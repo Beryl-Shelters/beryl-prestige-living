@@ -3,13 +3,35 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import morgan from "morgan";
+import swaggerUi from "swagger-ui-express";
 import routes from "./routes";
 import { errorMiddleware } from "./middlewares/error.middleware";
 import { env } from "./config/env";
+import { swaggerSpec } from "./config/swagger";
 
 const app = express();
 
 app.set("trust proxy", 1);
+
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec as swaggerUi.JsonObject, {
+    customSiteTitle: "Beryl Prestige Living API Docs",
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true,
+      docExpansion: "list",
+      filter: true,
+      tagsSorter: "alpha",
+      operationsSorter: "alpha"
+    }
+  })
+);
+
+app.get("/api-docs.json", (_req: Request, res: Response) => {
+  res.status(200).json(swaggerSpec);
+});
 
 app.use(helmet());
 

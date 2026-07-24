@@ -15,5 +15,6 @@ export const env = {
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || "",
 
   clientWebUrl: process.env.CLIENT_WEB_URL || "http://localhost:3000",
-  clientMobileUrl: process.env.CLIENT_MOBILE_URL || ""
+  clientMobileUrl: process.env.CLIENT_MOBILE_URL || "",
+  apiBaseUrl: process.env.API_BASE_URL || ""
 };
