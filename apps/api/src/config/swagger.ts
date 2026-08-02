@@ -653,8 +653,22 @@ const normalizeApiServer = (baseUrl: string) => {
 };
 
 const servers = [
-  { url: `http://localhost:${env.port}/api/v1`, description: "Local development server" },
-  ...(env.apiBaseUrl ? [{ url: normalizeApiServer(env.apiBaseUrl), description: "Production server" }] : [])
+  {
+    url: "/api/v1",
+    description: "Current server"
+  },
+  ...(env.apiBaseUrl
+    ? [
+        {
+          url: normalizeApiServer(env.apiBaseUrl),
+          description: "Production server"
+        }
+      ]
+    : []),
+  {
+    url: `http://localhost:${env.port}/api/v1`,
+    description: "Local development server"
+  }
 ];
 
 const options: swaggerJSDoc.OAS3Options = {
