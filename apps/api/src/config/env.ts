@@ -30,7 +30,7 @@ export const env = {
   otpMaxAttempts: Number(process.env.OTP_MAX_ATTEMPTS || 3),
   otpResendCooldownSeconds: Number(process.env.OTP_RESEND_COOLDOWN_SECONDS || 60),
   invitationExpiryHours: Number(process.env.ADMIN_INVITATION_EXPIRY_HOURS || 24),
-  mailProviderApiUrl: process.env.MAIL_PROVIDER_API_URL || "",
-  mailProviderApiKey: process.env.MAIL_PROVIDER_API_KEY || "",
-  mailFrom: process.env.MAIL_FROM || ""
+  resendApiKey: process.env.RESEND_API_KEY || "",
+  resendFromEmail: process.env.RESEND_FROM_EMAIL || "",
+  resendFromName: process.env.RESEND_FROM_NAME || ""
 };

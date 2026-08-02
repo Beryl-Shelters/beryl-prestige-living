@@ -40,6 +40,7 @@ export type VerifyOtpResult = {
   personas?: PersonaType[];
   onboardingStatus?: PersonaOnboardingStatus;
   nextAction?: string;
+  attemptsRemaining?: number;
 };
 
 export interface CustomerRegistrationStore {
@@ -62,5 +63,9 @@ export interface CustomerRegistrationStore {
   }): Promise<VerifyOtpResult>;
 }
 
-export class CustomerRegistrationConflictError extends Error {}
+export class CustomerRegistrationConflictError extends Error {
+  constructor(readonly conflict: "EMAIL" | "PHONE") {
+    super("Customer registration conflict");
+  }
+}
 export class CustomerRegistrationInfrastructureError extends Error {}

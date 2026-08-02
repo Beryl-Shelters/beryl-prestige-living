@@ -15,8 +15,10 @@ const phone = z
 const password = z
   .string()
   .min(8, "Password must contain at least 8 characters")
-  .regex(/[A-Za-z]/, "Password must contain at least one letter")
-  .regex(/\d/, "Password must contain at least one number");
+  .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+  .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+  .regex(/\d/, "Password must contain at least one number")
+  .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character");
 const otp = z.string().regex(/^\d{6}$/, "OTP must contain exactly 6 digits");
 const loginIdentifier = z
   .string()

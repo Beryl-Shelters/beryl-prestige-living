@@ -14,7 +14,7 @@ export const register = async (
 
     res.status(201).json({
       success: true,
-      message: "Registration successful. Please verify your email.",
+      message: "Account created. Check your email for the verification code.",
       data: result
     });
   } catch (error) {
@@ -101,11 +101,14 @@ export const resendVerificationOtp = async (
   next: NextFunction
 ) => {
   try {
-    await customerRegistrationService.resendVerificationOtp(req.body);
+    const result = await customerRegistrationService.resendVerificationOtp(req.body);
 
     res.status(202).json({
       success: true,
-      message: "If verification is available for this email, a new code will be sent."
+      message: "If the account is awaiting verification, a new code has been sent.",
+      data: {
+        resendAvailableIn: result.resendAvailableIn
+      }
     });
   } catch (error) {
     next(error);

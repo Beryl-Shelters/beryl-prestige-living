@@ -147,7 +147,7 @@ class InMemoryRegistrationStore implements CustomerRegistrationStore {
     const account = [...this.accounts.values()].find(
       (candidate) => candidate.email === input.email
     );
-    if (!account) return { status: "INVALID_OTP" };
+    if (!account) return { status: "INVALID_OTP", attemptsRemaining: 0 };
 
     const matched = [...this.challenges]
       .reverse()
@@ -180,7 +180,8 @@ class InMemoryRegistrationStore implements CustomerRegistrationStore {
       return {
         status:
           active.attempts >= active.maxAttempts ? "OTP_MAX_ATTEMPTS" : "INVALID_OTP",
-        userId: account.id
+        userId: account.id,
+        attemptsRemaining: Math.max(active.maxAttempts - active.attempts, 0)
       };
     }
 
@@ -212,8 +213,10 @@ class InMemoryRegistrationStore implements CustomerRegistrationStore {
 
 class CapturingMailService implements MailService {
   readonly messages: RegistrationOtpMail[] = [];
+  shouldFail = false;
 
   async sendRegistrationOtp(message: RegistrationOtpMail) {
+    if (this.shouldFail) throw new Error("Mail provider unavailable");
     this.messages.push({ ...message });
   }
 }
@@ -225,8 +228,8 @@ const registrationBody = {
   isWhatsAppNumber: true,
   whatsAppNumber: null,
   gettingStartedAs: "FIND_PROPERTY" as const,
-  password: "Password123",
-  confirmPassword: "Password123"
+  password: "Password123!",
+  confirmPassword: "Password123!"
 };
 
 describe("customer registration vertical slice", () => {
@@ -252,28 +255,50 @@ describe("customer registration vertical slice", () => {
   });
 
   const validInput = () => customerRegisterSchema.parse(registrationBody);
+  const registeredAccountId = () => [...store.accounts.keys()][0];
 
   it("registers a valid pending customer and sends one OTP", async () => {
     const result = await service.register(validInput());
     expect(result).toMatchObject({
-      accountStatus: "PENDING_VERIFICATION",
-      emailVerified: false,
+      verificationRequired: true,
+      maskedEmail: "c***r@example.com",
+      otpLength: 6,
+      resendAvailableIn: 60,
       nextAction: "VERIFY_EMAIL"
     });
     expect(result).not.toHaveProperty("password");
     expect(result).not.toHaveProperty("confirmPassword");
     expect(mail.messages).toHaveLength(1);
+    expect(store.accounts.get(registeredAccountId())?.initialPersona).toBe("BUYER");
+  });
+
+  it("registers the Seller/Developer path as pending verification", async () => {
+    const input = customerRegisterSchema.parse({
+      ...registrationBody,
+      email: "seller@example.com",
+      phone: "+2348098765432",
+      gettingStartedAs: "LIST_PROPERTY"
+    });
+
+    await service.register(input);
+
+    expect(store.accounts.get(registeredAccountId())).toMatchObject({
+      initialPersona: "SELLER_DEVELOPER",
+      accountStatus: "PENDING_VERIFICATION",
+      emailVerified: false
+    });
   });
 
   it("rejects duplicate normalized email", async () => {
     await service.register(validInput());
     const duplicate = customerRegisterSchema.parse({
       ...registrationBody,
+      email: " CUSTOMER@EXAMPLE.COM ",
       phone: "+2348099999999"
     });
     await expect(service.register(duplicate)).rejects.toMatchObject({
       statusCode: 409,
-      code: "ACCOUNT_ALREADY_EXISTS"
+      code: "EMAIL_ALREADY_REGISTERED"
     });
   });
 
@@ -281,9 +306,13 @@ describe("customer registration vertical slice", () => {
     await service.register(validInput());
     const duplicate = customerRegisterSchema.parse({
       ...registrationBody,
-      email: "another@example.com"
+      email: "another@example.com",
+      phone: "0801 234 5678"
     });
-    await expect(service.register(duplicate)).rejects.toMatchObject({ statusCode: 409 });
+    await expect(service.register(duplicate)).rejects.toMatchObject({
+      statusCode: 409,
+      code: "PHONE_ALREADY_REGISTERED"
+    });
   });
 
   it("accepts a null WhatsApp override when the phone is WhatsApp", () => {
@@ -311,20 +340,26 @@ describe("customer registration vertical slice", () => {
   });
 
   it("verifies the correct OTP and confirms managed Auth email", async () => {
-    const registered = await service.register(validInput());
+    await service.register(validInput());
     const result = await service.verifyEmail({
       email: registrationBody.email,
       otp: "123456"
     });
     expect(result).toMatchObject({ accountStatus: "ACTIVE", emailVerified: true });
-    expect(store.accounts.get(registered.accountId)?.authEmailConfirmed).toBe(true);
+    expect(store.accounts.get(registeredAccountId())?.authEmailConfirmed).toBe(true);
+  });
+
+  it("stores only the OTP hash", async () => {
+    await service.register(validInput());
+    expect(store.challenges[0].codeHash).not.toBe("123456");
+    expect(store.challenges[0].codeHash).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it("rejects a wrong OTP", async () => {
     await service.register(validInput());
     await expect(
       service.verifyEmail({ email: registrationBody.email, otp: "999999" })
-    ).rejects.toMatchObject({ code: "INVALID_OTP" });
+    ).rejects.toMatchObject({ code: "INVALID_OTP", details: { attemptsRemaining: 2 } });
   });
 
   it("rejects an expired OTP", async () => {
@@ -344,26 +379,31 @@ describe("customer registration vertical slice", () => {
     }
     await expect(
       service.verifyEmail({ email: registrationBody.email, otp: "999999" })
-    ).rejects.toMatchObject({ code: "OTP_MAX_ATTEMPTS" });
+    ).rejects.toMatchObject({ code: "OTP_ATTEMPTS_EXCEEDED" });
     await expect(
       service.verifyEmail({ email: registrationBody.email, otp: "123456" })
-    ).rejects.toMatchObject({ code: "OTP_MAX_ATTEMPTS" });
+    ).rejects.toMatchObject({ code: "OTP_ATTEMPTS_EXCEEDED" });
   });
 
   it("enforces resend cooldown without issuing another message", async () => {
     await service.register(validInput());
-    await service.resendVerificationOtp({ email: registrationBody.email });
+    await expect(
+      service.resendVerificationOtp({ email: registrationBody.email })
+    ).rejects.toMatchObject({
+      code: "OTP_RESEND_COOLDOWN",
+      details: { retryAfter: 60 }
+    });
     expect(mail.messages).toHaveLength(1);
     expect(store.challenges).toHaveLength(1);
   });
 
   it("does not duplicate persona records when verification is retried", async () => {
-    const registered = await service.register(validInput());
+    await service.register(validInput());
     await service.verifyEmail({ email: registrationBody.email, otp: "123456" });
     await expect(
       service.verifyEmail({ email: registrationBody.email, otp: "123456" })
-    ).rejects.toMatchObject({ code: "OTP_CONSUMED" });
-    expect(store.personas.get(registered.accountId)?.size).toBe(1);
+    ).rejects.toMatchObject({ code: "OTP_NO_LONGER_VALID" });
+    expect(store.personas.get(registeredAccountId())?.size).toBe(1);
   });
 
   it("does not duplicate the customer record when verification is retried", async () => {
@@ -376,16 +416,16 @@ describe("customer registration vertical slice", () => {
   });
 
   it("stores registration as pending verification", async () => {
-    const registered = await service.register(validInput());
-    expect(store.accounts.get(registered.accountId)?.accountStatus).toBe(
+    await service.register(validInput());
+    expect(store.accounts.get(registeredAccountId())?.accountStatus).toBe(
       "PENDING_VERIFICATION"
     );
   });
 
   it("does not mark email verified during registration", async () => {
-    const registered = await service.register(validInput());
-    expect(store.accounts.get(registered.accountId)?.emailVerified).toBe(false);
-    expect(store.accounts.get(registered.accountId)?.authEmailConfirmed).toBe(false);
+    await service.register(validInput());
+    expect(store.accounts.get(registeredAccountId())?.emailVerified).toBe(false);
+    expect(store.accounts.get(registeredAccountId())?.authEmailConfirmed).toBe(false);
   });
 
   it("resend invalidates the previous active OTP", async () => {
@@ -402,7 +442,7 @@ describe("customer registration vertical slice", () => {
     await service.verifyEmail({ email: registrationBody.email, otp: "123456" });
     await expect(
       service.verifyEmail({ email: registrationBody.email, otp: "123456" })
-    ).rejects.toMatchObject({ code: "OTP_CONSUMED" });
+    ).rejects.toMatchObject({ code: "OTP_NO_LONGER_VALID" });
   });
 
   it("does not permit a superseded OTP to be reused", async () => {
@@ -412,17 +452,17 @@ describe("customer registration vertical slice", () => {
     await service.resendVerificationOtp({ email: registrationBody.email });
     await expect(
       service.verifyEmail({ email: registrationBody.email, otp: "123456" })
-    ).rejects.toMatchObject({ code: "OTP_SUPERSEDED" });
+    ).rejects.toMatchObject({ code: "OTP_NO_LONGER_VALID" });
   });
 
   it("creates Buyer membership for FIND_PROPERTY", async () => {
-    const registered = await service.register(validInput());
+    await service.register(validInput());
     const result = await service.verifyEmail({
       email: registrationBody.email,
       otp: "123456"
     });
     expect(result.activePersona).toBe("BUYER");
-    expect(store.personas.get(registered.accountId)).toEqual(new Set(["BUYER"]));
+    expect(store.personas.get(registeredAccountId())).toEqual(new Set(["BUYER"]));
   });
 
   it("creates Seller/Developer membership for LIST_PROPERTY", async () => {
@@ -430,12 +470,36 @@ describe("customer registration vertical slice", () => {
       ...registrationBody,
       gettingStartedAs: "LIST_PROPERTY"
     });
-    const registered = await service.register(input);
+    await service.register(input);
     const result = await service.verifyEmail({ email: input.email, otp: "123456" });
     expect(result.activePersona).toBe("SELLER_DEVELOPER");
-    expect(store.personas.get(registered.accountId)).toEqual(
+    expect(store.personas.get(registeredAccountId())).toEqual(
       new Set(["SELLER_DEVELOPER"])
     );
+  });
+
+  it("does not report resend success when the email provider fails", async () => {
+    await service.register(validInput());
+    currentTime = new Date(currentTime.getTime() + 61_000);
+    generatedOtp = "654321";
+    mail.shouldFail = true;
+
+    await expect(
+      service.resendVerificationOtp({ email: registrationBody.email })
+    ).rejects.toMatchObject({ statusCode: 503, code: "MAIL_DELIVERY_FAILED" });
+    expect(store.challenges.at(-1)?.invalidatedAt).toEqual(currentTime);
+  });
+
+  it("keeps persona and customer projections unique under concurrent retry", async () => {
+    await service.register(validInput());
+    const results = await Promise.allSettled([
+      service.verifyEmail({ email: registrationBody.email, otp: "123456" }),
+      service.verifyEmail({ email: registrationBody.email, otp: "123456" })
+    ]);
+
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(store.personas.get(registeredAccountId())?.size).toBe(1);
+    expect(store.customerRecords.size).toBe(1);
   });
 
   it("preserves the existing Admin Portal customer-users route", () => {

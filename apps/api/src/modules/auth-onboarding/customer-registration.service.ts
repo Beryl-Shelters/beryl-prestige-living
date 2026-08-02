@@ -17,12 +17,25 @@ type ServiceOptions = {
   generateOtp?: () => string;
 };
 
-const duplicateError = () =>
-  new AppError(
-    "An account with these details already exists. Please log in or reset your password.",
-    409,
-    "ACCOUNT_ALREADY_EXISTS"
-  );
+const duplicateError = (conflict: "EMAIL" | "PHONE") =>
+  conflict === "EMAIL"
+    ? new AppError(
+        "An account with this email already exists. Please log in or reset your password.",
+        409,
+        "EMAIL_ALREADY_REGISTERED"
+      )
+    : new AppError(
+        "An account with this phone number already exists. Please log in or reset your password.",
+        409,
+        "PHONE_ALREADY_REGISTERED"
+      );
+
+const maskEmail = (email: string) => {
+  const [localPart, domain] = email.split("@");
+  if (!domain) return "***";
+  if (localPart.length <= 1) return `***@${domain}`;
+  return `${localPart[0]}***${localPart.at(-1)}@${domain}`;
+};
 
 export class CustomerRegistrationService {
   private readonly now: () => Date;
@@ -61,8 +74,9 @@ export class CustomerRegistrationService {
     let pendingUserId: string | undefined;
 
     try {
-      if (await this.store.findConflict(input.email, input.phone)) {
-        throw duplicateError();
+      const conflict = await this.store.findConflict(input.email, input.phone);
+      if (conflict) {
+        throw duplicateError(conflict);
       }
 
       const pending = await this.store.createPendingCustomer(input);
@@ -96,9 +110,10 @@ export class CustomerRegistrationService {
       });
 
       return {
-        accountId: pending.id,
-        accountStatus: "PENDING_VERIFICATION" as const,
-        emailVerified: false,
+        verificationRequired: true as const,
+        maskedEmail: maskEmail(pending.email),
+        otpLength: 6 as const,
+        resendAvailableIn: this.options.otpResendCooldownSeconds,
         nextAction: "VERIFY_EMAIL" as const
       };
     } catch (error) {
@@ -106,7 +121,9 @@ export class CustomerRegistrationService {
         await this.store.deletePendingCustomer(pendingUserId).catch(() => undefined);
       }
       if (error instanceof AppError) throw error;
-      if (error instanceof CustomerRegistrationConflictError) throw duplicateError();
+      if (error instanceof CustomerRegistrationConflictError) {
+        throw duplicateError(error.conflict);
+      }
       throw new AppError(
         "Unable to complete registration",
         503,
@@ -131,7 +148,12 @@ export class CustomerRegistrationService {
       });
 
       if (result.status === "INVALID_OTP") {
-        throw new AppError("Invalid verification code", 400, "INVALID_OTP");
+        throw new AppError(
+          "Invalid verification code",
+          400,
+          "INVALID_OTP",
+          { attemptsRemaining: result.attemptsRemaining ?? 0 }
+        );
       }
       if (result.status === "OTP_EXPIRED") {
         throw new AppError("Verification code has expired", 400, "OTP_EXPIRED");
@@ -140,17 +162,17 @@ export class CustomerRegistrationService {
         throw new AppError(
           "Maximum verification attempts exceeded",
           429,
-          "OTP_MAX_ATTEMPTS"
+          "OTP_ATTEMPTS_EXCEEDED"
         );
       }
-      if (result.status === "OTP_CONSUMED") {
-        throw new AppError("Verification code has already been used", 409, "OTP_CONSUMED");
-      }
-      if (result.status === "OTP_SUPERSEDED") {
+      if (
+        result.status === "OTP_CONSUMED" ||
+        result.status === "OTP_SUPERSEDED"
+      ) {
         throw new AppError(
-          "Verification code is no longer valid",
-          400,
-          "OTP_SUPERSEDED"
+          "Verification code is no longer valid. Request a new code.",
+          409,
+          "OTP_NO_LONGER_VALID"
         );
       }
       if (!result.userId || !result.activePersona || !result.onboardingStatus) {
@@ -197,12 +219,34 @@ export class CustomerRegistrationService {
       });
 
       if (
+        challenge.status === "COOLDOWN" &&
+        challenge.resendAvailableAt
+      ) {
+        throw new AppError(
+          "Please wait before requesting another verification code",
+          429,
+          "OTP_RESEND_COOLDOWN",
+          {
+            retryAfter: Math.max(
+              1,
+              Math.ceil(
+                (challenge.resendAvailableAt.getTime() - now.getTime()) / 1_000
+              )
+            )
+          }
+        );
+      }
+
+      if (
         challenge.status !== "REPLACED" ||
         !challenge.challengeId ||
         !challenge.email ||
         !challenge.fullName
       ) {
-        return { accepted: true as const };
+        return {
+          accepted: true as const,
+          resendAvailableIn: this.options.otpResendCooldownSeconds
+        };
       }
 
       try {
@@ -221,7 +265,10 @@ export class CustomerRegistrationService {
         );
       }
 
-      return { accepted: true as const };
+      return {
+        accepted: true as const,
+        resendAvailableIn: this.options.otpResendCooldownSeconds
+      };
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw new AppError(

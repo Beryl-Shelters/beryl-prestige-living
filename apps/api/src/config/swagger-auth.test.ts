@@ -25,7 +25,33 @@ describe("customer registration Swagger contracts", () => {
         "confirmPassword"
       ])
     );
-    expect(specification.paths["/auth/register"].post.responses[409]).toBeDefined();
+    const conflictExamples =
+      specification.paths["/auth/register"].post.responses[409].content[
+        "application/json"
+      ].examples;
+    expect(conflictExamples.email.value.code).toBe("EMAIL_ALREADY_REGISTERED");
+    expect(conflictExamples.phone.value.code).toBe("PHONE_ALREADY_REGISTERED");
+    expect(schema.properties.password.pattern).toContain("A-Z");
+    expect(schema.properties.password.pattern).toContain("a-z");
+  });
+
+  it("documents frontend OTP attempt and cooldown state", () => {
+    const invalidExamples =
+      specification.paths["/auth/verify-email"].post.responses[400].content[
+        "application/json"
+      ].examples;
+    const cooldownExamples =
+      specification.paths["/auth/resend-verification-otp"].post.responses[429]
+        .content["application/json"].examples;
+
+    expect(invalidExamples.invalid.value).toMatchObject({
+      code: "INVALID_OTP",
+      attemptsRemaining: 2
+    });
+    expect(cooldownExamples.cooldown.value).toMatchObject({
+      code: "OTP_RESEND_COOLDOWN",
+      retryAfter: 38
+    });
   });
 
   it("does not place an OTP value in the verification example", () => {

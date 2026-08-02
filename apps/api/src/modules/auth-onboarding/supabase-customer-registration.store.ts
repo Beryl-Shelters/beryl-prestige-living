@@ -13,6 +13,36 @@ import {
 const infrastructureFailure = () =>
   new CustomerRegistrationInfrastructureError("Customer registration storage failed");
 
+const authConflict = (error?: { code?: string; message: string } | null) => {
+  const code = error?.code?.toLowerCase();
+  const message = error?.message.toLowerCase() ?? "";
+
+  if (
+    code === "email_exists" ||
+    (message.includes("email") && message.includes("already"))
+  ) {
+    return "EMAIL" as const;
+  }
+  if (
+    code === "phone_exists" ||
+    (message.includes("phone") && message.includes("already"))
+  ) {
+    return "PHONE" as const;
+  }
+  return null;
+};
+
+const profileConflict = (message: string) => {
+  if (message.includes("profiles_email_normalized_uidx")) return "EMAIL" as const;
+  if (
+    message.includes("profiles_phone_normalized_uidx") ||
+    message.includes("profiles_phone_number_uidx")
+  ) {
+    return "PHONE" as const;
+  }
+  return null;
+};
+
 const splitName = (fullName: string) => {
   const [firstName, ...remaining] = fullName.trim().split(/\s+/);
   return { firstName, lastName: remaining.join(" ") };
@@ -54,8 +84,8 @@ export class SupabaseCustomerRegistrationStore
       });
 
     if (authError || !authData.user) {
-      const duplicate = authError?.message.toLowerCase().includes("already");
-      if (duplicate) throw new CustomerRegistrationConflictError();
+      const duplicate = authConflict(authError);
+      if (duplicate) throw new CustomerRegistrationConflictError(duplicate);
       throw infrastructureFailure();
     }
 
@@ -84,7 +114,8 @@ export class SupabaseCustomerRegistrationStore
     if (profileError) {
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       if (profileError.code === "23505") {
-        throw new CustomerRegistrationConflictError();
+        const duplicate = profileConflict(profileError.message);
+        if (duplicate) throw new CustomerRegistrationConflictError(duplicate);
       }
       throw infrastructureFailure();
     }
@@ -170,7 +201,8 @@ export class SupabaseCustomerRegistrationStore
       personas: row.result_personas as VerifyOtpResult["personas"],
       onboardingStatus:
         row.result_onboarding_status as VerifyOtpResult["onboardingStatus"],
-      nextAction: row.result_next_action as string | undefined
+      nextAction: row.result_next_action as string | undefined,
+      attemptsRemaining: row.result_attempts_remaining as number | undefined
     };
   }
 

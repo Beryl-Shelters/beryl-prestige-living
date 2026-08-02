@@ -48,7 +48,8 @@ returns table (
   result_active_persona public.persona_type,
   result_personas public.persona_type[],
   result_onboarding_status public.persona_onboarding_status,
-  result_next_action text
+  result_next_action text,
+  result_attempts_remaining integer
 )
 language plpgsql
 security definer
@@ -69,7 +70,7 @@ begin
   if not found then
     return query select 'INVALID_OTP', null::uuid, null::public.customer_account_status,
       false, null::public.persona_type, array[]::public.persona_type[],
-      null::public.persona_onboarding_status, null::text;
+      null::public.persona_onboarding_status, null::text, 0;
     return;
   end if;
 
@@ -82,7 +83,7 @@ begin
   ) then
     return query select 'OTP_SUPERSEDED', v_profile.id, v_profile.account_status,
       v_profile.email_verified_at is not null, v_profile.active_persona,
-      array[]::public.persona_type[], null::public.persona_onboarding_status, null::text;
+      array[]::public.persona_type[], null::public.persona_onboarding_status, null::text, 0;
     return;
   end if;
 
@@ -95,7 +96,7 @@ begin
   ) then
     return query select 'OTP_CONSUMED', v_profile.id, v_profile.account_status,
       v_profile.email_verified_at is not null, v_profile.active_persona,
-      array[]::public.persona_type[], null::public.persona_onboarding_status, null::text;
+      array[]::public.persona_type[], null::public.persona_onboarding_status, null::text, 0;
     return;
   end if;
 
@@ -113,7 +114,7 @@ begin
   if not found then
     return query select 'INVALID_OTP', v_profile.id, v_profile.account_status,
       v_profile.email_verified_at is not null, v_profile.active_persona,
-      array[]::public.persona_type[], null::public.persona_onboarding_status, null::text;
+      array[]::public.persona_type[], null::public.persona_onboarding_status, null::text, 0;
     return;
   end if;
 
@@ -124,14 +125,14 @@ begin
 
     return query select 'OTP_EXPIRED', v_profile.id, v_profile.account_status,
       false, null::public.persona_type, array[]::public.persona_type[],
-      null::public.persona_onboarding_status, null::text;
+      null::public.persona_onboarding_status, null::text, 0;
     return;
   end if;
 
   if v_challenge.attempt_count >= v_challenge.max_attempts then
     return query select 'OTP_MAX_ATTEMPTS', v_profile.id, v_profile.account_status,
       false, null::public.persona_type, array[]::public.persona_type[],
-      null::public.persona_onboarding_status, null::text;
+      null::public.persona_onboarding_status, null::text, 0;
     return;
   end if;
 
@@ -143,11 +144,12 @@ begin
     if v_challenge.attempt_count + 1 >= v_challenge.max_attempts then
       return query select 'OTP_MAX_ATTEMPTS', v_profile.id, v_profile.account_status,
         false, null::public.persona_type, array[]::public.persona_type[],
-        null::public.persona_onboarding_status, null::text;
+        null::public.persona_onboarding_status, null::text, 0;
     else
       return query select 'INVALID_OTP', v_profile.id, v_profile.account_status,
         false, null::public.persona_type, array[]::public.persona_type[],
-        null::public.persona_onboarding_status, null::text;
+        null::public.persona_onboarding_status, null::text,
+        greatest(v_challenge.max_attempts - (v_challenge.attempt_count + 1), 0)::integer;
     end if;
     return;
   end if;
@@ -209,7 +211,8 @@ begin
     case v_profile.active_persona
       when 'BUYER' then 'COMPLETE_BUYER_ONBOARDING'
       else 'COMPLETE_SELLER_ONBOARDING'
-    end;
+    end,
+    null::integer;
 end;
 $$;
 

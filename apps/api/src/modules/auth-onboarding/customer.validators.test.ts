@@ -12,8 +12,8 @@ const validRegistration = {
   phone: "0801 234 5678",
   isWhatsAppNumber: true,
   gettingStartedAs: "FIND_PROPERTY" as const,
-  password: "passw0rd",
-  confirmPassword: "passw0rd"
+  password: "Password1!",
+  confirmPassword: "Password1!"
 };
 
 describe("customer registration validation", () => {
@@ -35,11 +35,30 @@ describe("customer registration validation", () => {
     expect(result.success).toBe(false);
   });
 
+  it("normalizes a separate WhatsApp number", () => {
+    const result = customerRegisterSchema.parse({
+      ...validRegistration,
+      isWhatsAppNumber: false,
+      whatsAppNumber: "0809 876 5432"
+    });
+
+    expect(result.whatsAppNumber).toBe("+2348098765432");
+  });
+
   it("enforces the password policy", () => {
     const result = customerRegisterSchema.safeParse({
       ...validRegistration,
       password: "password",
       confirmPassword: "password"
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a confirm-password mismatch", () => {
+    const result = customerRegisterSchema.safeParse({
+      ...validRegistration,
+      confirmPassword: "Different1!"
     });
 
     expect(result.success).toBe(false);

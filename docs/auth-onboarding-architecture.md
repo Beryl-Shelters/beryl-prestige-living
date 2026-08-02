@@ -391,11 +391,13 @@ Registration response example:
 ```json
 {
   "success": true,
-  "message": "Registration received. Verify your email to continue.",
+  "message": "Account created. Check your email for the verification code.",
   "data": {
-    "accountId": "00000000-0000-0000-0000-000000000000",
-    "accountStatus": "PENDING_VERIFICATION",
-    "nextRequiredAction": "VERIFY_EMAIL"
+    "verificationRequired": true,
+    "maskedEmail": "c***r@example.com",
+    "otpLength": 6,
+    "resendAvailableIn": 60,
+    "nextAction": "VERIFY_EMAIL"
   }
 }
 ```
@@ -423,14 +425,13 @@ variables remain unchanged. Add:
 | `OTP_MAX_ATTEMPTS` | 3 |
 | `OTP_RESEND_COOLDOWN_SECONDS` | 60 |
 | `ADMIN_INVITATION_EXPIRY_HOURS` | 24 |
-| `MAIL_PROVIDER_API_URL` | Required production mail-provider/webhook endpoint |
-| `MAIL_PROVIDER_API_KEY` | Required production mail-provider bearer credential |
-| `MAIL_FROM` | Required verified production sender address |
+| `RESEND_API_KEY` | Required production Resend API credential |
+| `RESEND_FROM_EMAIL` | Required verified Resend sender; `onboarding@resend.dev` may be used temporarily in development |
+| `RESEND_FROM_NAME` | Required display name for verification email sender |
 | `ADMIN_ACTIVATION_URL` | Frontend activation-link base URL |
 
-Production startup must fail validation when a required auth secret is absent;
-the current config only exposes values and does not yet enforce this because the
-new routes are not mounted.
+The mounted registration routes fail safely when `OTP_HASH_SECRET` or Resend
+delivery is not configured; they never report a false OTP delivery success.
 
 ## 15. Migration strategy
 
