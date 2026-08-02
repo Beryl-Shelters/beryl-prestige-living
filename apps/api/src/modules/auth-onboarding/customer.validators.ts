@@ -37,7 +37,7 @@ export const customerRegisterSchema = z
     email,
     phone,
     isWhatsAppNumber: z.boolean(),
-    whatsAppNumber: phone.optional(),
+    whatsAppNumber: phone.nullish(),
     gettingStartedAs: z.enum(GETTING_STARTED_AS),
     password,
     confirmPassword: z.string()

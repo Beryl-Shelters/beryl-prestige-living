@@ -381,12 +381,10 @@ should accept an `Idempotency-Key` where noted.
 | `GET /admin/users/:adminId` | Admin access | 200 sanitized admin | read `admins`; no hashes | 401/403/404 |
 | `PATCH /admin/users/:adminId/status` | SUPER_ADMIN; status enum | 200 sanitized admin | status update; bump/revoke if disabling | 403, 404, 409 self/last-super-admin guard |
 
-There is a route collision: existing `GET /admin/users` lists customer `profiles`.
-During rollout, first add `GET /admin/customers` with identical behavior and keep
-the old route as a deprecated compatibility alias. Only after clients migrate may
-`GET /admin/users` safely switch to the admin identity list. Until then, mount new
-admin management at `/admin/admin-users` or obtain explicit approval for a
-versioned breaking change.
+`GET /admin/users` permanently retains its current meaning in this API version:
+it lists customer users managed through the Admin Portal. Admin staff-management
+route naming is a separate product decision and is outside the customer
+registration vertical slice.
 
 Registration response example:
 
@@ -425,7 +423,9 @@ variables remain unchanged. Add:
 | `OTP_MAX_ATTEMPTS` | 3 |
 | `OTP_RESEND_COOLDOWN_SECONDS` | 60 |
 | `ADMIN_INVITATION_EXPIRY_HOURS` | 24 |
-| `MAIL_FROM`, provider-specific mail credentials | Required when production mail adapter is implemented |
+| `MAIL_PROVIDER_API_URL` | Required production mail-provider/webhook endpoint |
+| `MAIL_PROVIDER_API_KEY` | Required production mail-provider bearer credential |
+| `MAIL_FROM` | Required verified production sender address |
 | `ADMIN_ACTIVATION_URL` | Frontend activation-link base URL |
 
 Production startup must fail validation when a required auth secret is absent;
@@ -525,8 +525,8 @@ role middleware need compatibility adapters, not wholesale rewrites.
 - Existing admin identities in `profiles` need a one-time secure migration into
   `admins`; passwords cannot be copied from Supabase, so invitation/reset is
   required.
-- Existing `/admin/users` semantics conflict with the required admin-list route.
-  Compatibility sequencing or API v2 approval is required.
+- Admin staff-management needs a distinct future route name or a versioned API;
+  `/admin/users` is reserved for Admin Portal customer management.
 - Mail provider, template ownership, delivery retry policy, frontend activation
   URL, and whether standard ADMIN may view all admins are not specified.
 - The current Supabase customer token format cannot provide the proposed distinct

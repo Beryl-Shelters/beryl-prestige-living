@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
-import { getCurrentUser, loginUser, registerUser } from "./auth.service";
+import { getCurrentUser, loginUser } from "./auth.service";
 import { getAuthUserId } from "../../utils/getAuthUserId";
+import { customerRegistrationService } from "../auth-onboarding/customer-registration.runtime";
 
 
 export const register = async (
@@ -9,11 +10,11 @@ export const register = async (
   next: NextFunction
 ) => {
   try {
-    const result = await registerUser(req.body);
+    const result = await customerRegistrationService.register(req.body);
 
     res.status(201).json({
       success: true,
-      message: "Account created successfully. Please verify your email.",
+      message: "Registration successful. Please verify your email.",
       data: result
     });
   } catch (error) {
@@ -70,6 +71,41 @@ export const me = async (
         user: req.user,
         profile
       }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyEmail = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await customerRegistrationService.verifyEmail(req.body);
+
+    res.status(200).json({
+      success: true,
+      message: "Email verified successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resendVerificationOtp = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    await customerRegistrationService.resendVerificationOtp(req.body);
+
+    res.status(202).json({
+      success: true,
+      message: "If verification is available for this email, a new code will be sent."
     });
   } catch (error) {
     next(error);

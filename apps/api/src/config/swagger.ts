@@ -27,6 +27,19 @@ type Endpoint = {
   badRequestMessage?: string;
   forbiddenMessage?: string;
   notFoundMessage?: string;
+  successExample?: Record<string, unknown>;
+  errorResponses?: Record<
+    string,
+    {
+      description: string;
+      message: string;
+      code?: string;
+      examples?: Record<
+        string,
+        { summary: string; message: string; code?: string }
+      >;
+    }
+  >;
 };
 
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
@@ -82,7 +95,8 @@ const components = {
     ErrorResponse: objectSchema(
       {
         success: { type: "boolean", enum: [false], example: false },
-        message: { type: "string", example: "Internal server error" }
+        message: { type: "string", example: "Internal server error" },
+        code: { type: "string", nullable: true, example: "INVALID_OTP" }
       },
       ["success", "message"]
     ),
@@ -299,7 +313,11 @@ const components = {
     AuditLog: { type: "object", properties: { id: uuid, actor_id: uuid, action: { type: "string" }, metadata: { type: "object", additionalProperties: true }, created_at: dateTime }, additionalProperties: true },
     StandardSuccessResponse: objectSchema({ success: { type: "boolean", enum: [true] }, message: { type: "string" }, data: { type: "object", additionalProperties: true } }, ["success", "message"]),
 
-    RegisterRequest: objectSchema({ first_name: { type: "string", minLength: 2, example: "Ada" }, last_name: { type: "string", minLength: 2, example: "Okafor" }, email: { type: "string", format: "email", example: "ada@example.com" }, phone_number: { type: "string", minLength: 7, example: "+2348012345678" }, password: { type: "string", format: "password", minLength: 8, writeOnly: true, example: "Str0ngPass!" }, role: { type: "string", enum: ["investor", "property_developer", "landlord", "registered_agent", "freelance_agent"] }, profile_type: { type: "string", enum: ["personal", "business"] }, referral_code: { type: "string", example: "BPL-ABCD1234" } }, ["first_name", "last_name", "email", "password", "role", "profile_type"]),
+    RegisterRequest: objectSchema({ fullName: { type: "string", minLength: 2, example: "Test Customer" }, email: { type: "string", format: "email", description: "Trimmed and normalized to lowercase.", example: "customer@example.com" }, phone: { type: "string", pattern: "^\\+[1-9]\\d{7,14}$", description: "Normalized to E.164. Nigerian local numbers default to +234.", example: "+2348012345678" }, isWhatsAppNumber: { type: "boolean", description: "True when phone is also the WhatsApp number." }, whatsAppNumber: { type: "string", nullable: true, pattern: "^\\+[1-9]\\d{7,14}$", description: "Required only when isWhatsAppNumber is false; otherwise null is accepted." }, gettingStartedAs: { type: "string", enum: ["FIND_PROPERTY", "LIST_PROPERTY"] }, password: { type: "string", format: "password", minLength: 8, pattern: "^(?=.*[A-Za-z])(?=.*\\d).{8,}$", writeOnly: true, description: "At least eight characters, one letter, and one number." }, confirmPassword: { type: "string", format: "password", writeOnly: true, description: "Must match password and is never persisted." } }, ["fullName", "email", "phone", "isWhatsAppNumber", "gettingStartedAs", "password", "confirmPassword"]),
+    VerifyCustomerEmailRequest: objectSchema({ email: { type: "string", format: "email", description: "Trimmed and normalized to lowercase." }, otp: { type: "string", pattern: "^\\d{6}$", writeOnly: true, description: "The six-digit registration email verification code." } }, ["email", "otp"]),
+    ResendCustomerVerificationRequest: objectSchema({ email: { type: "string", format: "email", description: "Trimmed and normalized to lowercase." } }, ["email"]),
+    CustomerRegistrationResult: objectSchema({ accountId: uuid, accountStatus: { type: "string", enum: ["PENDING_VERIFICATION"] }, emailVerified: { type: "boolean", enum: [false] }, nextAction: { type: "string", enum: ["VERIFY_EMAIL"] } }, ["accountId", "accountStatus", "emailVerified", "nextAction"]),
+    CustomerEmailVerificationResult: objectSchema({ accountStatus: { type: "string", enum: ["ACTIVE"] }, emailVerified: { type: "boolean", enum: [true] }, activePersona: { type: "string", enum: ["BUYER", "SELLER_DEVELOPER"] }, personas: { type: "array", items: { type: "string", enum: ["BUYER", "SELLER_DEVELOPER"] } }, onboardingStatus: { type: "string", enum: ["NOT_STARTED"] }, nextAction: { type: "string", enum: ["COMPLETE_BUYER_ONBOARDING", "COMPLETE_SELLER_ONBOARDING"] } }, ["accountStatus", "emailVerified", "activePersona", "personas", "onboardingStatus", "nextAction"]),
     LoginRequest: objectSchema({ email: { type: "string", format: "email", example: "ada@example.com" }, password: { type: "string", format: "password", minLength: 1, writeOnly: true, example: "Str0ngPass!" } }, ["email", "password"]),
     UpdateProfileRequest: objectSchema({ first_name: { type: "string", minLength: 2 }, last_name: { type: "string", minLength: 2 }, phone_number: { type: "string", minLength: 7 }, bio: { type: "string", maxLength: 1000 }, street_address: { type: "string" }, city: { type: "string" }, state: { type: "string" }, country: { type: "string" }, zip_code: { type: "string" }, agency_name: { type: "string" }, company_email: { type: "string", format: "email" }, company_phone_number: { type: "string" }, company_bio: { type: "string", maxLength: 1500 }, company_street_address: { type: "string" }, company_city: { type: "string" }, company_state: { type: "string" }, company_country: { type: "string" }, company_zip_code: { type: "string" } }),
     ChangePasswordRequest: objectSchema({ new_password: { type: "string", format: "password", minLength: 8, writeOnly: true, example: "N3wStr0ngPass!" } }, ["new_password"]),
@@ -334,7 +352,9 @@ const components = {
 const endpoints: Endpoint[] = [
   { method: "get", path: "/health", tag: "Health", summary: "Check API health", description: "Returns API availability and the current server timestamp.", successMessage: "Beryl Prestige Living API is healthy", responseSchema: "StandardSuccessResponse" },
 
-  { method: "post", path: "/auth/register", tag: "Authentication", summary: "Register a user", description: "Creates a Supabase auth user and the matching profile. Public access.", successStatus: 201, successMessage: "Account created successfully. Please verify your email.", responseSchema: "AuthResponse", bodySchema: "RegisterRequest", badRequestMessage: "User registration failed" },
+  { method: "post", path: "/auth/register", tag: "Authentication", summary: "Register a customer", description: "Creates one pending customer account without a legacy role. Email is lowercased, phones are normalized to E.164 with +234 as the default country code, and the account remains inactive until email OTP verification. whatsAppNumber is required only when isWhatsAppNumber is false. Password and OTP values are never returned.", successStatus: 201, successMessage: "Registration successful. Please verify your email.", responseSchema: "CustomerRegistrationResult", bodySchema: "RegisterRequest", successExample: { accountId: "550e8400-e29b-41d4-a716-446655440000", accountStatus: "PENDING_VERIFICATION", emailVerified: false, nextAction: "VERIFY_EMAIL" }, errorResponses: { "409": { description: "Normalized email or phone already belongs to an account", message: "An account with these details already exists. Please log in or reset your password.", code: "ACCOUNT_ALREADY_EXISTS" }, "503": { description: "Registration, configuration, or mail delivery is unavailable", message: "Unable to complete registration", code: "REGISTRATION_UNAVAILABLE", examples: { unavailable: { summary: "Registration infrastructure unavailable", message: "Unable to complete registration", code: "REGISTRATION_UNAVAILABLE" }, notConfigured: { summary: "OTP verification is not configured", message: "Customer verification is temporarily unavailable", code: "CUSTOMER_AUTH_NOT_CONFIGURED" } } } } },
+  { method: "post", path: "/auth/verify-email", tag: "Authentication", summary: "Verify customer registration email", description: "Validates the active registration OTP. The code expires, permits at most three attempts, and cannot be consumed or superseded twice. Success atomically confirms the managed Auth email, activates the account, creates the initial persona with NOT_STARTED onboarding, and upserts the single Admin Portal customer record.", successMessage: "Email verified successfully", responseSchema: "CustomerEmailVerificationResult", bodySchema: "VerifyCustomerEmailRequest", successExample: { accountStatus: "ACTIVE", emailVerified: true, activePersona: "BUYER", personas: ["BUYER"], onboardingStatus: "NOT_STARTED", nextAction: "COMPLETE_BUYER_ONBOARDING" }, errorResponses: { "400": { description: "OTP is invalid, expired, or superseded", message: "Invalid verification code", code: "INVALID_OTP", examples: { invalid: { summary: "Invalid OTP", message: "Invalid verification code", code: "INVALID_OTP" }, expired: { summary: "Expired OTP", message: "Verification code has expired", code: "OTP_EXPIRED" }, superseded: { summary: "Superseded OTP", message: "Verification code is no longer valid", code: "OTP_SUPERSEDED" } } }, "409": { description: "OTP was already consumed", message: "Verification code has already been used", code: "OTP_CONSUMED" }, "429": { description: "Maximum OTP attempts or endpoint rate limit exceeded", message: "Maximum verification attempts exceeded", code: "OTP_MAX_ATTEMPTS", examples: { attempts: { summary: "Maximum OTP attempts reached", message: "Maximum verification attempts exceeded", code: "OTP_MAX_ATTEMPTS" }, rateLimit: { summary: "Endpoint rate limit reached", message: "Too many requests, please try again later", code: "RATE_LIMIT_EXCEEDED" } } }, "503": { description: "Verification infrastructure or OTP configuration is unavailable", message: "Unable to verify email", code: "VERIFICATION_UNAVAILABLE", examples: { unavailable: { summary: "Verification infrastructure unavailable", message: "Unable to verify email", code: "VERIFICATION_UNAVAILABLE" }, notConfigured: { summary: "OTP verification is not configured", message: "Customer verification is temporarily unavailable", code: "CUSTOMER_AUTH_NOT_CONFIGURED" } } } } },
+  { method: "post", path: "/auth/resend-verification-otp", tag: "Authentication", summary: "Resend customer registration OTP", description: "For an eligible unverified account, invalidates the previous live OTP and sends a replacement after the cooldown. Missing, verified, and cooldown states intentionally receive the same generic 202 response to prevent account enumeration; during cooldown no new OTP is created or sent.", successStatus: 202, successMessage: "If verification is available for this email, a new code will be sent.", bodySchema: "ResendCustomerVerificationRequest", errorResponses: { "429": { description: "Endpoint rate limit exceeded. Domain resend cooldown returns the generic 202 response.", message: "Too many requests, please try again later", code: "RATE_LIMIT_EXCEEDED" }, "503": { description: "Mail delivery, verification infrastructure, or OTP configuration is unavailable", message: "Unable to process verification request", code: "VERIFICATION_UNAVAILABLE", examples: { mailDelivery: { summary: "Mail delivery failed", message: "Unable to send verification email", code: "MAIL_DELIVERY_FAILED" }, unavailable: { summary: "Verification infrastructure unavailable", message: "Unable to process verification request", code: "VERIFICATION_UNAVAILABLE" }, notConfigured: { summary: "OTP verification is not configured", message: "Customer verification is temporarily unavailable", code: "CUSTOMER_AUTH_NOT_CONFIGURED" } } } } },
   { method: "post", path: "/auth/login", tag: "Authentication", summary: "Log in", description: "Authenticates email and password and returns Supabase session tokens and the profile.", successMessage: "Login successful", responseSchema: "AuthResponse", bodySchema: "LoginRequest", badRequestMessage: "Invalid login credentials" },
   { method: "post", path: "/auth/logout", tag: "Authentication", summary: "Log out", description: "Acknowledges logout for the authenticated user. Token invalidation remains client/Supabase managed.", successMessage: "Logout successful", security: "required" },
   { method: "get", path: "/auth/me", tag: "Authentication", summary: "Get current user", description: "Returns the authenticated Supabase user and profile.", successMessage: "Current user fetched successfully", responseSchema: "UserProfile", security: "required", notFoundMessage: "Profile not found" },
@@ -457,20 +477,49 @@ const successResponse = (endpoint: Endpoint) => ({
       example: {
         success: true,
         message: endpoint.successMessage,
-        ...(endpoint.responseSchema ? { data: {} } : {})
+        ...(endpoint.responseSchema
+          ? { data: endpoint.successExample ?? {} }
+          : {})
       }
     }
   }
 });
 
-const errorResponse = (description: string, message: string, validation = false) => ({
+const errorResponse = (
+  description: string,
+  message: string,
+  validation = false,
+  code?: string,
+  examples?: Record<
+    string,
+    { summary: string; message: string; code?: string }
+  >
+) => ({
   description,
   content: {
     "application/json": {
       schema: validation ? ref("ValidationError") : ref("ErrorResponse"),
-      example: validation
-        ? { success: false, message: "Validation failed", errors: { formErrors: [], fieldErrors: {} } }
-        : { success: false, message }
+      ...(examples
+        ? {
+            examples: Object.fromEntries(
+              Object.entries(examples).map(([name, example]) => [
+                name,
+                {
+                  summary: example.summary,
+                  value: {
+                    success: false,
+                    message: example.message,
+                    ...(example.code ? { code: example.code } : {})
+                  }
+                }
+              ])
+            )
+          }
+        : {
+            example: validation
+              ? { success: false, message: "Validation failed", errors: { formErrors: [], fieldErrors: {} } }
+              : { success: false, message, ...(code ? { code } : {}) }
+          })
     }
   }
 });
@@ -501,6 +550,16 @@ for (const endpoint of endpoints) {
 
   if (endpoint.notFoundMessage) {
     responses["404"] = errorResponse("Resource not found", endpoint.notFoundMessage);
+  }
+
+  for (const [status, response] of Object.entries(endpoint.errorResponses ?? {})) {
+    responses[status] = errorResponse(
+      response.description,
+      response.message,
+      false,
+      response.code,
+      response.examples
+    );
   }
 
   const parameters = [

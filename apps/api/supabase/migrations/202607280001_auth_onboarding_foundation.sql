@@ -23,11 +23,21 @@ alter table public.profiles
   add column if not exists account_status public.customer_account_status not null default 'ACTIVE',
   add column if not exists is_whatsapp_number boolean,
   add column if not exists whatsapp_number text,
+  add column if not exists initial_persona public.persona_type,
   add column if not exists active_persona public.persona_type,
   add column if not exists last_active_persona public.persona_type,
   add column if not exists email_verified_at timestamptz,
   add column if not exists registration_source text not null default 'LEGACY',
   add column if not exists session_version integer not null default 1;
+
+-- New customer authorization is persona-based. Legacy registration continues
+-- to provide these columns explicitly, but new customer accounts store neither
+-- mutually-exclusive legacy role nor legacy personal/business profile type.
+alter table public.profiles
+  alter column role drop not null,
+  alter column role drop default,
+  alter column profile_type drop not null,
+  alter column profile_type drop default;
 
 do $$ begin
   alter table public.profiles add constraint profiles_session_version_positive check (session_version > 0);
@@ -51,12 +61,33 @@ do $$ begin
   ) not valid;
 exception when duplicate_object then null; end $$;
 
+do $$ begin
+  alter table public.profiles add constraint profiles_pending_initial_persona check (
+    account_status <> 'PENDING_VERIFICATION' or initial_persona is not null
+  ) not valid;
+exception when duplicate_object then null; end $$;
+
 update public.profiles
 set full_name = trim(concat_ws(' ', first_name, last_name))
 where full_name is null;
 
 create unique index if not exists profiles_email_normalized_uidx on public.profiles (lower(trim(email)));
 create unique index if not exists profiles_phone_number_uidx on public.profiles (phone_number) where phone_number is not null;
+create unique index if not exists profiles_phone_normalized_uidx on public.profiles (
+  (
+    case
+      when regexp_replace(trim(phone_number), '[\s().-]', '', 'g') like '+%'
+        then regexp_replace(trim(phone_number), '[\s().-]', '', 'g')
+      when regexp_replace(trim(phone_number), '[\s().-]', '', 'g') like '00%'
+        then '+' || substring(regexp_replace(trim(phone_number), '[\s().-]', '', 'g') from 3)
+      when regexp_replace(trim(phone_number), '[\s().-]', '', 'g') like '234%'
+        then '+' || regexp_replace(trim(phone_number), '[\s().-]', '', 'g')
+      when regexp_replace(trim(phone_number), '[\s().-]', '', 'g') like '0%'
+        then '+234' || substring(regexp_replace(trim(phone_number), '[\s().-]', '', 'g') from 2)
+      else '+234' || regexp_replace(trim(phone_number), '[\s().-]', '', 'g')
+    end
+  )
+) where phone_number is not null;
 
 create table if not exists public.user_personas (
   id uuid primary key default gen_random_uuid(),
