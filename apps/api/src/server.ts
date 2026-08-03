@@ -4,5 +4,5 @@ import { env } from "./config/env";
 
 
 app.listen(env.port, () => {
-  console.log(`Beryl Prestige Living API running on port ${env.port}`);
+  console.log(`Beryl Shelter Nigeria Limited API running on port ${env.port}`);
 });

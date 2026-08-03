@@ -72,22 +72,24 @@ export const resendCustomerVerificationSchema = z.object({ email });
 export const customerLoginSchema = z.object({
   identifier: loginIdentifier,
   password: z.string().min(1)
-});
+}).strict();
 
-export const forgotCustomerPasswordSchema = z.object({ email });
-export const verifyCustomerPasswordResetSchema = z.object({ email, otp });
+export const forgotCustomerPasswordSchema = z.object({ email }).strict();
+export const verifyCustomerPasswordResetSchema = z.object({ email, otp }).strict();
 export const resetCustomerPasswordSchema = z
   .object({
     resetToken: z.string().min(32),
-    password,
+    newPassword: password,
     confirmPassword: z.string()
   })
+  .strict()
   .superRefine((value, context) => {
-    if (value.password !== value.confirmPassword) {
+    if (value.newPassword !== value.confirmPassword) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["confirmPassword"],
-        message: "Passwords do not match"
+        message: "Passwords do not match",
+        params: { errorCode: "PASSWORD_VALIDATION_ERROR" }
       });
     }
   });
@@ -98,12 +100,14 @@ export const changeCustomerPasswordSchema = z
     newPassword: password,
     confirmPassword: z.string()
   })
+  .strict()
   .superRefine((value, context) => {
     if (value.currentPassword === value.newPassword) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["newPassword"],
-        message: "New password must differ from current password"
+        message: "New password must differ from current password",
+        params: { errorCode: "NEW_PASSWORD_SAME_AS_CURRENT" }
       });
     }
 
@@ -111,64 +115,98 @@ export const changeCustomerPasswordSchema = z
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["confirmPassword"],
-        message: "Passwords do not match"
+        message: "Passwords do not match",
+        params: { errorCode: "PASSWORD_VALIDATION_ERROR" }
       });
     }
   });
 
 export const refreshCustomerSessionSchema = z.object({
   refreshToken: z.string().min(32)
-});
+}).strict();
+
+export const logoutCustomerSessionSchema = refreshCustomerSessionSchema;
 
 export const buyerOnboardingSchema = z
-  .object({
-    preferredLocations: z.array(z.string().trim().min(1)).min(1),
-    budgetMin: z.number().nonnegative().optional(),
-    budgetMax: z.number().nonnegative().optional(),
-    currency: z.enum(CURRENCIES).default("NGN")
-  })
-  .superRefine((value, context) => {
-    if (
-      value.budgetMin !== undefined &&
-      value.budgetMax !== undefined &&
-      value.budgetMax < value.budgetMin
-    ) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["budgetMax"],
-        message: "Maximum budget must be greater than or equal to minimum budget"
-      });
-    }
-  });
+  .union([
+    z.object({ skip: z.literal(true) }).strict(),
+    z
+      .object({
+        skip: z.literal(false).optional(),
+        preferredLocations: z
+          .array(z.string().trim().min(1).max(120))
+          .min(1)
+          .max(10)
+          .transform((locations) => {
+            const seen = new Set<string>();
+            return locations.filter((location) => {
+              const normalized = location.toLocaleLowerCase("en");
+              if (seen.has(normalized)) return false;
+              seen.add(normalized);
+              return true;
+            });
+          }),
+        budgetMin: z.number().finite().nonnegative().optional(),
+        budgetMax: z.number().finite().nonnegative().optional(),
+        currency: z.enum(CURRENCIES).default("NGN")
+      })
+      .strict()
+      .superRefine((value, context) => {
+        if (
+          value.budgetMin !== undefined &&
+          value.budgetMax !== undefined &&
+          value.budgetMax < value.budgetMin
+        ) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["budgetMax"],
+            message:
+              "Maximum budget must be greater than or equal to minimum budget",
+            params: { errorCode: "INVALID_BUDGET_RANGE" }
+          });
+        }
+      })
+  ]);
 
 export const sellerOnboardingSchema = z
-  .object({
-    profileType: z.enum(PROFILE_TYPES),
-    companyName: z.string().trim().min(2).optional(),
-    companyAddress: z.string().trim().min(2).optional()
-  })
-  .superRefine((value, context) => {
-    if (value.profileType !== "BUSINESS") return;
+  .union([
+    z.object({ skip: z.literal(true) }).strict(),
+    z
+      .object({
+        skip: z.literal(false).optional(),
+        profileType: z.enum(PROFILE_TYPES),
+        companyName: z.string().trim().min(2).max(160).optional(),
+        companyAddress: z.string().trim().min(2).max(500).optional()
+      })
+      .strict()
+      .superRefine((value, context) => {
+        if (value.profileType !== "BUSINESS") return;
 
-    if (!value.companyName) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["companyName"],
-        message: "Company name is required for a business profile"
-      });
-    }
+        if (!value.companyName) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["companyName"],
+            message: "Company name is required for a business profile"
+          });
+        }
 
-    if (!value.companyAddress) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["companyAddress"],
-        message: "Company address is required for a business profile"
-      });
-    }
-  });
+        if (!value.companyAddress) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["companyAddress"],
+            message: "Company address is required for a business profile"
+          });
+        }
+      })
+      .transform((value) =>
+        value.profileType === "INDIVIDUAL"
+          ? { ...value, companyName: undefined, companyAddress: undefined }
+          : value
+      )
+  ]);
 
 export const activatePersonaSchema = z.object({
-  persona: z.enum(PERSONA_TYPES)
-});
+  personaType: z.enum(PERSONA_TYPES)
+}).strict();
 
 export const switchPersonaSchema = activatePersonaSchema;

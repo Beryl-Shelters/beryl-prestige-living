@@ -20,7 +20,7 @@ describe("Resend registration OTP mail", () => {
     const service = new ResendMailService(
       "test-api-key",
       "onboarding@example.com",
-      "Beryl Prestige Living"
+      "Beryl Shelter Nigeria Limited"
     );
 
     await service.sendRegistrationOtp({
@@ -33,9 +33,11 @@ describe("Resend registration OTP mail", () => {
     expect(send).toHaveBeenCalledOnce();
     const message = send.mock.calls[0][0];
     expect(message.from).toBe(
-      "Beryl Prestige Living <onboarding@example.com>"
+      "Beryl Shelter Nigeria Limited <onboarding@example.com>"
     );
-    expect(message.html).toContain("Beryl Prestige Living");
+    expect(message.subject).toBe("Verify your Beryl Shelter account");
+    expect(message.html).toContain("Beryl Shelter");
+    expect(message.html).toContain("Beryl Shelter Nigeria Limited");
     expect(message.html).toContain("419205");
     expect(message.html).toContain("Do not share this code");
     expect(message.html).not.toContain("<img");
@@ -47,7 +49,7 @@ describe("Resend registration OTP mail", () => {
     const service = new ResendMailService(
       "test-api-key",
       "onboarding@example.com",
-      "Beryl Prestige Living"
+      "Beryl Shelter Nigeria Limited"
     );
 
     await expect(
@@ -60,13 +62,36 @@ describe("Resend registration OTP mail", () => {
     ).rejects.toThrow("Resend rejected the verification email");
   });
 
+  it("sends a branded password-reset OTP without links or images", async () => {
+    send.mockResolvedValue({ data: { id: "email-id" }, error: null });
+    const service = new ResendMailService(
+      "test-api-key",
+      "onboarding@example.com",
+      "Beryl Shelter Nigeria Limited"
+    );
+
+    await service.sendPasswordResetOtp({
+      to: "customer@example.com",
+      fullName: "Test Customer",
+      otp: "419205",
+      expiresInMinutes: 10
+    });
+
+    const message = send.mock.calls[0][0];
+    expect(message.subject).toBe("Reset your Beryl Shelter password");
+    expect(message.html).toContain("419205");
+    expect(message.html).toContain("Beryl Shelter Nigeria Limited");
+    expect(message.html).not.toContain("<img");
+    expect(message.html).not.toContain("href=");
+  });
+
   it("rejects a Gmail from address", () => {
     expect(
       () =>
         new ResendMailService(
           "test-api-key",
           "beryl@gmail.com",
-          "Beryl Prestige Living"
+          "Beryl Shelter Nigeria Limited"
         )
     ).toThrow("must not use a Gmail sender address");
   });

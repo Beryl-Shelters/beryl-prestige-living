@@ -14,16 +14,36 @@ export const env = {
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || "",
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || "",
 
-  clientWebUrl: process.env.CLIENT_WEB_URL || "http://localhost:3000",
+  clientWebUrl:
+    process.env.PUBLIC_WEB_URL ||
+    process.env.CLIENT_WEB_URL ||
+    "http://localhost:3000",
   clientMobileUrl: process.env.CLIENT_MOBILE_URL || "",
-  apiBaseUrl: process.env.API_BASE_URL || "",
+  apiBaseUrl: process.env.API_PUBLIC_URL || process.env.API_BASE_URL || "",
+  adminWebUrl: process.env.ADMIN_WEB_URL || "",
 
   initialSuperAdminPassword: process.env.INITIAL_SUPER_ADMIN_PASSWORD || "",
   otpSecret: process.env.OTP_HASH_SECRET || "",
   customerSessionTokenSecret: process.env.CUSTOMER_SESSION_TOKEN_SECRET || "",
+  customerAccessTokenSecret:
+    process.env.CUSTOMER_ACCESS_TOKEN_SECRET ||
+    process.env.CUSTOMER_SESSION_TOKEN_SECRET ||
+    "",
+  customerRefreshTokenSecret: process.env.CUSTOMER_REFRESH_TOKEN_SECRET || "",
   adminSessionTokenSecret: process.env.ADMIN_SESSION_TOKEN_SECRET || "",
   customerAccessTokenMinutes: Number(process.env.CUSTOMER_ACCESS_TOKEN_MINUTES || 15),
   customerRefreshTokenDays: Number(process.env.CUSTOMER_REFRESH_TOKEN_DAYS || 30),
+  customerAccessTokenExpiresIn: Number(
+    process.env.CUSTOMER_ACCESS_TOKEN_EXPIRES_IN ||
+      Number(process.env.CUSTOMER_ACCESS_TOKEN_MINUTES || 15) * 60
+  ),
+  customerRefreshTokenExpiresIn: Number(
+    process.env.CUSTOMER_REFRESH_TOKEN_EXPIRES_IN ||
+      Number(process.env.CUSTOMER_REFRESH_TOKEN_DAYS || 30) * 86_400
+  ),
+  customerPasswordResetProofExpiresIn: Number(
+    process.env.CUSTOMER_PASSWORD_RESET_PROOF_EXPIRES_IN || 600
+  ),
   adminAccessTokenMinutes: Number(process.env.ADMIN_ACCESS_TOKEN_MINUTES || 10),
   adminRefreshTokenDays: Number(process.env.ADMIN_REFRESH_TOKEN_DAYS || 7),
   otpExpiryMinutes: Number(process.env.OTP_EXPIRY_MINUTES || 10),

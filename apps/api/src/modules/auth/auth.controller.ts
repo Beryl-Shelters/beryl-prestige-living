@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from "express";
-import { getCurrentUser, loginUser } from "./auth.service";
+import { getCurrentUser } from "./auth.service";
 import { getAuthUserId } from "../../utils/getAuthUserId";
 import { customerRegistrationService } from "../auth-onboarding/customer-registration.runtime";
+import { customerAuthenticationService } from "../auth-onboarding/customer-authentication.runtime";
+import { AppError } from "../../utils/AppError";
 
 
 export const register = async (
@@ -28,8 +30,7 @@ export const login = async (
   next: NextFunction
 ) => {
   try {
-    const { email, password } = req.body;
-    const result = await loginUser(email, password);
+    const result = await customerAuthenticationService.login(req.body);
 
     res.status(200).json({
       success: true,
@@ -47,6 +48,16 @@ export const logout = async (
   next: NextFunction
 ) => {
   try {
+    if (!req.customerSession) {
+      throw new AppError("Customer session was not found", 401, "SESSION_NOT_FOUND");
+    }
+    await customerAuthenticationService.logout(
+      {
+        userId: getAuthUserId(req),
+        sessionId: req.customerSession.id
+      },
+      req.body.refreshToken
+    );
     res.status(200).json({
       success: true,
       message: "Logout successful"
@@ -71,6 +82,101 @@ export const me = async (
         user: req.user,
         profile
       }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const forgotPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const data = await customerAuthenticationService.forgotPassword(req.body.email);
+    res.status(202).json({
+      success: true,
+      message:
+        "If an account exists for this email, password-reset instructions have been sent.",
+      data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyPasswordResetOtp = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const data = await customerAuthenticationService.verifyPasswordResetOtp(
+      req.body
+    );
+    res.status(200).json({
+      success: true,
+      message: "Password reset code verified successfully",
+      data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resetPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const data = await customerAuthenticationService.resetPassword(
+      req.body.resetToken,
+      req.body.newPassword
+    );
+    res.status(200).json({
+      success: true,
+      message: "Password reset successfully. Please log in with your new password.",
+      data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const refreshSession = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const data = await customerAuthenticationService.refresh(req.body.refreshToken);
+    res.status(200).json({
+      success: true,
+      message: "Session refreshed successfully",
+      data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const changePassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const data = await customerAuthenticationService.changePassword(
+      getAuthUserId(req),
+      req.body.currentPassword,
+      req.body.newPassword
+    );
+    res.status(200).json({
+      success: true,
+      message: "Password changed successfully. Please log in again.",
+      data
     });
   } catch (error) {
     next(error);

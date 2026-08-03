@@ -1,8 +1,8 @@
+import { env } from "../../config/env";
 import { supabaseAdmin } from "../../config/supabase";
 import { AppError } from "../../utils/AppError";
 
-const CLIENT_WEB_URL =
-  process.env.CLIENT_WEB_URL || "http://localhost:3000";
+const PUBLIC_WEB_URL = env.clientWebUrl;
 
 export const getReferralDashboard = async (userId: string) => {
   const { data: profile, error: profileError } = await supabaseAdmin
@@ -39,7 +39,7 @@ export const getReferralDashboard = async (userId: string) => {
     referrals_count: referrals?.length || 0,
     properties_sold_count: propertiesSoldCount,
     referral_code: profile.referral_code,
-    referral_link: `${CLIENT_WEB_URL}/register?ref=${profile.referral_code}`
+    referral_link: `${PUBLIC_WEB_URL}/register?ref=${profile.referral_code}`
   };
 };
 
@@ -118,7 +118,7 @@ export const generatePropertyReferralLink = async (
     throw new AppError("Property not found", 404);
   }
 
-  const referralLink = `${CLIENT_WEB_URL}/properties/${propertyId}?ref=${profile.referral_code}`;
+  const referralLink = `${PUBLIC_WEB_URL}/properties/${propertyId}?ref=${profile.referral_code}`;
 
   return {
     property_id: propertyId,
@@ -140,7 +140,7 @@ export const generateSellerReferralLink = async (userId: string) => {
 
   return {
     referral_code: profile.referral_code,
-    referral_link: `${CLIENT_WEB_URL}/register?type=seller&ref=${profile.referral_code}`
+    referral_link: `${PUBLIC_WEB_URL}/register?type=seller&ref=${profile.referral_code}`
   };
 };
 
@@ -175,8 +175,8 @@ export const trackReferral = async (
   }
 
   const referralLink = payload.property_id
-    ? `${CLIENT_WEB_URL}/properties/${payload.property_id}?ref=${payload.referral_code}`
-    : `${CLIENT_WEB_URL}/register?type=${payload.referral_type}&ref=${payload.referral_code}`;
+    ? `${PUBLIC_WEB_URL}/properties/${payload.property_id}?ref=${payload.referral_code}`
+    : `${PUBLIC_WEB_URL}/register?type=${payload.referral_type}&ref=${payload.referral_code}`;
 
   const { data, error } = await supabaseAdmin
     .from("referrals")

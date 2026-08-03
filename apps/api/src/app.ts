@@ -17,7 +17,7 @@ app.use(
   "/api-docs",
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpec as swaggerUi.JsonObject, {
-    customSiteTitle: "Beryl Prestige Living API Docs",
+    customSiteTitle: "Beryl Shelter API Docs",
     swaggerOptions: {
       persistAuthorization: true,
       displayRequestDuration: true,
@@ -63,7 +63,7 @@ app.use(morgan(env.nodeEnv === "production" ? "combined" : "dev"));
 app.get("/", (_req: Request, res: Response) => {
   res.status(200).json({
     success: true,
-    message: "Beryl Prestige Living API is running"
+    message: "Beryl Shelter Nigeria Limited API is running"
   });
 });
 

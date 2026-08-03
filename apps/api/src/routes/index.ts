@@ -14,6 +14,8 @@ import transactionRoutes from "../modules/transaction/transaction.routes";
 import notificationRoutes from "../modules/notification/notification.routes";
 import adminRoutes from "../modules/admin/admin.routes";
 import dashboardRoutes from "../modules/dashboard/dashboard.routes";
+import customerOnboardingRoutes from "../modules/auth-onboarding/customer-onboarding.routes";
+import customerPersonaRoutes from "../modules/auth-onboarding/customer-persona.routes";
 
 
 const router = Router();
@@ -33,5 +35,7 @@ router.use("/transactions", transactionRoutes);
 router.use("/notifications", notificationRoutes);
 router.use("/admin", adminRoutes);
 router.use("/dashboard", dashboardRoutes);
+router.use("/onboarding", customerOnboardingRoutes);
+router.use("/personas", customerPersonaRoutes);
 
 export default router;

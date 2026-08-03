@@ -93,7 +93,7 @@ const components = {
       type: "http",
       scheme: "bearer",
       bearerFormat: "JWT",
-      description: "Supabase JWT access token. Enter the token without the Bearer prefix."
+      description: "Access token for the endpoint's authentication domain. Customer endpoints require a Beryl customer access token; Admin endpoints require an Admin access token. Enter it without the Bearer prefix."
     }
   },
   schemas: {
@@ -111,6 +111,16 @@ const components = {
       {
         success: { type: "boolean", enum: [false], example: false },
         message: { type: "string", enum: ["Validation failed"] },
+        code: {
+          type: "string",
+          enum: [
+            "ONBOARDING_VALIDATION_ERROR",
+            "INVALID_BUDGET_RANGE",
+            "INVALID_PERSONA_TYPE",
+            "PASSWORD_VALIDATION_ERROR",
+            "NEW_PASSWORD_SAME_AS_CURRENT"
+          ]
+        },
         errors: {
           type: "object",
           properties: {
@@ -326,7 +336,156 @@ const components = {
     CustomerRegistrationResult: objectSchema({ verificationRequired: { type: "boolean", enum: [true] }, maskedEmail: { type: "string", example: "c***r@example.com" }, otpLength: { type: "integer", enum: [6] }, resendAvailableIn: { type: "integer", minimum: 1, example: 60 }, nextAction: { type: "string", enum: ["VERIFY_EMAIL"] } }, ["verificationRequired", "maskedEmail", "otpLength", "resendAvailableIn", "nextAction"]),
     CustomerEmailVerificationResult: objectSchema({ accountStatus: { type: "string", enum: ["ACTIVE"] }, emailVerified: { type: "boolean", enum: [true] }, activePersona: { type: "string", enum: ["BUYER", "SELLER_DEVELOPER"] }, personas: { type: "array", items: { type: "string", enum: ["BUYER", "SELLER_DEVELOPER"] } }, onboardingStatus: { type: "string", enum: ["NOT_STARTED"] }, nextAction: { type: "string", enum: ["COMPLETE_BUYER_ONBOARDING", "COMPLETE_SELLER_ONBOARDING"] } }, ["accountStatus", "emailVerified", "activePersona", "personas", "onboardingStatus", "nextAction"]),
     ResendCustomerVerificationResult: objectSchema({ resendAvailableIn: { type: "integer", minimum: 1, example: 60 } }, ["resendAvailableIn"]),
-    LoginRequest: objectSchema({ email: { type: "string", format: "email", example: "ada@example.com" }, password: { type: "string", format: "password", minLength: 1, writeOnly: true, example: "Str0ngPass!" } }, ["email", "password"]),
+    BuyerOnboardingRequest: {
+      oneOf: [
+        objectSchema({ skip: { type: "boolean", enum: [true] } }, ["skip"]),
+        objectSchema(
+          {
+            skip: { type: "boolean", enum: [false], default: false },
+            preferredLocations: {
+              type: "array",
+              minItems: 1,
+              maxItems: 10,
+              uniqueItems: true,
+              items: { type: "string", minLength: 1, maxLength: 120 },
+              description: "Trimmed and deduplicated case-insensitively."
+            },
+            budgetMin: { type: "number", minimum: 0 },
+            budgetMax: {
+              type: "number",
+              minimum: 0,
+              description: "Must be greater than or equal to budgetMin when both are supplied."
+            },
+            currency: {
+              type: "string",
+              enum: ["NGN", "USD", "GBP", "EUR"],
+              default: "NGN"
+            }
+          },
+          ["preferredLocations"]
+        )
+      ],
+      description: "Send either skip=true by itself or the Buyer preference form."
+    },
+    SellerOnboardingRequest: {
+      oneOf: [
+        objectSchema({ skip: { type: "boolean", enum: [true] } }, ["skip"]),
+        objectSchema(
+          {
+            skip: { type: "boolean", enum: [false], default: false },
+            profileType: { type: "string", enum: ["INDIVIDUAL", "BUSINESS"] },
+            companyName: {
+              type: "string",
+              minLength: 2,
+              maxLength: 160,
+              description: "Required when profileType is BUSINESS; ignored for INDIVIDUAL."
+            },
+            companyAddress: {
+              type: "string",
+              minLength: 2,
+              maxLength: 500,
+              description: "Required when profileType is BUSINESS; ignored for INDIVIDUAL."
+            }
+          },
+          ["profileType"]
+        )
+      ],
+      description: "Send either skip=true by itself or the Seller/Developer form. BUSINESS requires companyName and companyAddress."
+    },
+    PersonaTypeRequest: objectSchema(
+      {
+        personaType: {
+          type: "string",
+          enum: ["BUYER", "SELLER_DEVELOPER"]
+        }
+      },
+      ["personaType"]
+    ),
+    PersonaState: objectSchema(
+      {
+        type: { type: "string", enum: ["BUYER", "SELLER_DEVELOPER"] },
+        activated: { type: "boolean" },
+        onboardingStatus: {
+          type: "string",
+          enum: ["NOT_STARTED", "IN_PROGRESS", "COMPLETED"]
+        },
+        isActive: { type: "boolean" },
+        missingOnboardingSteps: { type: "array", items: { type: "string" } },
+        nextAction: { type: "string" }
+      },
+      ["type", "activated", "onboardingStatus"]
+    ),
+    OnboardingStatusResult: objectSchema(
+      {
+        accountStatus: {
+          type: "string",
+          enum: ["PENDING_VERIFICATION", "ACTIVE", "SUSPENDED", "LOCKED"]
+        },
+        emailVerified: { type: "boolean" },
+        activePersona: { type: "string", enum: ["BUYER", "SELLER_DEVELOPER"] },
+        lastActivePersona: { type: "string", enum: ["BUYER", "SELLER_DEVELOPER"] },
+        personas: { type: "array", items: ref("PersonaState") },
+        missingOnboardingSteps: { type: "array", items: { type: "string" } },
+        nextAction: { type: "string" },
+        dashboardAccess: { type: "boolean" }
+      },
+      ["accountStatus", "emailVerified", "activePersona", "lastActivePersona", "personas", "missingOnboardingSteps", "nextAction", "dashboardAccess"]
+    ),
+    BuyerOnboardingResult: objectSchema(
+      {
+        activePersona: { type: "string", enum: ["BUYER"] },
+        onboardingStatus: { type: "string", enum: ["COMPLETED"] },
+        preferredLocations: { type: "array", items: { type: "string" } },
+        budgetMin: { type: "number", nullable: true },
+        budgetMax: { type: "number", nullable: true },
+        currency: { type: "string", enum: ["NGN", "USD", "GBP", "EUR"] },
+        skipped: { type: "boolean" },
+        nextAction: { type: "string", enum: ["OPEN_BUYER_DASHBOARD"] }
+      },
+      ["activePersona", "onboardingStatus", "preferredLocations", "currency", "skipped", "nextAction"]
+    ),
+    SellerOnboardingResult: objectSchema(
+      {
+        activePersona: { type: "string", enum: ["SELLER_DEVELOPER"] },
+        onboardingStatus: { type: "string", enum: ["COMPLETED"] },
+        profileType: { type: "string", enum: ["INDIVIDUAL", "BUSINESS"], nullable: true },
+        companyName: { type: "string", nullable: true },
+        companyAddress: { type: "string", nullable: true },
+        skipped: { type: "boolean" },
+        nextAction: { type: "string", enum: ["OPEN_SELLER_DASHBOARD"] }
+      },
+      ["activePersona", "onboardingStatus", "skipped", "nextAction"]
+    ),
+    PersonaListResult: objectSchema(
+      {
+        activePersona: { type: "string", enum: ["BUYER", "SELLER_DEVELOPER"] },
+        personas: { type: "array", items: ref("PersonaState"), minItems: 2, maxItems: 2 }
+      },
+      ["activePersona", "personas"]
+    ),
+    PersonaMutationResult: objectSchema(
+      {
+        activePersona: { type: "string", enum: ["BUYER", "SELLER_DEVELOPER"] },
+        personas: { type: "array", items: { type: "string", enum: ["BUYER", "SELLER_DEVELOPER"] } },
+        onboardingStatus: { type: "string", enum: ["NOT_STARTED", "IN_PROGRESS", "COMPLETED"] },
+        alreadyActivated: { type: "boolean" },
+        alreadyActive: { type: "boolean" },
+        nextAction: { type: "string" }
+      },
+      ["activePersona", "onboardingStatus", "nextAction"]
+    ),
+    CustomerLoginRequest: objectSchema({ identifier: { type: "string", description: "Normalized email address or E.164 phone number. Nigerian local phone numbers default to +234.", example: "customer@example.com" }, password: { type: "string", format: "password", minLength: 1, writeOnly: true } }, ["identifier", "password"]),
+    ForgotCustomerPasswordRequest: objectSchema({ email: { type: "string", format: "email", description: "Trimmed and normalized to lowercase." } }, ["email"]),
+    VerifyCustomerPasswordResetRequest: objectSchema({ email: { type: "string", format: "email", description: "Trimmed and normalized to lowercase." }, otp: { type: "string", pattern: "^\\d{6}$", writeOnly: true, description: "Six-digit password-reset code delivered by email." } }, ["email", "otp"]),
+    ResetCustomerPasswordRequest: objectSchema({ resetToken: { type: "string", minLength: 32, writeOnly: true, description: "Short-lived, single-use proof returned after OTP verification." }, newPassword: { type: "string", format: "password", minLength: 8, pattern: "^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{8,}$", writeOnly: true }, confirmPassword: { type: "string", format: "password", writeOnly: true, description: "Must match newPassword." } }, ["resetToken", "newPassword", "confirmPassword"]),
+    CustomerRefreshRequest: objectSchema({ refreshToken: { type: "string", minLength: 32, writeOnly: true, description: "Current customer refresh token. Successful refresh rotates this token." } }, ["refreshToken"]),
+    CustomerLogoutRequest: objectSchema({ refreshToken: { type: "string", minLength: 32, writeOnly: true, description: "Refresh token bound to the customer access-token session." } }, ["refreshToken"]),
+    ChangeCustomerPasswordRequest: objectSchema({ currentPassword: { type: "string", format: "password", minLength: 1, writeOnly: true }, newPassword: { type: "string", format: "password", minLength: 8, pattern: "^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{8,}$", writeOnly: true }, confirmPassword: { type: "string", format: "password", writeOnly: true, description: "Must match newPassword." } }, ["currentPassword", "newPassword", "confirmPassword"]),
+    CustomerSessionResult: objectSchema({ accessToken: { type: "string", readOnly: true, description: "Short-lived customer access token." }, refreshToken: { type: "string", readOnly: true, description: "Rotating customer refresh token. Store securely." }, accessTokenExpiresIn: { type: "integer", minimum: 1, description: "Access-token lifetime in seconds." }, refreshTokenExpiresIn: { type: "integer", minimum: 1, description: "Refresh-token lifetime in seconds." } }, ["accessToken", "refreshToken", "accessTokenExpiresIn", "refreshTokenExpiresIn"]),
+    CustomerLoginResult: objectSchema({ user: objectSchema({ id: uuid, fullName: { type: "string" }, email: { type: "string", format: "email" }, phone: { type: "string", nullable: true }, accountStatus: { type: "string", enum: ["ACTIVE"] }, emailVerified: { type: "boolean", enum: [true] } }, ["id", "fullName", "email", "accountStatus", "emailVerified"]), activePersona: { type: "string", enum: ["BUYER", "SELLER_DEVELOPER"] }, personas: { type: "array", items: { type: "object", properties: { type: { type: "string", enum: ["BUYER", "SELLER_DEVELOPER"] }, onboardingStatus: { type: "string", enum: ["NOT_STARTED", "IN_PROGRESS", "COMPLETED"] } }, required: ["type", "onboardingStatus"], additionalProperties: false } }, nextAction: { type: "string" }, accessToken: { type: "string", readOnly: true }, refreshToken: { type: "string", readOnly: true }, accessTokenExpiresIn: { type: "integer", minimum: 1 }, refreshTokenExpiresIn: { type: "integer", minimum: 1 } }, ["user", "activePersona", "personas", "nextAction", "accessToken", "refreshToken", "accessTokenExpiresIn", "refreshTokenExpiresIn"]),
+    ForgotCustomerPasswordResult: objectSchema({ otpLength: { type: "integer", enum: [6] }, resendAvailableIn: { type: "integer", minimum: 1 }, nextAction: { type: "string", enum: ["VERIFY_PASSWORD_RESET_OTP"] } }, ["otpLength", "resendAvailableIn", "nextAction"]),
+    VerifyCustomerPasswordResetResult: objectSchema({ resetToken: { type: "string", readOnly: true, description: "Short-lived single-use password-reset proof." }, expiresIn: { type: "integer", minimum: 1, description: "Reset-proof lifetime in seconds." }, nextAction: { type: "string", enum: ["SET_NEW_PASSWORD"] } }, ["resetToken", "expiresIn", "nextAction"]),
+    SessionsInvalidatedResult: objectSchema({ sessionsInvalidated: { type: "boolean", enum: [true] }, nextAction: { type: "string", enum: ["LOGIN"] } }, ["sessionsInvalidated", "nextAction"]),
     UpdateProfileRequest: objectSchema({ first_name: { type: "string", minLength: 2 }, last_name: { type: "string", minLength: 2 }, phone_number: { type: "string", minLength: 7 }, bio: { type: "string", maxLength: 1000 }, street_address: { type: "string" }, city: { type: "string" }, state: { type: "string" }, country: { type: "string" }, zip_code: { type: "string" }, agency_name: { type: "string" }, company_email: { type: "string", format: "email" }, company_phone_number: { type: "string" }, company_bio: { type: "string", maxLength: 1500 }, company_street_address: { type: "string" }, company_city: { type: "string" }, company_state: { type: "string" }, company_country: { type: "string" }, company_zip_code: { type: "string" } }),
     ChangePasswordRequest: objectSchema({ new_password: { type: "string", format: "password", minLength: 8, writeOnly: true, example: "N3wStr0ngPass!" } }, ["new_password"]),
     PropertyInput: objectSchema({ title: { type: "string", minLength: 3 }, description: { type: "string", minLength: 10 }, category: { type: "string" }, property_type: { type: "string" }, property_subtype: { type: "string" }, listing_purpose: { type: "string" }, price: { type: "number", minimum: 0 }, minimum_down_payment: { type: "number", minimum: 0 }, agency_fee: { type: "number", minimum: 0 }, service_fee: { type: "number", minimum: 0 }, bedrooms: { type: "integer", minimum: 0 }, bathrooms: { type: "integer", minimum: 0 }, toilets: { type: "integer", minimum: 0 }, parking_spaces: { type: "integer", minimum: 0 }, number_of_units: { type: "integer", minimum: 0 }, land_area: { type: "number", minimum: 0 }, land_area_unit: { type: "string" }, year_built: { type: "integer" }, country: { type: "string" }, state: { type: "string" }, city: { type: "string" }, local_government: { type: "string" }, address: { type: "string" }, latitude: { type: "number" }, longitude: { type: "number" }, map_url: { type: "string" }, has_lien: { type: "boolean" }, title_document_type: { type: "string" }, amenities: { type: "array", items: { type: "string" } }, thumbnail_url: { type: "string" } }),
@@ -357,14 +516,149 @@ const components = {
   }
 };
 
+const customerAccessErrors: NonNullable<Endpoint["errorResponses"]> = {
+  "403": {
+    description: "The token is not for a verified, active customer account",
+    message: "Account verification is required",
+    code: "ACCOUNT_VERIFICATION_REQUIRED",
+    examples: {
+      unverified: {
+        summary: "Email verification is still required",
+        message: "Account verification is required",
+        code: "ACCOUNT_VERIFICATION_REQUIRED"
+      },
+      suspended: {
+        summary: "Customer account is suspended",
+        message: "Account is suspended",
+        code: "ACCOUNT_SUSPENDED"
+      },
+      customerOnly: {
+        summary: "Admin or non-customer token rejected",
+        message: "Customer access is required",
+        code: "CUSTOMER_ACCESS_REQUIRED"
+      }
+    }
+  },
+  "423": {
+    description: "The customer account is locked",
+    message: "Account is locked",
+    code: "ACCOUNT_LOCKED"
+  },
+  "503": {
+    description: "Customer onboarding storage or authorization is unavailable",
+    message: "Customer onboarding is temporarily unavailable",
+    code: "ONBOARDING_UNAVAILABLE"
+  }
+};
+
 const endpoints: Endpoint[] = [
-  { method: "get", path: "/health", tag: "Health", summary: "Check API health", description: "Returns API availability and the current server timestamp.", successMessage: "Beryl Prestige Living API is healthy", responseSchema: "StandardSuccessResponse" },
+  { method: "get", path: "/health", tag: "Health", summary: "Check API health", description: "Returns API availability and the current server timestamp.", successMessage: "Beryl Shelter Nigeria Limited API is healthy", responseSchema: "StandardSuccessResponse" },
 
   { method: "post", path: "/auth/register", tag: "Authentication", summary: "Register a customer", description: "Creates a pending customer without a legacy Buyer/Seller role and sends a registration OTP through Resend. Email is lowercased; phone and any separate WhatsApp number are normalized to E.164 with Nigeria as the local-number default. When isWhatsAppNumber is true, phone is persisted as the WhatsApp number. Password and confirmation values are never returned or persisted in profiles.", successStatus: 201, successMessage: "Account created. Check your email for the verification code.", responseSchema: "CustomerRegistrationResult", bodySchema: "RegisterRequest", successExample: { verificationRequired: true, maskedEmail: "c***r@example.com", otpLength: 6, resendAvailableIn: 60, nextAction: "VERIFY_EMAIL" }, errorResponses: { "409": { description: "Normalized email or phone already belongs to an account", message: "An account with this email already exists. Please log in or reset your password.", code: "EMAIL_ALREADY_REGISTERED", examples: { email: { summary: "Email already registered", message: "An account with this email already exists. Please log in or reset your password.", code: "EMAIL_ALREADY_REGISTERED" }, phone: { summary: "Phone already registered", message: "An account with this phone number already exists. Please log in or reset your password.", code: "PHONE_ALREADY_REGISTERED" } } }, "503": { description: "Registration, OTP configuration, or Resend delivery is unavailable", message: "Unable to complete registration", code: "REGISTRATION_UNAVAILABLE", examples: { unavailable: { summary: "Registration infrastructure or delivery unavailable", message: "Unable to complete registration", code: "REGISTRATION_UNAVAILABLE" }, notConfigured: { summary: "OTP verification is not configured", message: "Customer verification is temporarily unavailable", code: "CUSTOMER_AUTH_NOT_CONFIGURED" } } } } },
   { method: "post", path: "/auth/verify-email", tag: "Authentication", summary: "Verify customer registration email", description: "Validates the active six-digit registration OTP. It expires, allows three attempts, and cannot be reused after consumption or replacement. Success atomically confirms the managed Auth email, activates the account, upserts its initial NOT_STARTED persona, and upserts the single Admin Portal customer record.", successMessage: "Email verified successfully", responseSchema: "CustomerEmailVerificationResult", bodySchema: "VerifyCustomerEmailRequest", successExample: { accountStatus: "ACTIVE", emailVerified: true, activePersona: "BUYER", personas: ["BUYER"], onboardingStatus: "NOT_STARTED", nextAction: "COMPLETE_BUYER_ONBOARDING" }, errorResponses: { "400": { description: "OTP is invalid or expired", message: "Invalid verification code", code: "INVALID_OTP", examples: { invalid: { summary: "Incorrect OTP with attempts remaining", message: "Invalid verification code", code: "INVALID_OTP", details: { attemptsRemaining: 2 } }, expired: { summary: "Expired OTP", message: "Verification code has expired", code: "OTP_EXPIRED" } } }, "409": { description: "OTP was consumed or superseded and must be replaced", message: "Verification code is no longer valid. Request a new code.", code: "OTP_NO_LONGER_VALID" }, "429": { description: "Maximum OTP attempts or endpoint rate limit exceeded", message: "Maximum verification attempts exceeded", code: "OTP_ATTEMPTS_EXCEEDED", examples: { attempts: { summary: "Maximum OTP attempts reached", message: "Maximum verification attempts exceeded", code: "OTP_ATTEMPTS_EXCEEDED" }, rateLimit: { summary: "Endpoint rate limit reached", message: "Too many requests, please try again later", code: "RATE_LIMIT_EXCEEDED" } } }, "503": { description: "Verification infrastructure or OTP configuration is unavailable", message: "Unable to verify email", code: "VERIFICATION_UNAVAILABLE", examples: { unavailable: { summary: "Verification infrastructure unavailable", message: "Unable to verify email", code: "VERIFICATION_UNAVAILABLE" }, notConfigured: { summary: "OTP verification is not configured", message: "Customer verification is temporarily unavailable", code: "CUSTOMER_AUTH_NOT_CONFIGURED" } } } } },
   { method: "post", path: "/auth/resend-verification-otp", tag: "Authentication", summary: "Resend customer registration OTP", description: "For an eligible unverified account, invalidates the previous active OTP, resets attempts, and sends a replacement through Resend. Missing or verified accounts receive the same generic 202 response. An eligible account still inside its resend cooldown receives OTP_RESEND_COOLDOWN with retryAfter.", successStatus: 202, successMessage: "If the account is awaiting verification, a new code has been sent.", responseSchema: "ResendCustomerVerificationResult", bodySchema: "ResendCustomerVerificationRequest", successExample: { resendAvailableIn: 60 }, errorResponses: { "429": { description: "Domain resend cooldown or endpoint rate limit exceeded", message: "Please wait before requesting another verification code", code: "OTP_RESEND_COOLDOWN", examples: { cooldown: { summary: "Resend cooldown active", message: "Please wait before requesting another verification code", code: "OTP_RESEND_COOLDOWN", details: { retryAfter: 38 } }, rateLimit: { summary: "Endpoint rate limit reached", message: "Too many requests, please try again later", code: "RATE_LIMIT_EXCEEDED" } } }, "503": { description: "Resend delivery, verification infrastructure, or OTP configuration is unavailable", message: "Unable to process verification request", code: "VERIFICATION_UNAVAILABLE", examples: { mailDelivery: { summary: "Resend delivery failed", message: "Unable to send verification email", code: "MAIL_DELIVERY_FAILED" }, unavailable: { summary: "Verification infrastructure unavailable", message: "Unable to process verification request", code: "VERIFICATION_UNAVAILABLE" }, notConfigured: { summary: "OTP verification is not configured", message: "Customer verification is temporarily unavailable", code: "CUSTOMER_AUTH_NOT_CONFIGURED" } } } } },
-  { method: "post", path: "/auth/login", tag: "Authentication", summary: "Log in", description: "Authenticates email and password and returns Supabase session tokens and the profile.", successMessage: "Login successful", responseSchema: "AuthResponse", bodySchema: "LoginRequest", badRequestMessage: "Invalid login credentials" },
-  { method: "post", path: "/auth/logout", tag: "Authentication", summary: "Log out", description: "Acknowledges logout for the authenticated user. Token invalidation remains client/Supabase managed.", successMessage: "Logout successful", security: "required" },
+
+  {
+    method: "get",
+    path: "/onboarding/status",
+    tag: "Onboarding",
+    summary: "Get resumable customer onboarding status",
+    description: "Returns the verified customer's persisted account, active/last persona, activated persona onboarding states, missing steps, next action, and dashboard eligibility.",
+    successMessage: "Onboarding status fetched successfully",
+    responseSchema: "OnboardingStatusResult",
+    security: "required",
+    successExample: {
+      accountStatus: "ACTIVE",
+      emailVerified: true,
+      activePersona: "BUYER",
+      lastActivePersona: "BUYER",
+      personas: [{ type: "BUYER", onboardingStatus: "NOT_STARTED", activated: true, missingOnboardingSteps: ["PREFERRED_LOCATIONS"] }],
+      missingOnboardingSteps: ["PREFERRED_LOCATIONS"],
+      nextAction: "COMPLETE_BUYER_ONBOARDING",
+      dashboardAccess: false
+    },
+    errorResponses: customerAccessErrors
+  },
+  {
+    method: "patch",
+    path: "/onboarding/buyer",
+    tag: "Onboarding",
+    summary: "Complete or skip Buyer onboarding",
+    description: "Requires an activated Buyer persona. Normal submission upserts one Buyer profile, trims and case-insensitively deduplicates 1–10 locations, validates the optional budget range, defaults currency to NGN, and atomically completes Buyer onboarding. Sending only skip=true completes onboarding without requiring or deleting a Buyer profile. Repeated submissions are idempotent updates.",
+    successMessage: "Buyer profile completed successfully",
+    responseSchema: "BuyerOnboardingResult",
+    bodySchema: "BuyerOnboardingRequest",
+    security: "required",
+    successExample: { activePersona: "BUYER", onboardingStatus: "COMPLETED", preferredLocations: ["Lekki, Lagos", "Ikoyi, Lagos"], budgetMin: 50000000, budgetMax: 150000000, currency: "NGN", skipped: false, nextAction: "OPEN_BUYER_DASHBOARD" },
+    errorResponses: {
+      ...customerAccessErrors,
+      "409": { description: "Buyer persona has not been activated", message: "Buyer persona is not activated", code: "BUYER_PERSONA_NOT_ACTIVE" }
+    }
+  },
+  {
+    method: "patch",
+    path: "/onboarding/seller",
+    tag: "Onboarding",
+    summary: "Complete or skip Seller/Developer onboarding",
+    description: "Requires an activated Seller/Developer persona. BUSINESS requires trimmed companyName and companyAddress; INDIVIDUAL stores company fields as null. Sending only skip=true completes onboarding without creating invalid Seller profile data. The profile/persona/projection update is atomic and idempotent.",
+    successMessage: "Seller profile completed successfully",
+    responseSchema: "SellerOnboardingResult",
+    bodySchema: "SellerOnboardingRequest",
+    security: "required",
+    successExample: { activePersona: "SELLER_DEVELOPER", onboardingStatus: "COMPLETED", profileType: "BUSINESS", companyName: "Beryl Development Company", companyAddress: "Lekki Phase 1, Lagos", skipped: false, nextAction: "OPEN_SELLER_DASHBOARD" },
+    errorResponses: {
+      ...customerAccessErrors,
+      "409": { description: "Seller/Developer persona has not been activated", message: "Seller/Developer persona is not activated", code: "SELLER_PERSONA_NOT_ACTIVE" }
+    }
+  },
+  {
+    method: "get",
+    path: "/personas",
+    tag: "Personas",
+    summary: "Get the customer persona switcher state",
+    description: "Returns both possible customer personas with activation, onboarding, active-selection, and destination state.",
+    successMessage: "Personas fetched successfully",
+    responseSchema: "PersonaListResult",
+    security: "required",
+    successExample: { activePersona: "BUYER", personas: [{ type: "BUYER", activated: true, onboardingStatus: "COMPLETED", isActive: true, nextAction: "OPEN_BUYER_DASHBOARD" }, { type: "SELLER_DEVELOPER", activated: false, onboardingStatus: "NOT_STARTED", isActive: false, nextAction: "ACTIVATE_SELLER_PERSONA" }] },
+    errorResponses: customerAccessErrors
+  },
+  {
+    method: "post",
+    path: "/personas/activate",
+    tag: "Personas",
+    summary: "Activate an additional customer persona",
+    description: "Atomically inserts only a missing Buyer or Seller/Developer persona, preserves every existing persona/profile, sets the requested persona active, and touches the single Admin Portal customer projection. Repeating an activation returns HTTP 200 with code PERSONA_ALREADY_ACTIVE and the current state without duplication.",
+    successMessage: "Persona activated successfully",
+    responseSchema: "PersonaMutationResult",
+    bodySchema: "PersonaTypeRequest",
+    security: "required",
+    successExample: { activePersona: "SELLER_DEVELOPER", personas: ["BUYER", "SELLER_DEVELOPER"], onboardingStatus: "NOT_STARTED", alreadyActivated: false, nextAction: "COMPLETE_SELLER_ONBOARDING" },
+    errorResponses: customerAccessErrors
+  },
+  {
+    method: "patch",
+    path: "/personas/active",
+    tag: "Personas",
+    summary: "Switch the active customer persona",
+    description: "Atomically switches only to an activated persona, updates active_persona and last_active_persona, preserves all persona profiles, touches the existing Admin Portal customer projection, and returns the onboarding or dashboard destination.",
+    successMessage: "Active persona changed successfully",
+    responseSchema: "PersonaMutationResult",
+    bodySchema: "PersonaTypeRequest",
+    security: "required",
+    successExample: { activePersona: "BUYER", onboardingStatus: "COMPLETED", alreadyActive: false, nextAction: "OPEN_BUYER_DASHBOARD" },
+    errorResponses: {
+      ...customerAccessErrors,
+      "409": { description: "Requested persona has not been activated", message: "Persona has not been activated", code: "PERSONA_NOT_ACTIVATED" }
+    }
+  },
+  { method: "post", path: "/auth/login", tag: "Authentication", summary: "Log in a customer", description: "Authenticates a normalized email address or phone number with one generic credential failure, restores the last active persona, and creates a server-tracked customer session. Returns access and refresh tokens from the isolated customer token domain.", successMessage: "Login successful", responseSchema: "CustomerLoginResult", bodySchema: "CustomerLoginRequest", successExample: { user: { id: "550e8400-e29b-41d4-a716-446655440000", fullName: "Test Customer", email: "customer@example.com", phone: "+2348012345678", accountStatus: "ACTIVE", emailVerified: true }, activePersona: "BUYER", personas: [{ type: "BUYER", onboardingStatus: "COMPLETED" }], nextAction: "OPEN_BUYER_DASHBOARD", accessToken: "<customer-access-token>", refreshToken: "<customer-refresh-token>", accessTokenExpiresIn: 900, refreshTokenExpiresIn: 2592000 }, errorResponses: { "401": { description: "Email/phone or password is incorrect", message: "Incorrect email/phone or password", code: "INVALID_CREDENTIALS" }, "403": { description: "Customer email is unverified or account is suspended", message: "Account verification is required", code: "ACCOUNT_VERIFICATION_REQUIRED", examples: { verification: { summary: "Email verification required", message: "Account verification is required", code: "ACCOUNT_VERIFICATION_REQUIRED" }, suspended: { summary: "Account suspended", message: "Account is suspended", code: "ACCOUNT_SUSPENDED" } } }, "423": { description: "Customer account is locked", message: "Account is locked", code: "ACCOUNT_LOCKED" }, "429": { description: "IP and normalized-identifier login limit exceeded", message: "Too many login attempts, please try again later", code: "LOGIN_RATE_LIMITED" }, "503": { description: "Customer session configuration or authentication storage is unavailable", message: "Customer login is temporarily unavailable", code: "LOGIN_UNAVAILABLE" } } },
+  { method: "post", path: "/auth/forgot-password", tag: "Authentication", summary: "Request a password-reset code", description: "Returns the same accepted response whether or not the normalized email exists. For an eligible account, replaces the active reset challenge and emails a six-digit OTP; neither passwords nor OTPs are stored in plaintext.", successStatus: 202, successMessage: "If an account exists for this email, password-reset instructions have been sent.", responseSchema: "ForgotCustomerPasswordResult", bodySchema: "ForgotCustomerPasswordRequest", successExample: { otpLength: 6, resendAvailableIn: 60, nextAction: "VERIFY_PASSWORD_RESET_OTP" }, errorResponses: { "429": { description: "Reset request limit exceeded", message: "Too many requests, please try again later", code: "RATE_LIMIT_EXCEEDED" }, "503": { description: "Password-reset storage, configuration, or mail delivery is unavailable", message: "Password reset is temporarily unavailable", code: "PASSWORD_RESET_UNAVAILABLE", examples: { unavailable: { summary: "Reset infrastructure unavailable", message: "Password reset is temporarily unavailable", code: "PASSWORD_RESET_UNAVAILABLE" }, mail: { summary: "Reset email delivery failed", message: "Unable to send password-reset email", code: "MAIL_DELIVERY_FAILED" } } } } },
+  { method: "post", path: "/auth/verify-password-reset-otp", tag: "Authentication", summary: "Verify a password-reset code", description: "Verifies the active six-digit password-reset OTP with expiry, attempt, consumption, and replacement checks. Success returns a short-lived opaque reset proof; only its hash is stored.", successMessage: "Password reset code verified successfully", responseSchema: "VerifyCustomerPasswordResetResult", bodySchema: "VerifyCustomerPasswordResetRequest", successExample: { resetToken: "<single-use-reset-token>", expiresIn: 600, nextAction: "SET_NEW_PASSWORD" }, errorResponses: { "400": { description: "OTP is invalid or expired", message: "Invalid verification code", code: "INVALID_OTP", examples: { invalid: { summary: "Incorrect OTP", message: "Invalid verification code", code: "INVALID_OTP", details: { attemptsRemaining: 2 } }, expired: { summary: "Expired OTP", message: "Verification code has expired", code: "OTP_EXPIRED" } } }, "409": { description: "OTP is consumed or superseded", message: "Verification code is no longer valid. Request a new code.", code: "OTP_NO_LONGER_VALID" }, "429": { description: "Maximum OTP attempts or endpoint limit exceeded", message: "Maximum verification attempts exceeded", code: "OTP_ATTEMPTS_EXCEEDED" }, "503": { description: "Password-reset infrastructure is unavailable", message: "Password reset is temporarily unavailable", code: "PASSWORD_RESET_UNAVAILABLE" } } },
+  { method: "post", path: "/auth/reset-password", tag: "Authentication", summary: "Reset a customer password", description: "Consumes a verified, unexpired reset proof, updates the managed Auth password, increments the customer's session version, and revokes every customer session atomically. The new password must differ from the current password.", successMessage: "Password reset successfully. Please log in with your new password.", responseSchema: "SessionsInvalidatedResult", bodySchema: "ResetCustomerPasswordRequest", successExample: { sessionsInvalidated: true, nextAction: "LOGIN" }, errorResponses: { "400": { description: "Password policy, confirmation, or same-password check failed", message: "New password must differ from current password", code: "NEW_PASSWORD_SAME_AS_CURRENT" }, "401": { description: "Reset proof is invalid or expired", message: "Invalid password-reset token", code: "INVALID_RESET_TOKEN", examples: { invalid: { summary: "Invalid reset proof", message: "Invalid password-reset token", code: "INVALID_RESET_TOKEN" }, expired: { summary: "Expired reset proof", message: "Password-reset token has expired", code: "RESET_TOKEN_EXPIRED" } } }, "409": { description: "Reset proof was already consumed", message: "Password-reset token has already been used", code: "RESET_TOKEN_USED" }, "503": { description: "Password reset is unavailable", message: "Password reset is temporarily unavailable", code: "PASSWORD_RESET_UNAVAILABLE" } } },
+  { method: "post", path: "/auth/refresh", tag: "Authentication", summary: "Rotate a customer session", description: "Validates the current customer refresh token and atomically replaces its server-tracked session with a new access/refresh token pair. Reuse detection revokes the user's active customer sessions.", successMessage: "Session refreshed successfully", responseSchema: "CustomerSessionResult", bodySchema: "CustomerRefreshRequest", successExample: { accessToken: "<new-customer-access-token>", refreshToken: "<new-customer-refresh-token>", accessTokenExpiresIn: 900, refreshTokenExpiresIn: 2592000 }, errorResponses: { "401": { description: "Refresh token is invalid, expired, revoked, reused, or not backed by a session", message: "Invalid refresh token", code: "INVALID_REFRESH_TOKEN", examples: { invalid: { summary: "Invalid refresh token", message: "Invalid refresh token", code: "INVALID_REFRESH_TOKEN" }, expired: { summary: "Expired refresh token", message: "Refresh token has expired", code: "REFRESH_TOKEN_EXPIRED" }, revoked: { summary: "Revoked refresh token", message: "Refresh token has been revoked", code: "REFRESH_TOKEN_REVOKED" }, reused: { summary: "Refresh-token reuse", message: "Refresh token reuse detected; sessions have been revoked", code: "REFRESH_TOKEN_REUSED" }, missing: { summary: "Session missing", message: "Customer session was not found", code: "SESSION_NOT_FOUND" } } }, "403": { description: "Customer email is unverified or account is suspended", message: "Account verification is required", code: "ACCOUNT_VERIFICATION_REQUIRED" }, "423": { description: "Customer account is locked", message: "Account is locked", code: "ACCOUNT_LOCKED" }, "503": { description: "Session rotation is unavailable", message: "Session refresh is temporarily unavailable", code: "SESSION_REFRESH_UNAVAILABLE" } } },
+  { method: "post", path: "/auth/logout", tag: "Authentication", summary: "Log out a customer session", description: "Requires the customer access token and its bound refresh token. Revokes the current server-tracked session; repeating the same valid logout is idempotent.", successMessage: "Logout successful", security: "required", bodySchema: "CustomerLogoutRequest", errorResponses: { "401": { description: "Customer access token, refresh token, or bound session is invalid", message: "Customer session was not found", code: "SESSION_NOT_FOUND", examples: { access: { summary: "Invalid customer access token", message: "Invalid customer access token", code: "INVALID_ACCESS_TOKEN" }, refresh: { summary: "Invalid refresh token", message: "Invalid refresh token", code: "INVALID_REFRESH_TOKEN" }, session: { summary: "Session missing", message: "Customer session was not found", code: "SESSION_NOT_FOUND" } } }, "503": { description: "Session revocation is unavailable", message: "Logout is temporarily unavailable", code: "LOGOUT_UNAVAILABLE" } } },
+  { method: "patch", path: "/auth/change-password", tag: "Authentication", summary: "Change the current customer's password", description: "Requires a verified active customer session, checks the current password, updates the managed Auth password, increments session version, and revokes every customer session atomically. The new password must differ from the current password.", successMessage: "Password changed successfully. Please log in again.", responseSchema: "SessionsInvalidatedResult", bodySchema: "ChangeCustomerPasswordRequest", security: "required", successExample: { sessionsInvalidated: true, nextAction: "LOGIN" }, errorResponses: { "400": { description: "Password policy, confirmation, or same-password check failed", message: "New password must differ from current password", code: "NEW_PASSWORD_SAME_AS_CURRENT" }, "401": { description: "Customer session is invalid or current password is incorrect", message: "Current password is incorrect", code: "CURRENT_PASSWORD_INCORRECT", examples: { password: { summary: "Incorrect current password", message: "Current password is incorrect", code: "CURRENT_PASSWORD_INCORRECT" }, session: { summary: "Session missing", message: "Customer session was not found", code: "SESSION_NOT_FOUND" }, access: { summary: "Invalid customer access token", message: "Invalid customer access token", code: "INVALID_ACCESS_TOKEN" } } }, "403": { description: "Customer is unverified or suspended", message: "Account verification is required", code: "ACCOUNT_VERIFICATION_REQUIRED" }, "423": { description: "Customer account is locked", message: "Account is locked", code: "ACCOUNT_LOCKED" }, "503": { description: "Password change or customer authorization is unavailable", message: "Password change is temporarily unavailable", code: "PASSWORD_CHANGE_UNAVAILABLE" } } },
   { method: "get", path: "/auth/me", tag: "Authentication", summary: "Get current user", description: "Returns the authenticated Supabase user and profile.", successMessage: "Current user fetched successfully", responseSchema: "UserProfile", security: "required", notFoundMessage: "Profile not found" },
 
   { method: "get", path: "/profiles/me", tag: "Profile", summary: "Get my profile", description: "Returns the authenticated user's profile.", successMessage: "Profile fetched successfully", responseSchema: "UserProfile", security: "required", notFoundMessage: "Profile not found" },
@@ -689,13 +983,13 @@ const options: swaggerJSDoc.OAS3Options = {
   definition: {
     openapi: "3.0.3",
     info: {
-      title: "Beryl Prestige Living API",
+      title: "Beryl Shelter Nigeria Limited API",
       version: "1.0.0",
-      description: "Backend API documentation for the Beryl Prestige Living web and mobile applications."
+      description: "Backend API documentation for the Beryl Shelter Nigeria Limited web and mobile applications."
     },
     servers,
     tags: [
-      "Health", "Authentication", "Profile", "Properties", "Property Images", "Saved Properties", "Analytics",
+      "Health", "Authentication", "Onboarding", "Personas", "Profile", "Properties", "Property Images", "Saved Properties", "Analytics",
       "Referrals", "Inquiries", "Support", "Listings", "Reports", "Mandates", "Transactions", "Notifications",
       "Admin", "Super Admin", "Dashboard"
     ].map((name) => ({ name })),

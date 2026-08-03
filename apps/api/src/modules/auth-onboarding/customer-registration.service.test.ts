@@ -219,6 +219,10 @@ class CapturingMailService implements MailService {
     if (this.shouldFail) throw new Error("Mail provider unavailable");
     this.messages.push({ ...message });
   }
+
+  async sendPasswordResetOtp() {
+    throw new Error("Password-reset mail is not used by registration tests");
+  }
 }
 
 const registrationBody = {

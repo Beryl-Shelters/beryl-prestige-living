@@ -1,7 +1,17 @@
 # Authentication and Onboarding Architecture
 
-Status: foundational design and additive schema scaffold, 28 July 2026. Unmounted
-contracts in `src/modules/auth-onboarding` are not production endpoints.
+Status: additive architecture with the customer registration, verification,
+onboarding, persona, session, recovery, and password vertical slices mounted as
+of 3 August 2026. Admin authentication and staff-management contracts remain
+design-only.
+
+The mounted customer routes use an isolated customer access-token audience,
+server-tracked hashed refresh sessions, rotation/reuse detection, and a verified
+customer guard. Legacy routes that still use Supabase bearer tokens are unchanged.
+
+Product branding: use **Beryl Shelter Nigeria Limited** for formal customer-facing
+contexts and **Beryl Shelter** for compact UI labels. The `berylshelter.com`
+domain configuration is provisional until ownership is confirmed.
 
 ## 1. Current-state summary
 
@@ -14,9 +24,9 @@ contracts in `src/modules/auth-onboarding` are not production endpoints.
   user with `email_confirm: true`, then inserts a `profiles` row. It accepts
   first/last name, optional phone, one mutually exclusive legacy `role`, and
   personal/business profile type.
-- Customer login accepts email/password only and immediately returns the raw
-  Supabase session. Errors expose the provider message. Logout returns success
-  without revoking anything.
+- Customer login accepts a normalized email or phone plus password, returns a
+  custom customer access/refresh pair, and persists only the refresh-token hash.
+  Refresh rotates the session atomically; logout revokes the bound session.
 - `authMiddleware` accepts any valid Supabase access token. `requireRoles` then
   reads `profiles.role`; the same identity, token, middleware, and table protect
   customer and admin routes.
@@ -24,8 +34,10 @@ contracts in `src/modules/auth-onboarding` are not production endpoints.
   supplied password and immediately creates a confirmed, active user in the same
   Supabase/customer identity domain. There is no admin login route, invitation,
   activation, OTP challenge, department, or first-login restriction.
-- Profile password change does not require the current password and does not
-  revoke sessions. Forgot/reset password and refresh endpoints do not exist.
+- The new customer password-change route requires the current password and
+  revokes all customer sessions. Recovery uses a hashed email OTP followed by a
+  short-lived, hashed, single-use reset proof. The legacy profile password route
+  remains unchanged for compatibility.
 - No email service, OTP implementation, database migrations, seed scripts, or
   committed tests existed at inspection time. The database shape can only be
   inferred from queries; it is not reproducible from this repository.
@@ -164,9 +176,12 @@ sequenceDiagram
   A-->>C: dashboard context or next action
 ```
 
-Buyer locations are a non-empty array; currency defaults to NGN. Seller BUSINESS
-requires company name/address; INDIVIDUAL does not. Closing the app does not lose
-state: login computes the next action from stored persona status.
+Buyer locations are a non-empty, trimmed, case-insensitively deduplicated array
+of at most 10 values; currency defaults to NGN. Seller BUSINESS requires company
+name/address; INDIVIDUAL stores both as null. Either onboarding flow may receive
+only `{ "skip": true }`, which completes that persona without deleting it or
+creating invalid profile data. Closing the app does not lose state: the status
+endpoint recomputes the next action from stored persona status.
 
 ## 7. Persona activation and switching
 
@@ -175,17 +190,17 @@ sequenceDiagram
   participant C as Client
   participant A as Customer API
   participant DB as Database
-  C->>A: POST /personas/activate {persona}
+  C->>A: POST /personas/activate {personaType}
   A->>DB: INSERT user_personas ON CONFLICT DO NOTHING
   A->>DB: Set active/last persona; touch same customer record
   A-->>C: personas + persona onboarding action
-  C->>A: PATCH /personas/active {persona}
+  C->>A: PATCH /personas/active {personaType}
   A->>DB: Assert membership then update active/last
   A-->>C: dashboardContext + current persona
 ```
 
 Activation never requests global account fields. Switching to an inactive
-persona is `409 PERSONA_NOT_ACTIVE`. Dashboard contexts are `BUYER_DASHBOARD` and
+persona is `409 PERSONA_NOT_ACTIVATED`. Dashboard contexts are `BUYER_DASHBOARD` and
 `SELLER_DEVELOPER_DASHBOARD`, unless onboarding is pending, in which case the
 onboarding action wins.
 
@@ -319,8 +334,8 @@ refresh token as compromise warranting session-family revocation.
 Logout revokes the current session. Password reset/change and Super Admin reset
 increment version and revoke the required scope. The existing Supabase session
 format remains supported on legacy endpoints during migration, but cannot satisfy
-strong immediate revocation/audience isolation; new auth routes must not be
-mounted until the new middleware exists.
+strong immediate revocation/audience isolation. The mounted customer auth,
+onboarding, and persona routes use the new customer-session middleware.
 
 ## 13. API contracts
 
@@ -340,9 +355,9 @@ should accept an `Idempotency-Key` where noted.
 | `POST /auth/login` | Public; identifier/password | 200 account/personas/current/onboarding/next + tokens | generic credential check; restore last active; create session | 401 generic, 403/409 verification action, 423 locked, 429 |
 | `POST /auth/forgot-password` | Public; email | 202 generic acknowledgement | conditionally replace reset OTP + mail | always enumeration-safe; 429 |
 | `POST /auth/verify-password-reset-otp` | Public; email/OTP | 200 short-lived reset token | consume OTP; store proof hash/expiry | 400/expired, 429; one proof per challenge |
-| `POST /auth/reset-password` | Public; proof/new/confirm | 200 `LOGIN_REQUIRED` | consume proof; set password; bump version; revoke all sessions | 400 policy, 401 proof, 409 used; replay safe |
+| `POST /auth/reset-password` | Public; `resetToken`/`newPassword`/`confirmPassword` | 200 `LOGIN` next action | consume proof; set password; bump version; revoke all sessions | 400 policy, 401 proof, 409 used; replay safe |
 | `POST /auth/refresh` | Customer refresh token | 200 rotated tokens | atomically rotate customer session | 401/409 reuse, 429 |
-| `POST /auth/logout` | Customer access token | 200 | revoke current `customer_sessions` row | idempotent |
+| `POST /auth/logout` | Customer access token + bound `refreshToken` body | 200 | revoke current `customer_sessions` row | idempotent |
 | `PATCH /auth/change-password` | Customer access; current/new/confirm | 200 `LOGIN_REQUIRED` | verify old; set new; bump version; revoke sessions | 400 policy/same, 401 old password, 429 |
 
 ### Customer onboarding/personas
@@ -402,20 +417,35 @@ Registration response example:
 }
 ```
 
-Login additionally returns sanitized account data, `personas` with onboarding
-statuses, `currentPersona`, `dashboardContext`, `nextRequiredAction`,
-`accessToken`, and `refreshToken`.
+Login returns sanitized customer data, persona onboarding states,
+`activePersona`, `nextAction`, `accessToken`, `refreshToken`, and both token
+lifetimes in seconds.
 
 ## 14. Required environment variables
 
-Existing Supabase, Cloudinary, client URL, API URL, port, and Node environment
-variables remain unchanged. Add:
+Existing Supabase, Cloudinary, port, and Node environment variables remain
+unchanged. Public URLs must be configured through environment variables. The
+provisional `berylshelter.com` values require product ownership confirmation:
+
+| Variable | Purpose/default |
+|---|---|
+| `PUBLIC_WEB_URL` | Public web origin; provisional production value `https://berylshelter.com` |
+| `API_PUBLIC_URL` | Public API origin; provisional production value `https://api.berylshelter.com` |
+| `ADMIN_WEB_URL` | Admin web origin; provisional production value `https://admin.berylshelter.com` |
+
+Legacy `CLIENT_WEB_URL` and `API_BASE_URL` values remain supported as fallbacks
+during configuration migration. Add:
 
 | Variable | Purpose/default |
 |---|---|
 | `INITIAL_SUPER_ADMIN_PASSWORD` | Required only for deployment seed; no default |
 | `OTP_HASH_SECRET` | Required high-entropy keyed OTP/reset-proof hashing secret |
-| `CUSTOMER_SESSION_TOKEN_SECRET` | Required customer access-token signing key |
+| `CUSTOMER_ACCESS_TOKEN_SECRET` | Required customer access-token signing key; minimum 32 characters |
+| `CUSTOMER_REFRESH_TOKEN_SECRET` | Required distinct customer refresh-token signing key; minimum 32 characters |
+| `CUSTOMER_ACCESS_TOKEN_EXPIRES_IN` | Access-token lifetime in seconds; 900 |
+| `CUSTOMER_REFRESH_TOKEN_EXPIRES_IN` | Refresh-token lifetime in seconds; 2592000 |
+| `CUSTOMER_PASSWORD_RESET_PROOF_EXPIRES_IN` | Reset-proof lifetime in seconds; 600 |
+| `CUSTOMER_SESSION_TOKEN_SECRET` | Legacy fallback for `CUSTOMER_ACCESS_TOKEN_SECRET` during configuration migration |
 | `ADMIN_SESSION_TOKEN_SECRET` | Required distinct admin access-token signing key |
 | `CUSTOMER_ACCESS_TOKEN_MINUTES` | 15 |
 | `CUSTOMER_REFRESH_TOKEN_DAYS` | 30 |
@@ -427,11 +457,12 @@ variables remain unchanged. Add:
 | `ADMIN_INVITATION_EXPIRY_HOURS` | 24 |
 | `RESEND_API_KEY` | Required production Resend API credential |
 | `RESEND_FROM_EMAIL` | Required verified Resend sender; `onboarding@resend.dev` may be used temporarily in development |
-| `RESEND_FROM_NAME` | Required display name for verification email sender |
+| `RESEND_FROM_NAME` | Required display name for verification email sender; use `Beryl Shelter Nigeria Limited` |
 | `ADMIN_ACTIVATION_URL` | Frontend activation-link base URL |
 
-The mounted registration routes fail safely when `OTP_HASH_SECRET` or Resend
-delivery is not configured; they never report a false OTP delivery success.
+The mounted registration and password-reset routes fail safely when their signing,
+OTP, storage, or Resend configuration is unavailable; they never report false
+delivery success. Customer access and refresh secrets must be different.
 
 ## 15. Migration strategy
 
@@ -446,8 +477,11 @@ delivery is not configured; they never report a false OTP delivery success.
    and must not be guessed.
 4. Populate one `customer_records` row for genuine customers only. Do not project
    legacy admin/support rows.
-5. Implement database RPCs for atomic email verification/persona/customer upsert,
-   OTP attempt consumption, refresh rotation, and version/revocation updates.
+5. Apply `202608030001_customer_onboarding_personas.sql` and
+   `202608030002_customer_authentication_sessions.sql` in staging after the
+   foundation/verification migrations. Review the service-role-only RPC grants,
+   transaction behavior, and managed Auth password update against the target
+   Supabase version before production.
 6. Deploy new routes behind a feature flag, dual-read legacy customers, then
    migrate callers. Keep existing endpoints until compatibility is confirmed.
 7. Run the Super Admin seed once per environment after the migration. Reruns are
@@ -492,14 +526,11 @@ Foundational files already added:
 - `supabase/migrations/202607280001_auth_onboarding_foundation.sql`
 - `src/scripts/seed-super-admin.ts`
 
-Next implementation should add `customer-auth.service/controller/routes.ts`,
-`onboarding.service/controller/routes.ts`, `persona.service/controller/routes.ts`,
-`admin-auth.service/controller/routes.ts`, `admin-users.service/controller/routes.ts`,
-`otp.service.ts`, `session.service.ts`, `password.service.ts`, `mail.service.ts`,
-and separate `customer-auth.middleware.ts`/`admin-auth.middleware.ts`. Update
-`routes/index.ts`, `config/swagger.ts`, and auth-specific rate limiters only when
-those controllers are complete. Existing `auth.*`, `admin.*`, `profile.*`, and
-role middleware need compatibility adapters, not wholesale rewrites.
+Customer registration, onboarding/persona, customer-session, recovery/password,
+mail, Swagger, and rate-limiter implementations now exist. Next implementation
+work is the separate Admin authentication and staff-management slice. Existing
+legacy `auth.*`, `admin.*`, `profile.*`, and role middleware still require
+compatibility adapters rather than wholesale rewrites.
 
 ## 18. Implementation phases
 
@@ -530,6 +561,6 @@ role middleware need compatibility adapters, not wholesale rewrites.
   `/admin/users` is reserved for Admin Portal customer management.
 - Mail provider, template ownership, delivery retry policy, frontend activation
   URL, and whether standard ADMIN may view all admins are not specified.
-- The current Supabase customer token format cannot provide the proposed distinct
-  audience/session-version semantics. Mounting new flows requires the session
-  implementation, not validation scaffolding alone.
+- The migration updates `auth.users.encrypted_password` inside service-role-only
+  transactional RPCs. This preserves atomic session invalidation but requires
+  explicit staging verification against the deployed Supabase Auth version.

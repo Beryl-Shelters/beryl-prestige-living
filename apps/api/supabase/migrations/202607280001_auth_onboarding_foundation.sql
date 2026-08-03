@@ -49,6 +49,29 @@ do $$ begin
   );
 exception when duplicate_object then null; end $$;
 
+-- Normalize existing legacy phone values before enforcing E.164 format.
+update public.profiles
+set phone_number =
+  case
+    when phone_number is null then null
+    when regexp_replace(trim(phone_number), '[\s().-]', '', 'g') like '+%'
+      then regexp_replace(trim(phone_number), '[\s().-]', '', 'g')
+    when regexp_replace(trim(phone_number), '[\s().-]', '', 'g') like '00%'
+      then '+' || substring(
+        regexp_replace(trim(phone_number), '[\s().-]', '', 'g')
+        from 3
+      )
+    when regexp_replace(trim(phone_number), '[\s().-]', '', 'g') like '234%'
+      then '+' || regexp_replace(trim(phone_number), '[\s().-]', '', 'g')
+    when regexp_replace(trim(phone_number), '[\s().-]', '', 'g') like '0%'
+      then '+234' || substring(
+        regexp_replace(trim(phone_number), '[\s().-]', '', 'g')
+        from 2
+      )
+    else '+234' || regexp_replace(trim(phone_number), '[\s().-]', '', 'g')
+  end
+where phone_number is not null;
+
 do $$ begin
   alter table public.profiles add constraint profiles_phone_e164 check (
     phone_number is null or phone_number ~ '^\+[1-9][0-9]{7,14}$'

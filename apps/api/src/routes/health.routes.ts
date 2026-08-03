@@ -5,7 +5,7 @@ const router = Router();
 router.get("/", (_req, res) => {
   res.status(200).json({
     success: true,
-    message: "Beryl Prestige Living API is healthy",
+    message: "Beryl Shelter Nigeria Limited API is healthy",
     timestamp: new Date().toISOString()
   });
 });

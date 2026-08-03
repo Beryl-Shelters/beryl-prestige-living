@@ -69,6 +69,31 @@ select version, name, statements
 from supabase_migrations.schema_migrations
 order by version;
 
+select ns.nspname as function_schema,
+       proc.proname as function_name,
+       pg_get_function_identity_arguments(proc.oid) as identity_arguments,
+       proc.prosecdef as security_definer,
+       has_function_privilege('service_role', proc.oid, 'EXECUTE') as service_role_execute,
+       has_function_privilege('authenticated', proc.oid, 'EXECUTE') as authenticated_execute,
+       has_function_privilege('anon', proc.oid, 'EXECUTE') as anon_execute
+from pg_proc proc
+join pg_namespace ns on ns.oid = proc.pronamespace
+where ns.nspname = 'public'
+  and proc.proname in (
+    'complete_customer_buyer_onboarding',
+    'complete_customer_seller_onboarding',
+    'activate_customer_persona',
+    'switch_customer_active_persona',
+    'create_customer_session',
+    'rotate_customer_session',
+    'revoke_customer_session',
+    'replace_customer_password_reset_otp',
+    'verify_customer_password_reset_otp',
+    'finalize_customer_password_reset',
+    'change_customer_password'
+  )
+order by proc.proname;
+
 select lower(trim(email)) as normalized_email, count(*)
 from public.profiles
 group by lower(trim(email))
