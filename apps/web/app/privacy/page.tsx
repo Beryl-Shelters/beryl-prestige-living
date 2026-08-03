@@ -1,0 +1,1 @@
+export default function PrivacyPage() { return <main className="dashboard-placeholder"><section className="dashboard-card"><h1 className="page-title">Privacy Policy</h1><p className="page-copy">The customer-facing Privacy Policy will be published here before launch.</p></section></main>; }

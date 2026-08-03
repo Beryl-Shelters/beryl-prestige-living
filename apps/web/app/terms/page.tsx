@@ -1,0 +1,1 @@
+export default function TermsPage() { return <main className="dashboard-placeholder"><section className="dashboard-card"><h1 className="page-title">Terms and Conditions</h1><p className="page-copy">The customer-facing Terms and Conditions will be published here before launch.</p></section></main>; }
