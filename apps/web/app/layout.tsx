@@ -9,6 +9,15 @@ export const metadata: Metadata = {
   title: { default: "Beryl Shelter", template: "%s | Beryl Shelter" },
   description: "Customer authentication and onboarding for Beryl Shelter Nigeria Limited.",
   applicationName: "Beryl Shelter",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/brand/favicon.ico" },
+      { url: "/brand/favicon-16x16.png", type: "image/png", sizes: "16x16" },
+      { url: "/brand/favicon-32x32.png", type: "image/png", sizes: "32x32" }
+    ],
+    apple: [{ url: "/brand/apple-touch-icon.png", type: "image/png", sizes: "180x180" }]
+  },
   robots: { index: false, follow: false }
 };
 

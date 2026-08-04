@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -11,11 +11,12 @@ describe("web authentication architecture", () => {
   const client = source("lib/api/client.ts");
   const proxy = source("proxy.ts");
   const css = source("app/globals.css");
+  const authProvider = source("context/auth-provider.tsx");
 
   it("connects every approved customer endpoint", () => {
-    for (const endpoint of ["auth/register", "auth/verify-email", "auth/resend-verification-otp", "auth/login", "auth/forgot-password", "auth/verify-password-reset-otp", "auth/reset-password", "auth/refresh", "auth/logout", "auth/change-password", "onboarding/status", "onboarding/buyer", "onboarding/seller", "personas", "personas/activate", "personas/active"]) {
-      expect(bridge).toContain(endpoint);
-      expect(client).toContain(endpoint);
+    for (const [browserPath, upstreamPath] of [["/register", "auth/register"], ["/verify-email", "auth/verify-email"], ["/resend-verification-otp", "auth/resend-verification-otp"], ["/login", "auth/login"], ["/forgot-password", "auth/forgot-password"], ["/verify-password-reset-otp", "auth/verify-password-reset-otp"], ["/reset-password", "auth/reset-password"], ["/refresh", "auth/refresh"], ["/logout", "auth/logout"], ["/change-password", "auth/change-password"], ["/onboarding/status", "onboarding/status"], ["/onboarding/buyer", "onboarding/buyer"], ["/onboarding/seller", "onboarding/seller"], ["/personas", "personas"], ["/personas/activate", "personas/activate"], ["/personas/active", "personas/active"]]) {
+      expect(bridge).toContain(upstreamPath);
+      expect(client).toContain(browserPath);
     }
   });
 
@@ -23,6 +24,19 @@ describe("web authentication architecture", () => {
     expect(cookies).toContain("httpOnly: true");
     expect(cookies).toContain("sameSite: \"lax\"");
     expect(client).not.toMatch(/localStorage/i);
+  });
+
+  it("never includes the signup password in persisted flow state", () => {
+    const persistFunction = authProvider.slice(authProvider.indexOf("const persist"), authProvider.indexOf("const setPendingSignup"));
+    expect(persistFunction).toContain("sessionStorage.setItem");
+    expect(persistFunction).not.toMatch(/password/i);
+  });
+
+  it("contains no old customer-facing brand name in scoped web sources", () => {
+    const files = ["README.md", ...["app", "components"].flatMap((directory) => readdirSync(directory, { recursive: true, withFileTypes: true })
+      .filter((entry) => entry.isFile() && /\.(?:ts|tsx|md)$/.test(entry.name))
+      .map((entry) => join(entry.parentPath, entry.name)))];
+    expect(files.map(source).join("\n")).not.toMatch(/Beryl Prestige Living/i);
   });
 
   it("bridges refresh-token rotation and retries protected requests", () => {

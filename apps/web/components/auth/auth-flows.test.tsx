@@ -73,8 +73,8 @@ describe("customer authentication screens", () => {
     const user = await completeSignup();
     await user.clear(screen.getByLabelText(/confirm password/i));
     await user.type(screen.getByLabelText(/confirm password/i), "Different123!");
-    await user.click(screen.getByRole("button", { name: /create account/i }));
     expect(await screen.findByText(/passwords do not match/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /create account/i })).toBeDisabled();
   });
 
   it("updates password-strength states", async () => {
@@ -91,6 +91,16 @@ describe("customer authentication screens", () => {
     const user = await completeSignup();
     await user.click(screen.getByRole("button", { name: /create account/i }));
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/verify-email"));
+    expect(mocks.register.mock.calls[0]?.[0]).toEqual({
+      fullName: "Test Customer",
+      email: "customer@example.com",
+      phone: "+2348012345678",
+      isWhatsAppNumber: true,
+      whatsAppNumber: "+2348012345678",
+      gettingStartedAs: "FIND_PROPERTY",
+      password: "Password123!",
+      confirmPassword: "Password123!"
+    });
     expect(mocks.setPendingSignup).toHaveBeenCalledWith(expect.objectContaining({ intent: "FIND_PROPERTY", password: "Password123!" }));
   });
 
@@ -117,12 +127,12 @@ describe("customer authentication screens", () => {
     await userEvent.type(screen.getByLabelText(/^password$/i), "Password123!");
     await userEvent.click(screen.getByRole("button", { name: /^log in$/i }));
     await waitFor(() => expect(mocks.login).toHaveBeenCalled());
-    expect(mocks.login.mock.calls[0][0]).toBe(identifier.includes("@") ? identifier : "+2348012345678");
+    expect(mocks.login).toHaveBeenCalledWith(identifier.includes("@") ? identifier : "+2348012345678", "Password123!");
   });
 
   it.each([
     ["INVALID_CREDENTIALS", "That email/phone or password is not right."],
-    ["LOGIN_RATE_LIMITED", "Too many attempts. Please wait a few minutes, then try again."]
+    ["LOGIN_RATE_LIMITED", "Too many attempts. Try again later or reset your password."]
   ])("renders %s login state", async (code, expected) => {
     mocks.login.mockRejectedValue(apiFailure(code, "unsafe provider text"));
     renderWithQuery(<LoginScreen />);

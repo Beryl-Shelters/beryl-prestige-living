@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import type { ApiSuccess, CustomerSessionState } from "@/lib/contracts";
+import { ApiConfigurationError, backendApiUrl } from "@/lib/server/api-url";
 import { clearSessionCookies, SESSION_COOKIES, setSessionCookies } from "@/lib/server/session-cookies";
 
 type Context = { params: Promise<{ path: string[] }> };
@@ -11,23 +12,23 @@ type BackendLoginData = CustomerSessionState & {
   refreshTokenExpiresIn: number;
 };
 
-const allowed = new Set([
-  "POST auth/register",
-  "POST auth/verify-email",
-  "POST auth/resend-verification-otp",
-  "POST auth/login",
-  "POST auth/forgot-password",
-  "POST auth/verify-password-reset-otp",
-  "POST auth/reset-password",
-  "POST auth/refresh",
-  "POST auth/logout",
-  "PATCH auth/change-password",
-  "GET onboarding/status",
-  "PATCH onboarding/buyer",
-  "PATCH onboarding/seller",
-  "GET personas",
-  "POST personas/activate",
-  "PATCH personas/active"
+const upstreamPaths = new Map([
+  ["POST register", "auth/register"],
+  ["POST verify-email", "auth/verify-email"],
+  ["POST resend-verification-otp", "auth/resend-verification-otp"],
+  ["POST login", "auth/login"],
+  ["POST forgot-password", "auth/forgot-password"],
+  ["POST verify-password-reset-otp", "auth/verify-password-reset-otp"],
+  ["POST reset-password", "auth/reset-password"],
+  ["POST refresh", "auth/refresh"],
+  ["POST logout", "auth/logout"],
+  ["PATCH change-password", "auth/change-password"],
+  ["GET onboarding/status", "onboarding/status"],
+  ["PATCH onboarding/buyer", "onboarding/buyer"],
+  ["PATCH onboarding/seller", "onboarding/seller"],
+  ["GET personas", "personas"],
+  ["POST personas/activate", "personas/activate"],
+  ["PATCH personas/active", "personas/active"]
 ]);
 
 const protectedPaths = new Set([
@@ -41,10 +42,8 @@ const protectedPaths = new Set([
   "personas/active"
 ]);
 
-const apiBase = () => (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1").replace(/\/$/, "");
-
 const backendFetch = (path: string, method: string, body: unknown, accessToken?: string) =>
-  fetch(`${apiBase()}/${path}`, {
+  fetch(backendApiUrl(path), {
     method,
     cache: "no-store",
     headers: {
@@ -70,9 +69,15 @@ const refreshSession = async (refreshToken: string) => {
   return { response, payload };
 };
 
-const handle = async (request: NextRequest, context: Context) => {
-  const path = (await context.params).path.join("/");
-  if (!allowed.has(`${request.method} ${path}`)) {
+const upstreamNotFound = (method: string, path: string) => {
+  console.warn(`[customer-bff] upstream 404 ${method} ${backendApiUrl(path)}`);
+  return NextResponse.json({ success: false, message: "The authentication service route could not be reached.", code: "UPSTREAM_ROUTE_NOT_FOUND" }, { status: 502 });
+};
+
+const handleRequest = async (request: NextRequest, context: Context) => {
+  const browserPath = (await context.params).path.join("/");
+  const path = upstreamPaths.get(`${request.method} ${browserPath}`);
+  if (!path) {
     return NextResponse.json({ success: false, message: "Route not found" }, { status: 404 });
   }
 
@@ -84,6 +89,7 @@ const handle = async (request: NextRequest, context: Context) => {
   if (path === "auth/refresh") {
     if (!refreshToken) return NextResponse.json({ success: false, message: "Session not found", code: "SESSION_NOT_FOUND" }, { status: 401 });
     const refreshed = await refreshSession(refreshToken);
+    if (refreshed.response.status === 404) return upstreamNotFound("POST", "auth/refresh");
     if (!refreshed.response.ok) return NextResponse.json(refreshed.payload, { status: refreshed.response.status });
     const tokenData = refreshed.payload.data as BackendLoginData;
     const next = NextResponse.json({ success: true, message: refreshed.payload.message, data: { refreshed: true } });
@@ -101,6 +107,7 @@ const handle = async (request: NextRequest, context: Context) => {
 
   let backend = await backendFetch(path, request.method, body, protectedPaths.has(path) ? accessToken : undefined);
   let payload = await backend.json();
+  if (backend.status === 404) return upstreamNotFound(request.method, path);
 
   if (backend.status === 401 && protectedPaths.has(path) && path !== "auth/logout" && refreshToken) {
     const refreshed = await refreshSession(refreshToken);
@@ -109,6 +116,7 @@ const handle = async (request: NextRequest, context: Context) => {
       accessToken = tokenData.accessToken;
       backend = await backendFetch(path, request.method, body, accessToken);
       payload = await backend.json();
+      if (backend.status === 404) return upstreamNotFound(request.method, path);
       const retried = NextResponse.json(payload, { status: backend.status });
       const currentState = cookieStore.get(SESSION_COOKIES.state)?.value;
       setSessionCookies(retried, { ...tokenData, state: currentState ? JSON.parse(currentState) : undefined });
@@ -139,11 +147,22 @@ const handle = async (request: NextRequest, context: Context) => {
 
   const response = NextResponse.json(payload, { status: backend.status });
   if (path === "auth/logout") clearSessionCookies(response);
-  if (path === "auth/reset-password" && backend.ok) {
-    response.cookies.delete(SESSION_COOKIES.resetProof);
+  if (backend.ok && (path === "auth/reset-password" || path === "auth/change-password")) {
+    if (path === "auth/reset-password") response.cookies.delete(SESSION_COOKIES.resetProof);
     clearSessionCookies(response);
   }
   return response;
+};
+
+const handle = async (request: NextRequest, context: Context) => {
+  try {
+    return await handleRequest(request, context);
+  } catch (error) {
+    if (error instanceof ApiConfigurationError) {
+      return NextResponse.json({ success: false, message: error.message, code: "API_CONFIGURATION_ERROR" }, { status: 500 });
+    }
+    return NextResponse.json({ success: false, message: "We could not connect to the service. Please try again.", code: "UPSTREAM_UNAVAILABLE" }, { status: 503 });
+  }
 };
 
 export const GET = handle;

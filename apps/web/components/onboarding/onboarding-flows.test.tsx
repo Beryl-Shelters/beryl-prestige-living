@@ -37,6 +37,28 @@ describe("customer onboarding screens", () => {
     expect(screen.queryByLabelText("Selected locations")).not.toBeInTheDocument();
   });
 
+  it("hides the location search icon while typing and restores it when empty", async () => {
+    renderWithQuery(<BuyerOnboardingScreen />);
+    const search = screen.getByRole("combobox", { name: /select your preferred location/i });
+    expect(screen.getByTestId("location-search-icon")).toBeInTheDocument();
+    await userEvent.type(search, "Ikeja");
+    expect(screen.queryByTestId("location-search-icon")).not.toBeInTheDocument();
+    await userEvent.clear(search);
+    expect(screen.getByTestId("location-search-icon")).toBeInTheDocument();
+  });
+
+  it("updates both budget prefixes when the selected currency changes", async () => {
+    const { container } = renderWithQuery(<BuyerOnboardingScreen />);
+    const prefixes = () => Array.from(container.querySelectorAll(".input-prefix"), (prefix) => prefix.textContent);
+    expect(prefixes()).toEqual(["₦", "₦"]);
+    await userEvent.selectOptions(screen.getByLabelText("Currency"), "USD");
+    expect(prefixes()).toEqual(["$", "$"]);
+    await userEvent.type(screen.getByLabelText("Minimum"), "5000000");
+    await userEvent.type(screen.getByLabelText("Maximum"), "10000000");
+    expect(screen.getByLabelText("Minimum")).toHaveValue("5000000");
+    expect(screen.getByLabelText("Maximum")).toHaveValue("10000000");
+  });
+
   it("validates that maximum buyer budget is not below minimum", async () => {
     renderWithQuery(<BuyerOnboardingScreen />);
     await userEvent.click(screen.getByRole("button", { name: /victoria island, lagos/i }));

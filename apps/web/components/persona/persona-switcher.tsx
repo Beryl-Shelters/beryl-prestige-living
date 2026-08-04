@@ -43,7 +43,7 @@ export function PersonaSwitcher({ open, onClose }: { open: boolean; onClose: () 
 
   if (!open) return null;
   const activePersona = query.data?.data.activePersona;
-  const personas = query.data?.data.personas ?? ([{ type: "BUYER", activated: activePersona === "BUYER" }, { type: "SELLER_DEVELOPER", activated: activePersona === "SELLER_DEVELOPER" }] as PersonaState[]);
+  const personas = query.data?.data.personas ?? (query.isLoading ? [] : ([{ type: "BUYER", activated: activePersona === "BUYER" }, { type: "SELLER_DEVELOPER", activated: activePersona === "SELLER_DEVELOPER" }] as PersonaState[]));
   const act = async (persona: PersonaState) => {
     setError("");
     try {
