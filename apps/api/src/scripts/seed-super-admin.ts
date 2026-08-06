@@ -2,8 +2,6 @@ import { randomBytes, scryptSync } from "node:crypto";
 import { env } from "../config/env";
 import { supabaseAdmin } from "../config/supabase";
 
-const INITIAL_SUPER_ADMIN_EMAIL = "berylsshelter@gmail.com";
-
 const hashPassword = (password: string) => {
   const salt = randomBytes(16);
   const hash = scryptSync(password, salt, 64);
@@ -28,7 +26,7 @@ const seedInitialSuperAdmin = async () => {
   const { data: existing, error: lookupError } = await supabaseAdmin
     .from("admins")
     .select("id")
-    .eq("email", INITIAL_SUPER_ADMIN_EMAIL)
+    .eq("email", env.initialSuperAdminEmail.trim().toLowerCase())
     .maybeSingle();
 
   if (lookupError) throw lookupError;
@@ -39,7 +37,7 @@ const seedInitialSuperAdmin = async () => {
 
   const { error } = await supabaseAdmin.from("admins").insert({
     full_name: "Beryl Shelter Super Admin",
-    email: INITIAL_SUPER_ADMIN_EMAIL,
+    email: env.initialSuperAdminEmail.trim().toLowerCase(),
     department: "MANAGEMENT",
     admin_role: "SUPER_ADMIN",
     status: "ACTIVE",

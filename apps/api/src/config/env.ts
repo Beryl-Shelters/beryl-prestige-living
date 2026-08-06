@@ -21,7 +21,11 @@ export const env = {
   clientMobileUrl: process.env.CLIENT_MOBILE_URL || "",
   apiBaseUrl: process.env.API_PUBLIC_URL || process.env.API_BASE_URL || "",
   adminWebUrl: process.env.ADMIN_WEB_URL || "",
+  adminActivationUrl: process.env.ADMIN_ACTIVATION_URL || "",
+  adminInvitationTokenSecret: process.env.ADMIN_INVITATION_TOKEN_SECRET || "",
 
+  initialSuperAdminEmail:
+    process.env.INITIAL_SUPER_ADMIN_EMAIL || "berylsshelter@gmail.com",
   initialSuperAdminPassword: process.env.INITIAL_SUPER_ADMIN_PASSWORD || "",
   otpSecret: process.env.OTP_HASH_SECRET || "",
   customerSessionTokenSecret: process.env.CUSTOMER_SESSION_TOKEN_SECRET || "",
@@ -31,6 +35,8 @@ export const env = {
     "",
   customerRefreshTokenSecret: process.env.CUSTOMER_REFRESH_TOKEN_SECRET || "",
   adminSessionTokenSecret: process.env.ADMIN_SESSION_TOKEN_SECRET || "",
+  adminAccessTokenSecret: process.env.ADMIN_ACCESS_TOKEN_SECRET || "",
+  adminRefreshTokenSecret: process.env.ADMIN_REFRESH_TOKEN_SECRET || "",
   customerAccessTokenMinutes: Number(process.env.CUSTOMER_ACCESS_TOKEN_MINUTES || 15),
   customerRefreshTokenDays: Number(process.env.CUSTOMER_REFRESH_TOKEN_DAYS || 30),
   customerAccessTokenExpiresIn: Number(
@@ -46,6 +52,16 @@ export const env = {
   ),
   adminAccessTokenMinutes: Number(process.env.ADMIN_ACCESS_TOKEN_MINUTES || 10),
   adminRefreshTokenDays: Number(process.env.ADMIN_REFRESH_TOKEN_DAYS || 7),
+  adminAccessTokenExpiresIn: Number(
+    process.env.ADMIN_ACCESS_TOKEN_EXPIRES_IN || 900
+  ),
+  adminRefreshTokenExpiresIn: Number(
+    process.env.ADMIN_REFRESH_TOKEN_EXPIRES_IN || 2_592_000
+  ),
+  adminInvitationExpiresIn: Number(process.env.ADMIN_INVITATION_EXPIRES_IN_SECONDS || process.env.ADMIN_INVITATION_EXPIRES_IN || 86_400),
+  adminActivationOtpExpiryMinutes: Number(process.env.ADMIN_ACTIVATION_OTP_EXPIRY_MINUTES || 10),
+  adminActivationOtpMaxAttempts: Number(process.env.ADMIN_ACTIVATION_OTP_MAX_ATTEMPTS || 3),
+  adminActivationOtpResendCooldownSeconds: Number(process.env.ADMIN_ACTIVATION_OTP_RESEND_COOLDOWN_SECONDS || 60),
   otpExpiryMinutes: Number(process.env.OTP_EXPIRY_MINUTES || 10),
   otpMaxAttempts: Number(process.env.OTP_MAX_ATTEMPTS || 3),
   otpResendCooldownSeconds: Number(process.env.OTP_RESEND_COOLDOWN_SECONDS || 60),

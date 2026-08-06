@@ -36,3 +36,13 @@ export const passwordResetVerificationRateLimiter = authLimiter(10);
 export const passwordResetRateLimiter = authLimiter(5);
 export const sessionRefreshRateLimiter = authLimiter(30);
 export const passwordChangeRateLimiter = authLimiter(5);
+export const adminLoginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `${ipKeyGenerator(req.ip || "unknown")}:${String(req.body?.email ?? "").toLowerCase()}`,
+  message: { success: false, message: "Too many Admin login attempts, please try again later", code: "ADMIN_LOGIN_RATE_LIMITED" }
+});
+export const adminOtpRateLimiter = authLimiter(10, "ADMIN_LOGIN_RATE_LIMITED");
+export const adminInvitationRateLimiter = authLimiter(5, "ADMIN_INVITATION_COOLDOWN");

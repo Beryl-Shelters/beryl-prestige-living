@@ -325,6 +325,16 @@ const components = {
       additionalProperties: true
     },
     Admin: { allOf: [ref("UserProfile")], description: "Profile with an admin or support role." },
+    AdminStaff: objectSchema({ id: uuid, fullName: { type: "string" }, email: { type: "string", format: "email" }, phone: nullableString, department: { type: "string", enum: ["TECH", "MANAGEMENT"] }, role: { type: "string", enum: ["ADMIN", "SUPER_ADMIN"] }, status: { type: "string", enum: ["PENDING", "ACTIVE", "SUSPENDED", "LOCKED"] }, requiresPasswordChange: { type: "boolean" } }, ["id", "fullName", "email", "department", "role", "status"]),
+    AdminInvitationRequest: objectSchema({ fullName: { type: "string", minLength: 2 }, email: { type: "string", format: "email" }, phone: { type: "string", example: "+2348012345678" }, department: { type: "string", enum: ["TECH", "MANAGEMENT"] }, adminRole: { type: "string", enum: ["ADMIN", "SUPER_ADMIN"] } }, ["fullName", "email", "department", "adminRole"]),
+    AdminActivationRequest: objectSchema({ invitationToken: { type: "string", writeOnly: true, description: "Token from the invitation link; never log it." }, temporaryPassword: { type: "string", format: "password", writeOnly: true } }, ["invitationToken", "temporaryPassword"]),
+    AdminOtpVerificationRequest: objectSchema({ challengeId: uuid, otp: { type: "string", pattern: "^[0-9]{6}$", writeOnly: true, example: "123456" } }, ["challengeId", "otp"]),
+    AdminResendOtpRequest: objectSchema({ challengeId: uuid }, ["challengeId"]),
+    AdminSetPasswordRequest: objectSchema({ setupToken: { type: "string", writeOnly: true }, newPassword: { type: "string", format: "password", writeOnly: true, minLength: 8 }, confirmPassword: { type: "string", format: "password", writeOnly: true, minLength: 8 } }, ["setupToken", "newPassword", "confirmPassword"]),
+    AdminLoginRequest: objectSchema({ email: { type: "string", format: "email" }, password: { type: "string", format: "password", writeOnly: true } }, ["email", "password"]),
+    AdminRefreshRequest: objectSchema({ refreshToken: { type: "string", writeOnly: true, description: "Admin refresh token. Never log it." } }, ["refreshToken"]),
+    AdminChangePasswordRequest: objectSchema({ currentPassword: { type: "string", format: "password", writeOnly: true }, newPassword: { type: "string", format: "password", writeOnly: true }, confirmPassword: { type: "string", format: "password", writeOnly: true } }, ["currentPassword", "newPassword", "confirmPassword"]),
+    AdminStatusRequest: objectSchema({ status: { type: "string", enum: ["ACTIVE", "SUSPENDED", "LOCKED"] } }, ["status"]),
     DashboardSummary: { type: "object", additionalProperties: true, description: "Dashboard counters and recent activity computed by the dashboard service." },
     AnalyticsOverview: { type: "object", additionalProperties: true, description: "Property view, share, save, and publication analytics." },
     AuditLog: { type: "object", properties: { id: uuid, actor_id: uuid, action: { type: "string" }, metadata: { type: "object", additionalProperties: true }, created_at: dateTime }, additionalProperties: true },
@@ -761,6 +771,12 @@ const endpoints: Endpoint[] = [
   { method: "get", path: "/dashboard/recent-messages", tag: "Dashboard", summary: "Get recent messages", description: "Returns the authenticated user's recent support and inquiry messages.", successMessage: "Recent messages fetched successfully", responseSchema: "DashboardSummary", security: "required" },
   { method: "get", path: "/dashboard/recent-properties", tag: "Dashboard", summary: "Get recent properties", description: "Returns recently relevant properties for the authenticated user.", successMessage: "Recent properties fetched successfully", responseSchema: "Property", security: "required" },
   { method: "get", path: "/dashboard/admin-summary", tag: "Dashboard", summary: "Get admin dashboard summary", description: "Returns platform dashboard totals. Admin or Super Admin only.", successMessage: "Admin dashboard summary fetched successfully", responseSchema: "DashboardSummary", security: "required", roles: ["admin", "super_admin"] }
+  ,{ method: "post", path: "/admin/staff/invite", tag: "Admin Staff Management", summary: "Invite an Admin staff member", description: "Active Super Admin only. Creates a pending Admin and sends a branded, one-time activation invitation. Tokens and temporary passwords are never returned.", successStatus: 201, successMessage: "Admin invitation sent successfully", security: "required", roles: ["SUPER_ADMIN"], bodySchema: "AdminInvitationRequest" }
+  ,{ method: "post", path: "/admin/staff/{adminId}/resend-invitation", tag: "Admin Staff Management", summary: "Resend an Admin invitation", description: "Active Super Admin only. Invalidates the previous pending invitation after the cooldown.", successStatus: 202, successMessage: "Admin invitation resent successfully", security: "required", roles: ["SUPER_ADMIN"], pathParams: [{ name: "adminId", description: "Admin UUID." }] }
+  ,{ method: "post", path: "/admin/auth/activate", tag: "Admin Authentication", summary: "Start invited Admin activation", description: "Accepts the invitation token and temporary password, then sends the activation OTP. It never creates an Admin session.", successStatus: 202, successMessage: "Activation code sent successfully", bodySchema: "AdminActivationRequest" }
+  ,{ method: "post", path: "/admin/auth/resend-activation-otp", tag: "Admin Authentication", summary: "Resend activation OTP", description: "Replaces the pending activation OTP after its cooldown; no session is created.", successStatus: 202, successMessage: "Activation code resent successfully", bodySchema: "AdminResendOtpRequest" }
+  ,{ method: "post", path: "/admin/auth/verify-activation-otp", tag: "Admin Authentication", summary: "Verify Admin activation OTP", description: "Returns a short-lived, single-use setup token. It does not activate the account or create a session.", successMessage: "Activation code verified successfully", bodySchema: "AdminOtpVerificationRequest" }
+  ,{ method: "post", path: "/admin/auth/set-password", tag: "Admin Authentication", summary: "Complete Admin activation", description: "Consumes the setup token, sets the permanent password, marks the invitation used, and activates the Admin. Normal Admin login is not part of this slice.", successMessage: "Admin account activated successfully", bodySchema: "AdminSetPasswordRequest" }
 ];
 
 const successResponse = (endpoint: Endpoint) => ({
@@ -991,7 +1007,7 @@ const options: swaggerJSDoc.OAS3Options = {
     tags: [
       "Health", "Authentication", "Onboarding", "Personas", "Profile", "Properties", "Property Images", "Saved Properties", "Analytics",
       "Referrals", "Inquiries", "Support", "Listings", "Reports", "Mandates", "Transactions", "Notifications",
-      "Admin", "Super Admin", "Dashboard"
+      "Admin", "Super Admin", "Dashboard", "Admin Authentication", "Admin Staff Management"
     ].map((name) => ({ name })),
     components,
     paths
