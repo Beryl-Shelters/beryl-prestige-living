@@ -10,6 +10,7 @@ describe("Admin authentication Swagger coverage", () => {
       "/admin/auth/verify-activation-otp", "/admin/auth/set-password"
     ].forEach((path) => expect(paths[path]).toBeDefined());
     expect(paths["/admin/users"]).toBeDefined();
-    expect(paths["/admin/auth/login"]).toBeUndefined();
+    ["/admin/auth/login", "/admin/auth/resend-login-otp", "/admin/auth/verify-login-otp"].forEach((path) => expect(paths[path]).toBeDefined());
+    expect(paths["/admin/auth/refresh"]).toBeUndefined();
   });
 });
