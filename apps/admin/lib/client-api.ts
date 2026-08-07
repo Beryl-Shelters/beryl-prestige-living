@@ -1,0 +1,3 @@
+import type { ApiEnvelope } from "./contracts";
+export async function postApi<T>(path: string, body: unknown): Promise<ApiEnvelope<T>> { const response = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }); const payload = await response.json().catch(() => ({ success: false, message: "Unexpected response", code: "UPSTREAM_INVALID_RESPONSE" })); if (!response.ok) throw payload as ApiEnvelope<T>; return payload as ApiEnvelope<T>; }
+export const errorMessage = (error: unknown, fallback: string) => { const api = error as ApiEnvelope<unknown>; return api?.message || fallback; };

@@ -1,0 +1,2 @@
+import { BrandLogo } from "./brand-logo";
+export function AuthLayout({ children, title = "Built for careful administration." }: { children: React.ReactNode; title?: string }) { return <main className="auth-layout"><aside className="art-panel" aria-label="Beryl Shelter Admin Portal"><div className="art-copy"><BrandLogo dark /><h2>{title}</h2><p>Securely manage Beryl Shelter operations with protected Admin access and verification.</p></div></aside><section className="form-panel"><div className="form-content"><BrandLogo />{children}</div></section></main>; }

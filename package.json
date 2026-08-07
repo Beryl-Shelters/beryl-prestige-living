@@ -10,6 +10,12 @@
     "build:web": "npm run build --workspace=apps/web",
     "lint:web": "npm run lint --workspace=apps/web",
     "type-check:web": "npm run type-check --workspace=apps/web",
-    "test:web": "npm run test --workspace=apps/web"
+    "test:web": "npm run test --workspace=apps/web",
+    "dev:admin": "npm run dev --workspace=apps/admin",
+    "build:admin": "npm run build --workspace=apps/admin",
+    "start:admin": "npm run start --workspace=apps/admin",
+    "lint:admin": "npm run lint --workspace=apps/admin",
+    "type-check:admin": "npm run type-check --workspace=apps/admin",
+    "test:admin": "npm run test --workspace=apps/admin"
   }
 }
