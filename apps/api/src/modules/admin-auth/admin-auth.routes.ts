@@ -2,7 +2,7 @@ import { Router } from "express";
 import { validate } from "../../middlewares/validate.middleware";
 import { adminInvitationRateLimiter, adminOtpRateLimiter } from "../../middlewares/auth-rate-limiters";
 import { adminSessionMiddleware, requireAdminRole } from "../../middlewares/admin-session.middleware";
-import { adminLoginSchema, beginAdminActivationSchema, inviteAdminSchema, resendAdminActivationOtpSchema, resendAdminLoginOtpSchema, setAdminPasswordSchema, verifyAdminActivationOtpSchema, verifyAdminLoginOtpSchema } from "../auth-onboarding/admin.validators";
+import { adminLoginSchema, beginAdminActivationSchema, completeFirstPasswordChangeSchema, inviteAdminSchema, resendAdminActivationOtpSchema, resendAdminLoginOtpSchema, setAdminPasswordSchema, verifyAdminActivationOtpSchema, verifyAdminLoginOtpSchema } from "../auth-onboarding/admin.validators";
 import { adminLoginRateLimiter } from "../../middlewares/auth-rate-limiters";
 import * as controller from "./admin-auth.controller";
 
@@ -16,4 +16,5 @@ router.post("/auth/set-password", adminOtpRateLimiter, validate(setAdminPassword
 router.post("/auth/login", adminLoginRateLimiter, validate(adminLoginSchema), controller.login);
 router.post("/auth/resend-login-otp", adminOtpRateLimiter, validate(resendAdminLoginOtpSchema), controller.resendLoginOtp);
 router.post("/auth/verify-login-otp", adminOtpRateLimiter, validate(verifyAdminLoginOtpSchema), controller.verifyLoginOtp);
+router.post("/auth/complete-first-password-change", adminOtpRateLimiter, validate(completeFirstPasswordChangeSchema,"PASSWORD_VALIDATION_ERROR"), controller.completeFirstPasswordChange);
 export default router;

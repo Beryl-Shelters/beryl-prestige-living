@@ -64,6 +64,16 @@ export class SupabaseAdminAuthStore {
     if (result.error || !result.data) throw fail();
     return row(result.data);
   }
+  async completeFirstPasswordChange(proofHash: string, passwordHash: string, now: Date) {
+    const result = await supabaseAdmin.rpc("complete_first_admin_password_change", { p_proof_hash: proofHash, p_password_hash: passwordHash, p_now: now.toISOString() }).single();
+    if (result.error || !result.data) throw fail();
+    return row(result.data);
+  }
+  async findAdminForPasswordChangeProof(proofHash: string) {
+    const result = await supabaseAdmin.from("otp_challenges").select("admin:admins(*)").eq("purpose", "ADMIN_LOGIN").eq("verified_proof_hash", proofHash).maybeSingle();
+    if (result.error) throw fail();
+    return (result.data as { admin: AdminRecord | null } | null)?.admin ?? null;
+  }
   async createSession(input: { adminId: string; sessionId: string; refreshTokenHash: string; expiresAt: Date; now: Date }) {
     const result = await supabaseAdmin.rpc("create_admin_session", { p_admin_id: input.adminId, p_session_id: input.sessionId, p_refresh_token_hash: input.refreshTokenHash, p_expires_at: input.expiresAt.toISOString(), p_now: input.now.toISOString() }).single();
     if (result.error || !result.data) throw fail();
