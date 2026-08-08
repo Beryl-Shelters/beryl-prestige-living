@@ -4,10 +4,10 @@ import { AdminMailService } from "../../services/mail.service";
 import { AdminDepartment, AdminRole } from "../auth-onboarding/auth-onboarding.types";
 import { generateSixDigitOtp, hashOtp } from "../auth-onboarding/otp";
 import { createTemporaryAdminPassword, hashAdminPassword, verifyAdminPassword } from "./admin-password";
-import { createAdminProof, hashAdminInvitationToken, hashAdminSecret, issueAdminAccessToken, issueAdminRefreshToken, verifyAdminRefreshToken } from "./admin-session.tokens";
+import { AdminTokenError, createAdminProof, hashAdminInvitationToken, hashAdminSecret, issueAdminAccessToken, issueAdminRefreshToken, verifyAdminRefreshToken } from "./admin-session.tokens";
 import { AdminRecord, SupabaseAdminAuthStore } from "./supabase-admin-auth.store";
 
-type Options = { otpSecret: string; invitationTokenSecret: string; invitationExpiresIn: number; activationOtpExpiryMinutes: number; activationOtpMaxAttempts: number; activationOtpResendCooldownSeconds: number; adminAccessTokenSecret: string; adminAccessTokenExpiresIn: number; adminRefreshTokenSecret: string; adminRefreshTokenExpiresIn: number; adminLoginOtpExpiryMinutes: number; adminLoginOtpMaxAttempts: number; adminLoginOtpResendCooldownSeconds: number; adminPasswordChangeProofExpiresIn: number; adminActivationUrl: string; now?: () => Date; generateOtp?: () => string };
+type Options = { otpSecret: string; invitationTokenSecret: string; invitationExpiresIn: number; activationOtpExpiryMinutes: number; activationOtpMaxAttempts: number; activationOtpResendCooldownSeconds: number; adminAccessTokenSecret: string; adminAccessTokenExpiresIn: number; adminRefreshTokenSecret: string; adminRefreshTokenExpiresIn: number; customerAccessTokenSecret: string; customerRefreshTokenSecret: string; adminLoginOtpExpiryMinutes: number; adminLoginOtpMaxAttempts: number; adminLoginOtpResendCooldownSeconds: number; adminPasswordChangeProofExpiresIn: number; adminActivationUrl: string; now?: () => Date; generateOtp?: () => string };
 const maskEmail = (email: string) => { const [name, domain] = email.split("@"); return `${name.slice(0, 1)}***${name.slice(-1)}@${domain}`; };
 
 export class AdminAuthService {
@@ -16,6 +16,25 @@ export class AdminAuthService {
   constructor(private readonly store: SupabaseAdminAuthStore, private readonly mail: AdminMailService, private readonly options: Options) { this.now = options.now ?? (() => new Date()); this.generateOtp = options.generateOtp ?? generateSixDigitOtp; }
   private requireConfiguration() {
     if (this.options.otpSecret.length < 32 || this.options.invitationTokenSecret.length < 32 || this.options.invitationExpiresIn <= 0 || this.options.activationOtpExpiryMinutes <= 0) throw new AppError("Admin activation is temporarily unavailable", 503, "ADMIN_ACTIVATION_UNAVAILABLE");
+  }
+  private requireSessionConfiguration() {
+    const { adminAccessTokenSecret: access, adminRefreshTokenSecret: refresh, customerAccessTokenSecret: customerAccess, customerRefreshTokenSecret: customerRefresh } = this.options;
+    if (access.length < 32 || refresh.length < 32 || access === refresh || refresh === customerAccess || refresh === customerRefresh || this.options.adminAccessTokenExpiresIn <= 0 || this.options.adminRefreshTokenExpiresIn <= 0) throw new AppError("Admin session authentication is temporarily unavailable", 503, "ADMIN_SESSION_REFRESH_UNAVAILABLE");
+  }
+  private refreshError(status: string): AppError {
+    if (status === "REFRESH_TOKEN_EXPIRED") return new AppError("Admin refresh token has expired", 401, "ADMIN_REFRESH_TOKEN_EXPIRED");
+    if (status === "REFRESH_TOKEN_REVOKED") return new AppError("Admin refresh token has been revoked", 401, "ADMIN_REFRESH_TOKEN_REVOKED");
+    if (status === "REFRESH_TOKEN_REUSED") return new AppError("Admin refresh token reuse detected; sessions have been revoked", 401, "ADMIN_REFRESH_TOKEN_REUSED");
+    if (status === "SESSION_NOT_FOUND") return new AppError("Admin session was not found", 401, "ADMIN_SESSION_NOT_FOUND");
+    if (status === "ACCOUNT_SUSPENDED") return new AppError("Admin account is suspended", 403, "ADMIN_ACCOUNT_SUSPENDED");
+    if (status === "ACCOUNT_LOCKED") return new AppError("Admin account is locked", 423, "ADMIN_ACCOUNT_LOCKED");
+    if (status === "PASSWORD_CHANGE_REQUIRED") return new AppError("Admin password change is required", 403, "ADMIN_PASSWORD_CHANGE_REQUIRED");
+    return new AppError("Invalid Admin refresh token", 401, "INVALID_ADMIN_REFRESH_TOKEN");
+  }
+  private passwordChangeError(status: string): AppError {
+    if (status === "ACCOUNT_SUSPENDED") return new AppError("Admin account is suspended", 403, "ADMIN_ACCOUNT_SUSPENDED");
+    if (status === "ACCOUNT_LOCKED") return new AppError("Admin account is locked", 423, "ADMIN_ACCOUNT_LOCKED");
+    return new AppError("Admin password change is unavailable", 503, "ADMIN_PASSWORD_CHANGE_UNAVAILABLE");
   }
   private otpHash(admin: AdminRecord, otp: string) { return hashOtp(this.options.otpSecret, admin.email, "ADMIN_ACTIVATION", otp); }
   private mapOtp(status: string, attempts?: number): never {
@@ -56,6 +75,13 @@ export class AdminAuthService {
     catch { await this.store.cancelPendingInvitation(adminId, now).catch(() => undefined); throw new AppError("Unable to deliver Admin invitation", 503, "MAIL_DELIVERY_FAILED"); }
     return { adminId, email: maskEmail(admin.email), status: "PENDING" as const, invitationExpiresIn: this.options.invitationExpiresIn };
   }
+  async listStaff() {
+    const staff = await this.store.listStaff();
+    return staff.map((member) => {
+      const row = member as { id: string; full_name: string; email: string; phone: string | null; department: AdminDepartment; admin_role: AdminRole; status: string; requires_password_change: boolean; created_at: string; updated_at: string };
+      return { id: row.id, fullName: row.full_name, email: row.email, phone: row.phone, department: row.department, adminRole: row.admin_role, status: row.status, requiresPasswordChange: row.requires_password_change, createdAt: row.created_at, updatedAt: row.updated_at };
+    });
+  }
   async activate(input: { invitationToken: string; temporaryPassword: string }) {
     this.requireConfiguration(); const invitation = await this.store.findInvitationByTokenHash(hashAdminInvitationToken(this.options.invitationTokenSecret, input.invitationToken));
     if (!invitation) throw new AppError("Invitation token is invalid", 400, "INVALID_INVITATION_TOKEN");
@@ -90,4 +116,47 @@ export class AdminAuthService {
   async resendLoginOtp(challengeId:string) { const challenge=await this.store.getChallenge(challengeId); const admin=challenge?.admin_id?await this.store.findAdminById(challenge.admin_id):null; if(!challenge||challenge.purpose!=="ADMIN_LOGIN"||!admin||admin.status!=="ACTIVE") throw new AppError("Login challenge is invalid",400,"ADMIN_LOGIN_CHALLENGE_INVALID"); const data=await this.startLoginOtp(admin); return {resendAvailableIn:data.resendAvailableIn}; }
   async verifyLoginOtp(input:{challengeId:string;otp:string}) { const now=this.now(); const challenge=await this.store.getChallenge(input.challengeId); const admin=challenge?.admin_id?await this.store.findAdminById(challenge.admin_id):null; if(!admin) throw new AppError("Invalid verification code",400,"INVALID_OTP"); const proof=createAdminProof(); const result=await this.store.verifyOtp({challengeId:input.challengeId,purpose:"ADMIN_LOGIN",codeHash:hashOtp(this.options.otpSecret,admin.email,"ADMIN_LOGIN",input.otp),proofHash:hashAdminSecret(proof),proofExpiresAt:new Date(now.getTime()+this.options.adminPasswordChangeProofExpiresIn*1000),now}); if(result.result_status!=="VERIFIED") this.mapOtp(String(result.result_status),Number(result.result_attempts_remaining)); if(admin.requires_password_change) return {requiresPasswordChange:true,changePasswordToken:proof,expiresIn:this.options.adminPasswordChangeProofExpiresIn,nextAction:"CHANGE_INITIAL_ADMIN_PASSWORD" as const}; const sessionId=randomUUID(); const refreshToken=issueAdminRefreshToken({secret:this.options.adminRefreshTokenSecret,adminId:admin.id,sessionId,sessionVersion:admin.session_version,role:admin.admin_role,department:admin.department,restricted:false,expiresIn:this.options.adminRefreshTokenExpiresIn,now}); const session=await this.store.createSession({adminId:admin.id,sessionId,refreshTokenHash:hashAdminSecret(refreshToken),expiresAt:new Date(now.getTime()+this.options.adminRefreshTokenExpiresIn*1000),now}); if(session.result_status!=="OK") throw new AppError("Admin login is temporarily unavailable",503,"ADMIN_LOGIN_UNAVAILABLE"); const version=Number(session.result_session_version??admin.session_version); return {admin:{id:admin.id,fullName:admin.full_name,email:admin.email,department:admin.department,adminRole:admin.admin_role,status:admin.status,requiresPasswordChange:false},accessToken:issueAdminAccessToken({secret:this.options.adminAccessTokenSecret,adminId:admin.id,sessionId,sessionVersion:version,role:admin.admin_role,department:admin.department,restricted:false,expiresIn:this.options.adminAccessTokenExpiresIn,now}),refreshToken,accessTokenExpiresIn:this.options.adminAccessTokenExpiresIn,refreshTokenExpiresIn:this.options.adminRefreshTokenExpiresIn,nextAction:"OPEN_ADMIN_DASHBOARD" as const}; }
   async completeFirstPasswordChange(input:{changePasswordToken:string;currentPassword:string;newPassword:string}) { const proofHash=hashAdminSecret(input.changePasswordToken); const admin=await this.store.findAdminForPasswordChangeProof(proofHash); if(!admin) throw new AppError("Invalid password-change token",401,"INVALID_ADMIN_PASSWORD_CHANGE_TOKEN"); if(!verifyAdminPassword(input.currentPassword,admin.password_hash)) throw new AppError("Current password is incorrect",401,"CURRENT_PASSWORD_INCORRECT"); if(input.currentPassword===input.newPassword) throw new AppError("New password must differ from current password",400,"NEW_PASSWORD_SAME_AS_CURRENT"); const result=await this.store.completeFirstPasswordChange(proofHash,hashAdminPassword(input.newPassword),this.now()); if(result.result_status==="INVALID_TOKEN") throw new AppError("Invalid password-change token",401,"INVALID_ADMIN_PASSWORD_CHANGE_TOKEN"); if(result.result_status==="EXPIRED_TOKEN") throw new AppError("Password-change token has expired",401,"ADMIN_PASSWORD_CHANGE_TOKEN_EXPIRED"); if(result.result_status==="USED_TOKEN") throw new AppError("Password-change token has already been used",409,"ADMIN_PASSWORD_CHANGE_TOKEN_USED"); if(result.result_status!=="OK") throw new AppError("Password change is unavailable",503,"ADMIN_PASSWORD_CHANGE_UNAVAILABLE"); return {requiresPasswordChange:false,sessionsInvalidated:true,nextAction:"ADMIN_LOGIN" as const}; }
+  async refresh(refreshToken: string) {
+    this.requireSessionConfiguration();
+    let claims;
+    try { claims = verifyAdminRefreshToken(refreshToken, this.options.adminRefreshTokenSecret, this.now()); }
+    catch (error) { throw error instanceof AdminTokenError && error.reason === "EXPIRED" ? this.refreshError("REFRESH_TOKEN_EXPIRED") : this.refreshError("INVALID_REFRESH_TOKEN"); }
+    if (claims.restricted) throw this.refreshError("INVALID_REFRESH_TOKEN");
+    const now = this.now(); const replacementSessionId = randomUUID();
+    const replacementRefreshToken = issueAdminRefreshToken({ secret: this.options.adminRefreshTokenSecret, adminId: claims.sub, sessionId: replacementSessionId, sessionVersion: claims.ver, role: claims.role, department: claims.department, restricted: false, expiresIn: this.options.adminRefreshTokenExpiresIn, now });
+    let result: Record<string, unknown>;
+    try { result = await this.store.rotateSession({ adminId: claims.sub, sessionId: claims.sid, refreshTokenHash: hashAdminSecret(refreshToken), replacementSessionId, replacementRefreshTokenHash: hashAdminSecret(replacementRefreshToken), replacementExpiresAt: new Date(now.getTime() + this.options.adminRefreshTokenExpiresIn * 1_000), now }); }
+    catch { throw new AppError("Admin session refresh is temporarily unavailable", 503, "ADMIN_SESSION_REFRESH_UNAVAILABLE"); }
+    if (result.result_status !== "OK" || !Number.isInteger(Number(result.result_session_version))) throw this.refreshError(String(result.result_status));
+    const sessionVersion = Number(result.result_session_version);
+    return { accessToken: issueAdminAccessToken({ secret: this.options.adminAccessTokenSecret, adminId: claims.sub, sessionId: replacementSessionId, sessionVersion, role: claims.role, department: claims.department, restricted: false, expiresIn: this.options.adminAccessTokenExpiresIn, now }), refreshToken: replacementRefreshToken, accessTokenExpiresIn: this.options.adminAccessTokenExpiresIn, refreshTokenExpiresIn: this.options.adminRefreshTokenExpiresIn };
+  }
+  async logout(session: { adminId: string; sessionId: string }, refreshToken: string) {
+    this.requireSessionConfiguration();
+    let claims;
+    try { claims = verifyAdminRefreshToken(refreshToken, this.options.adminRefreshTokenSecret, this.now()); }
+    catch { throw this.refreshError("INVALID_REFRESH_TOKEN"); }
+    if (claims.restricted || claims.sub !== session.adminId || claims.sid !== session.sessionId) throw this.refreshError("INVALID_REFRESH_TOKEN");
+    let result: Record<string, unknown>;
+    try { result = await this.store.revokeSession({ adminId: session.adminId, sessionId: session.sessionId, refreshTokenHash: hashAdminSecret(refreshToken), now: this.now() }); }
+    catch { throw new AppError("Admin logout is temporarily unavailable", 503, "ADMIN_LOGOUT_UNAVAILABLE"); }
+    if (result.result_status !== "OK") throw this.refreshError(String(result.result_status));
+    return { revoked: true as const };
+  }
+  async changePassword(adminId: string, currentPassword: string, newPassword: string) {
+    this.requireSessionConfiguration();
+    let admin: AdminRecord | null;
+    try { admin = await this.store.findAdminById(adminId); }
+    catch { throw new AppError("Admin password change is unavailable", 503, "ADMIN_PASSWORD_CHANGE_UNAVAILABLE"); }
+    if (!admin) throw this.passwordChangeError("ACCOUNT_NOT_FOUND");
+    if (admin.status === "SUSPENDED") throw this.passwordChangeError("ACCOUNT_SUSPENDED");
+    if (admin.status === "LOCKED") throw this.passwordChangeError("ACCOUNT_LOCKED");
+    if (!verifyAdminPassword(currentPassword, admin.password_hash)) throw new AppError("Current password is incorrect", 401, "CURRENT_PASSWORD_INCORRECT");
+    if (currentPassword === newPassword) throw new AppError("New password must differ from current password", 400, "NEW_PASSWORD_SAME_AS_CURRENT");
+    let result: Record<string, unknown>;
+    try { result = await this.store.changePassword(adminId, hashAdminPassword(newPassword), this.now()); }
+    catch { throw new AppError("Admin password change is unavailable", 503, "ADMIN_PASSWORD_CHANGE_UNAVAILABLE"); }
+    if (result.result_status !== "OK") throw this.passwordChangeError(String(result.result_status));
+    return { sessionsInvalidated: true as const, nextAction: "ADMIN_LOGIN" as const };
+  }
 }

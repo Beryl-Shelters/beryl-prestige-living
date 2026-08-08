@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { validate } from "../../middlewares/validate.middleware";
-import { adminInvitationRateLimiter, adminOtpRateLimiter } from "../../middlewares/auth-rate-limiters";
-import { adminSessionMiddleware, requireAdminRole } from "../../middlewares/admin-session.middleware";
-import { adminLoginSchema, beginAdminActivationSchema, completeFirstPasswordChangeSchema, inviteAdminSchema, resendAdminActivationOtpSchema, resendAdminLoginOtpSchema, setAdminPasswordSchema, verifyAdminActivationOtpSchema, verifyAdminLoginOtpSchema } from "../auth-onboarding/admin.validators";
+import { adminInvitationRateLimiter, adminOtpRateLimiter, adminPasswordChangeRateLimiter, adminSessionRefreshRateLimiter } from "../../middlewares/auth-rate-limiters";
+import { adminSessionMiddleware, requireAdminRole, requireUnrestrictedAdminSession } from "../../middlewares/admin-session.middleware";
+import { adminLoginSchema, beginAdminActivationSchema, changeAdminPasswordSchema, completeFirstPasswordChangeSchema, inviteAdminSchema, refreshAdminSessionSchema, resendAdminActivationOtpSchema, resendAdminLoginOtpSchema, setAdminPasswordSchema, verifyAdminActivationOtpSchema, verifyAdminLoginOtpSchema } from "../auth-onboarding/admin.validators";
 import { adminLoginRateLimiter } from "../../middlewares/auth-rate-limiters";
 import * as controller from "./admin-auth.controller";
 
 const router = Router();
+router.get("/staff", adminSessionMiddleware, requireAdminRole("SUPER_ADMIN"), controller.listStaff);
 router.post("/staff/invite", adminSessionMiddleware, requireAdminRole("SUPER_ADMIN"), adminInvitationRateLimiter, validate(inviteAdminSchema), controller.invite);
 router.post("/staff/:adminId/resend-invitation", adminSessionMiddleware, requireAdminRole("SUPER_ADMIN"), adminInvitationRateLimiter, controller.resendInvitation);
 router.post("/auth/activate", adminOtpRateLimiter, validate(beginAdminActivationSchema), controller.activate);
@@ -17,4 +18,7 @@ router.post("/auth/login", adminLoginRateLimiter, validate(adminLoginSchema), co
 router.post("/auth/resend-login-otp", adminOtpRateLimiter, validate(resendAdminLoginOtpSchema), controller.resendLoginOtp);
 router.post("/auth/verify-login-otp", adminOtpRateLimiter, validate(verifyAdminLoginOtpSchema), controller.verifyLoginOtp);
 router.post("/auth/complete-first-password-change", adminOtpRateLimiter, validate(completeFirstPasswordChangeSchema,"PASSWORD_VALIDATION_ERROR"), controller.completeFirstPasswordChange);
+router.post("/auth/refresh", adminSessionRefreshRateLimiter, validate(refreshAdminSessionSchema), controller.refresh);
+router.post("/auth/logout", adminSessionMiddleware, requireUnrestrictedAdminSession, adminSessionRefreshRateLimiter, validate(refreshAdminSessionSchema), controller.logout);
+router.patch("/auth/change-password", adminSessionMiddleware, requireUnrestrictedAdminSession, adminPasswordChangeRateLimiter, validate(changeAdminPasswordSchema, "PASSWORD_VALIDATION_ERROR"), controller.changePassword);
 export default router;

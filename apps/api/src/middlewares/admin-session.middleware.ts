@@ -44,3 +44,9 @@ export const requireAdminPasswordChangeAccess = (req: Request, _res: Response, n
   if (!req.adminSession) return next(new AppError("Admin access is required", 401, "ADMIN_ACCESS_REQUIRED"));
   next();
 };
+
+export const requireUnrestrictedAdminSession = (req: Request, _res: Response, next: NextFunction) => {
+  if (!req.adminSession) return next(new AppError("Admin access is required", 401, "ADMIN_ACCESS_REQUIRED"));
+  if (req.adminSession.restricted) return next(new AppError("Admin password change is required", 403, "ADMIN_PASSWORD_CHANGE_REQUIRED"));
+  next();
+};

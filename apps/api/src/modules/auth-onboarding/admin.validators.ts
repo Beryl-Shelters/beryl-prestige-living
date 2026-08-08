@@ -12,6 +12,13 @@ const adminPassword = z
   .min(8)
   .regex(/[A-Za-z]/, "Password must contain at least one letter")
   .regex(/\d/, "Password must contain at least one number");
+const strongAdminPassword = z
+  .string()
+  .min(8, "Password must contain at least 8 characters")
+  .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+  .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+  .regex(/\d/, "Password must contain at least one number")
+  .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character");
 const adminOtp = z.string().regex(/^\d{6}$/, "OTP must contain exactly 6 digits");
 
 export const inviteAdminSchema = z.object({
@@ -51,5 +58,5 @@ export const adminLoginSchema = z.object({ email: adminEmail, password: z.string
 export const verifyAdminLoginOtpSchema = z.object({ challengeId: z.string().uuid(), otp: adminOtp });
 export const resendAdminLoginOtpSchema = z.object({ challengeId: z.string().uuid() });
 export const refreshAdminSessionSchema = z.object({ refreshToken: z.string().min(32) });
-export const changeAdminPasswordSchema = z.object({ currentPassword: z.string().min(1), newPassword: adminPassword, confirmPassword: z.string() }).superRefine((value, context) => { if (value.currentPassword === value.newPassword) context.addIssue({ code: z.ZodIssueCode.custom, path: ["newPassword"], message: "New password must differ from current password" }); if (value.newPassword !== value.confirmPassword) context.addIssue({ code: z.ZodIssueCode.custom, path: ["confirmPassword"], message: "Passwords do not match" }); });
+export const changeAdminPasswordSchema = z.object({ currentPassword: z.string().min(1), newPassword: strongAdminPassword, confirmPassword: z.string() }).refine((value) => value.newPassword === value.confirmPassword, { path: ["confirmPassword"], message: "Passwords do not match" });
 export const completeFirstPasswordChangeSchema = z.object({ changePasswordToken: z.string().min(32), currentPassword: z.string().min(1), newPassword: adminPassword, confirmPassword: z.string() }).refine((value) => value.newPassword === value.confirmPassword, { path: ["confirmPassword"], message: "Passwords do not match" });

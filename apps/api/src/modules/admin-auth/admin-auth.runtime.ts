@@ -14,6 +14,8 @@ export const adminAuthService = new AdminAuthService(new SupabaseAdminAuthStore(
   adminAccessTokenExpiresIn: env.adminAccessTokenExpiresIn,
   adminRefreshTokenSecret: env.adminRefreshTokenSecret,
   adminRefreshTokenExpiresIn: env.adminRefreshTokenExpiresIn,
+  customerAccessTokenSecret: env.customerAccessTokenSecret,
+  customerRefreshTokenSecret: env.customerRefreshTokenSecret,
   adminLoginOtpExpiryMinutes: env.adminLoginOtpExpiryMinutes,
   adminLoginOtpMaxAttempts: env.adminLoginOtpMaxAttempts,
   adminLoginOtpResendCooldownSeconds: env.adminLoginOtpResendCooldownSeconds,

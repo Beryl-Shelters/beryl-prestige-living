@@ -46,3 +46,5 @@ export const adminLoginRateLimiter = rateLimit({
 });
 export const adminOtpRateLimiter = authLimiter(10, "ADMIN_LOGIN_RATE_LIMITED");
 export const adminInvitationRateLimiter = authLimiter(5, "ADMIN_INVITATION_COOLDOWN");
+export const adminSessionRefreshRateLimiter = authLimiter(30, "ADMIN_SESSION_REFRESH_RATE_LIMITED");
+export const adminPasswordChangeRateLimiter = authLimiter(5, "ADMIN_PASSWORD_CHANGE_RATE_LIMITED");

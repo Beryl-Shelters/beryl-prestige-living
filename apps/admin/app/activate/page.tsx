@@ -1,0 +1,2 @@
+import { ActivationScreen } from "@/components/activation-screen";
+export default async function ActivatePage({ searchParams }: { searchParams: Promise<{ token?: string }> }) { const token = (await searchParams).token; if (!token) return <main className="simple-message"><h1>Invitation link required</h1><p>Open the invitation link from your email to activate your account.</p></main>; return <ActivationScreen invitationToken={token} />; }

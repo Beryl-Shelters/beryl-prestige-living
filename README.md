@@ -15,3 +15,6 @@ The following canonical domains are provisional until product ownership is confi
 | `ADMIN_WEB_URL` | `https://admin.berylshelter.com` |
 
 Future web and mobile app metadata should use **Beryl Shelter** for compact app labels and **Beryl Shelter Nigeria Limited** where the full legal product name fits.
+
+
+i just added the two images(public/image/auth in the apps/admin) for the signup and login page can you put them instead and remove the brown background color that is there. here are screenshots of how those page is supposed to be. 
