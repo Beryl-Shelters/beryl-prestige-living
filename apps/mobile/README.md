@@ -18,4 +18,6 @@ Use Expo Go for device testing. Android emulators commonly use `http://10.0.2.2:
 
 Expo Router provides the `(auth)` and `(onboarding)` route groups. React Hook Form/Zod validates signup locally. The typed fetch client calls only registration/verification endpoints. The verification context contains email, masked email, persona intent, and resend time in memory only. No password or OTP is persisted. `expo-secure-store` is reserved for a later authenticated refresh-token session boundary; AsyncStorage is not used for tokens.
 
-Next planned mobile flow: Buyer and Seller onboarding forms, then login/session restoration.
+After verification, the app immediately uses the active in-memory signup password to establish the customer session, then clears that password. If the app is terminated before that login can occur, the password is intentionally unavailable; the verified customer must use the future Login flow rather than recovering a password insecurely.
+
+Buyer and Seller onboarding, skip behavior, status-based resume routing, and dashboard placeholders are now included. Next planned mobile flow: Login and refresh-token rotation.

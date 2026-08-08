@@ -2,7 +2,7 @@ import { PlusJakartaSans_400Regular, PlusJakartaSans_600SemiBold, PlusJakartaSan
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
-import { AuthFlowProvider } from "@/store/auth-flow";
+import { AuthFlowProvider, CustomerSessionProvider } from "@/store/auth-flow";
 import { colors } from "@/theme/tokens";
 const client=new QueryClient();
-export default function Layout(){const[loaded]=useFonts({PlusJakartaSans_400Regular,PlusJakartaSans_600SemiBold,PlusJakartaSans_700Bold,PlusJakartaSans_800ExtraBold});if(!loaded)return <View style={{flex:1,justifyContent:"center"}}><ActivityIndicator color={colors.brown}/></View>;return <QueryClientProvider client={client}><AuthFlowProvider><Stack screenOptions={{headerShown:false,animation:"fade"}}/></AuthFlowProvider></QueryClientProvider>}
+export default function Layout(){const[loaded]=useFonts({PlusJakartaSans_400Regular,PlusJakartaSans_600SemiBold,PlusJakartaSans_700Bold,PlusJakartaSans_800ExtraBold});if(!loaded)return <View style={{flex:1,justifyContent:"center"}}><ActivityIndicator color={colors.brown}/></View>;return <QueryClientProvider client={client}><AuthFlowProvider><CustomerSessionProvider><Stack screenOptions={{headerShown:false,animation:"fade"}}/></CustomerSessionProvider></AuthFlowProvider></QueryClientProvider>}
