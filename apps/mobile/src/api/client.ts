@@ -1,0 +1,4 @@
+import type { ApiEnvelope } from "@/types/auth";
+const base = process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
+export class ApiError extends Error { constructor(public code?: string, public details?: ApiEnvelope<never>["details"], message = "Something went wrong") { super(message); } }
+export async function post<T>(path: string, body: unknown): Promise<ApiEnvelope<T>> { if (!base) throw new ApiError("API_CONFIGURATION_ERROR", undefined, "Set EXPO_PUBLIC_API_BASE_URL before continuing."); const response = await fetch(`${base}${path}`, { method: "POST", headers: { "content-type": "application/json", accept: "application/json" }, body: JSON.stringify(body) }); const payload = await response.json().catch(() => ({ success: false, message: "Unexpected server response" })) as ApiEnvelope<T>; if (!response.ok) throw new ApiError(payload.code, payload.details, payload.message); return payload; }

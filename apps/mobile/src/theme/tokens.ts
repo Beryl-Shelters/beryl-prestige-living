@@ -1,0 +1,4 @@
+export const colors = { brown: "#70521b", brownDark: "#523b13", cream: "#f5e8c6", canvas: "#fffdf8", ink: "#171715", muted: "#716d65", line: "#ded8cd", field: "#eeece7", danger: "#c53842", success: "#216943", white: "#ffffff" } as const;
+export const spacing = { xs: 6, sm: 10, md: 16, lg: 24, xl: 32, xxl: 48 } as const;
+export const radii = { control: 12, card: 20, pill: 999 } as const;
+export const sizes = { input: 52, button: 54, touch: 44 } as const;

@@ -17,5 +17,9 @@
     "lint:admin": "npm run lint --workspace=apps/admin",
     "type-check:admin": "npm run type-check --workspace=apps/admin",
     "test:admin": "npm run test --workspace=apps/admin"
+    ,"dev:mobile": "npm run dev --workspace=apps/mobile"
+    ,"start:mobile": "npm run start --workspace=apps/mobile"
+    ,"test:mobile": "npm run test --workspace=apps/mobile"
+    ,"type-check:mobile": "npm run type-check --workspace=apps/mobile"
   }
 }
