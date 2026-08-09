@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "ios": { "bundleIdentifier": "com.berylshelter.mobile" },
-    "android": { "package": "com.berylshelter.mobile" },
+    "android": { "package": "com.berylshelter.mobile", "softwareKeyboardLayoutMode": "resize" },
     "plugins": ["expo-router", "expo-secure-store"],
     "experiments": { "typedRoutes": false }
   }

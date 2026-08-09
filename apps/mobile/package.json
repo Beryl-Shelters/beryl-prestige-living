@@ -24,6 +24,7 @@
     "react": "19.2.3",
     "react-hook-form": "^7.84.0",
     "react-native": "latest",
+    "react-native-keyboard-controller": "1.21.9",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "zod": "^3.25.76"
