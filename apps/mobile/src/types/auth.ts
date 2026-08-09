@@ -1,8 +1,10 @@
 export type Intent = "FIND_PROPERTY" | "LIST_PROPERTY";
-export type Persona = { type: "BUYER" | "SELLER_DEVELOPER"; onboardingStatus: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" };
+export type Persona = { type: "BUYER" | "SELLER_DEVELOPER"; activated?: boolean; isActive?: boolean; onboardingStatus: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED"; nextAction?: NextAction | "ACTIVATE_BUYER_PERSONA" | "ACTIVATE_SELLER_PERSONA" };
 export type VerificationFlow = { email: string; maskedEmail: string; gettingStartedAs: Intent; resendAvailableIn: number; password?: string };
 export type ResetFlow = { email: string; maskedEmail?: string; resendAvailableIn: number; resetToken?: string };
 export type ApiEnvelope<T> = { success: boolean; message: string; data?: T; code?: string; details?: { attemptsRemaining?: number; retryAfter?: number } };
 export type CustomerSession = { accessToken: string; refreshToken: string; user: { id: string; fullName: string; email: string; phone: string | null; accountStatus: string; emailVerified: boolean } | null; activePersona: Persona["type"]; personas: Persona[]; nextAction: NextAction };
 export type NextAction = "VERIFY_EMAIL" | "COMPLETE_BUYER_ONBOARDING" | "COMPLETE_SELLER_ONBOARDING" | "OPEN_BUYER_DASHBOARD" | "OPEN_SELLER_DASHBOARD";
 export type OnboardingStatus = { accountStatus: string; emailVerified: boolean; activePersona: Persona["type"]; lastActivePersona: Persona["type"]; personas: Persona[]; onboardingStatus?: Persona["onboardingStatus"]; nextAction: NextAction; dashboardAccess: boolean; missingOnboardingSteps: string[] };
+export type PersonaList = { activePersona: Persona["type"]; personas: Persona[] };
+export type PersonaMutation = { activePersona: Persona["type"]; personas?: Persona["type"][]; onboardingStatus: Persona["onboardingStatus"]; alreadyActivated?: boolean; alreadyActive?: boolean; nextAction: NextAction };
