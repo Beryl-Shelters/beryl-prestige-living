@@ -13,7 +13,9 @@ const authLimiter = (max: number, code = "RATE_LIMIT_EXCEEDED") =>
     }
   });
 
-export const registrationRateLimiter = authLimiter(5);
+// Mobile users commonly share carrier/NAT IPs. Keep an abuse guard, but avoid
+// one person's retries blocking unrelated customers on the same connection.
+export const registrationRateLimiter = authLimiter(30);
 export const emailVerificationRateLimiter = authLimiter(10);
 export const verificationResendRateLimiter = authLimiter(5);
 export const loginRateLimiter = rateLimit({
