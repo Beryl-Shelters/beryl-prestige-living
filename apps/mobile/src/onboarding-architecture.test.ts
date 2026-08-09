@@ -8,7 +8,7 @@ describe("customer onboarding session architecture", () => {
   it("keeps the signup password volatile and establishes a session after verification", () => {
     const signup = source("components/signup-form.tsx");
     const verify = source("components/verify-email.tsx");
-    expect(signup).toContain("password:payload.password");
+    expect(signup).toMatch(/password:\s*payload\.password/);
     expect(verify).toContain('post<');
     expect(verify).toContain('"/auth/login"');
     expect(verify).toContain("await establishSession(login.data)");
