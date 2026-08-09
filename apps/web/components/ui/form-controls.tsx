@@ -8,12 +8,12 @@ export function FieldError({ id, children }: { id?: string; children?: React.Rea
   return <p id={id} className="field-error" role="alert">{children}</p>;
 }
 
-type InputProps = InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string; prefix?: string };
-export const InputField = forwardRef<HTMLInputElement, InputProps>(function InputField({ label, error, id: providedId, prefix, ...props }, ref) {
+type InputProps = InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string; prefix?: string; formatThousands?: boolean };
+export const InputField = forwardRef<HTMLInputElement, InputProps>(function InputField({ label, error, id: providedId, prefix, formatThousands, ...props }, ref) {
   const generatedId = useId();
   const id = providedId ?? generatedId;
   const errorId = `${id}-error`;
-  const input = <input ref={ref} id={id} className="form-control" aria-invalid={Boolean(error)} aria-describedby={error ? errorId : props["aria-describedby"]} {...props} />;
+  const input = <input ref={ref} id={id} className="form-control" aria-invalid={Boolean(error)} aria-describedby={error ? errorId : props["aria-describedby"]} {...props} onChange={formatThousands || id === "budget-min" || id === "budget-max" ? (event) => { event.currentTarget.value=event.currentTarget.value.replace(/\D/g,"").replace(/\B(?=(\d{3})+(?!\d))/g,","); props.onChange?.(event); } : props.onChange} />;
   return <div className="field-wrap"><label className="field-label" htmlFor={id}>{label}</label>{prefix ? <div className="input-prefix-wrap"><span className="input-prefix" aria-hidden>{prefix}</span>{input}</div> : input}<FieldError id={errorId}>{error}</FieldError></div>;
 });
 

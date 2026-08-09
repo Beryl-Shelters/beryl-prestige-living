@@ -54,7 +54,7 @@ export const buyerOnboardingSchema = z
     currency: z.enum(["NGN", "USD", "GBP", "EUR"])
   })
   .refine(
-    (value) => !value.budgetMin || !value.budgetMax || Number(value.budgetMax) >= Number(value.budgetMin),
+    (value) => !value.budgetMin || !value.budgetMax || Number(value.budgetMax.replaceAll(",", "")) >= Number(value.budgetMin.replaceAll(",", "")),
     { path: ["budgetMax"], message: "Maximum budget must be at least the minimum budget" }
   );
 

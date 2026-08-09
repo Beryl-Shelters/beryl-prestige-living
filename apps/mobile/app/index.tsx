@@ -4,4 +4,4 @@ import { useRouter } from "expo-router";
 import { useCustomerSession } from "@/store/auth-flow";
 import { colors } from "@/theme/tokens";
 
-export default function Index(){const router=useRouter();const session=useCustomerSession();useEffect(()=>{if(session.isHydrating)return;if(!session.isAuthenticated){router.replace("/signup");return;}void session.restoreSession().then(status=>router.replace(status?session.routeFromNextAction(status.nextAction):"/signup"));},[session.isHydrating,session.isAuthenticated]);return <View style={{flex:1,justifyContent:"center"}}><ActivityIndicator color={colors.brown}/></View>;}
+export default function Index(){const router=useRouter();const session=useCustomerSession();useEffect(()=>{if(session.isHydrating)return;router.replace(session.isAuthenticated&&session.nextAction?session.routeFromNextAction(session.nextAction):"/signup");},[session.isHydrating,session.isAuthenticated,session.nextAction]);return <View style={{flex:1,justifyContent:"center"}}><ActivityIndicator color={colors.brown}/></View>;}
