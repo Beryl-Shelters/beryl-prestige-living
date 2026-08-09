@@ -4,11 +4,36 @@
     "slug": "beryl-shelter",
     "scheme": "berylshelter",
     "version": "1.0.0",
+    "icon": "./assets/brand/launcher-icon.png",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "ios": { "bundleIdentifier": "com.berylshelter.mobile" },
-    "android": { "package": "com.berylshelter.mobile", "softwareKeyboardLayoutMode": "resize" },
-    "plugins": ["expo-router", "expo-secure-store"],
-    "experiments": { "typedRoutes": false }
+    "ios": {
+      "bundleIdentifier": "com.berylshelter.mobile"
+    },
+    "android": {
+      "package": "com.berylshelter.mobile",
+      "softwareKeyboardLayoutMode": "resize",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/brand/launcher-adaptive-foreground.png",
+        "backgroundColor": "#FFFDF8"
+      }
+    },
+    "androidStatusBar": {
+      "backgroundColor": "#FFFDF8",
+      "barStyle": "dark-content"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4eb3a6e8-1426-479c-a96c-eb7b6adc0c0a"
+      }
+    }
   }
 }
