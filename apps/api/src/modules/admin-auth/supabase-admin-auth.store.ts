@@ -27,7 +27,7 @@ export class SupabaseAdminAuthStore {
     return row(result.data);
   }
   async findInvitationByTokenHash(tokenHash: string) {
-    const result = await supabaseAdmin.from("admin_invitations").select("*, admin:admins(*)").eq("token_hash", tokenHash).maybeSingle();
+    const result = await supabaseAdmin.from("admin_invitations").select("*, admin:admins!admin_invitations_admin_id_fkey(*)").eq("token_hash", tokenHash).maybeSingle();
     if (result.error) throw fail();
     return result.data as ({ id: string; status: "PENDING" | "USED" | "REVOKED" | "EXPIRED"; expires_at: string; admin: AdminRecord } | null);
   }
