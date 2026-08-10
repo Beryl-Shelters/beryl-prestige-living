@@ -289,8 +289,44 @@ input {
 .password-meter > span {
   display: block;
   height: 100%;
+  background: var(--color-admin-line);
+  transition: width 0.15s ease, background-color 0.15s ease;
+}
+.password-meter > span[data-strength="weak"] {
+  background: var(--color-admin-danger);
+}
+.password-meter > span[data-strength="moderate"] {
+  background: #2468a2;
+}
+.password-meter > span[data-strength="strong"] {
   background: var(--color-admin-brown);
-  transition: width 0.15s;
+}
+.password-strength-summary {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 7px;
+  font-size: 12px;
+}
+.password-strength[data-strength="weak"] .password-strength-summary strong,
+.password-strength[data-strength="weak"] .password-strength-help {
+  color: var(--color-admin-danger);
+}
+.password-strength[data-strength="moderate"] .password-strength-summary strong,
+.password-strength[data-strength="moderate"] .password-strength-help {
+  color: #2468a2;
+}
+.password-strength[data-strength="strong"] .password-strength-summary strong,
+.password-strength[data-strength="strong"] .password-strength-help {
+  color: var(--color-admin-brown);
+}
+.password-strength-help {
+  margin: 12px 0 7px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.password-requirements-title {
+  margin: 12px 0 7px;
+  font-size: 12px;
 }
 .password-list {
   list-style: none;
