@@ -99,6 +99,17 @@ describe("customer BFF cookie bridge", () => {
     expect(cookieHeader).toContain("Expires=Thu, 01 Jan 1970 00:00:00 GMT");
   });
 
+  it("clears session cookies when the logout upstream is unavailable", async () => {
+    state.cookies.set("beryl_customer_access", "dummy-access-token");
+    state.cookies.set("beryl_customer_refresh", "dummy-refresh-token");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network unavailable")));
+    const response = await call(["logout"]);
+    const cookieHeader = response.headers.get("set-cookie") ?? "";
+    expect(response.status).toBe(503);
+    expect(cookieHeader).toContain("beryl_customer_access=");
+    expect(cookieHeader).toContain("beryl_customer_refresh=");
+  });
+
   it("clears stale session cookies after a successful password change", async () => {
     state.cookies.set("beryl_customer_access", "dummy-access-token");
     state.cookies.set("beryl_customer_refresh", "dummy-refresh-token");

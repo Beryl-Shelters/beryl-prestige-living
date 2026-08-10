@@ -158,10 +158,15 @@ const handle = async (request: NextRequest, context: Context) => {
   try {
     return await handleRequest(request, context);
   } catch (error) {
+    const browserPath = (await context.params).path.join("/");
     if (error instanceof ApiConfigurationError) {
-      return NextResponse.json({ success: false, message: error.message, code: "API_CONFIGURATION_ERROR" }, { status: 500 });
+      const response = NextResponse.json({ success: false, message: error.message, code: "API_CONFIGURATION_ERROR" }, { status: 500 });
+      if (browserPath === "logout") clearSessionCookies(response);
+      return response;
     }
-    return NextResponse.json({ success: false, message: "We could not connect to the service. Please try again.", code: "UPSTREAM_UNAVAILABLE" }, { status: 503 });
+    const response = NextResponse.json({ success: false, message: "We could not connect to the service. Please try again.", code: "UPSTREAM_UNAVAILABLE" }, { status: 503 });
+    if (browserPath === "logout") clearSessionCookies(response);
+    return response;
   }
 };
 

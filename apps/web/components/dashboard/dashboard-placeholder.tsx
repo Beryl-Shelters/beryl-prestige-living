@@ -40,8 +40,8 @@ export function DashboardPlaceholder({
           </button>
           <button
             className="btn btn-secondary"
-            onClick={async () => {
-              await logout();
+            onClick={() => {
+              void logout().finally(() => router.refresh());
               router.replace("/login");
             }}
           >
