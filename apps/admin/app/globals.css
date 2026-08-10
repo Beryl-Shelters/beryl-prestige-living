@@ -375,6 +375,9 @@ input {
 }
 .sidebar-nav a {
   color: inherit;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   border-radius: 9px;
   padding: 12px;
   text-decoration: none;

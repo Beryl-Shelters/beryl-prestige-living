@@ -18,13 +18,10 @@ export function AdminShell({ session, children }: { session: AdminSessionState; 
         <BrandLogo href="/dashboard" dark />
         <nav className="sidebar-nav" aria-label="Admin navigation">
           <Link href="/dashboard">
-            <LayoutDashboard
-              size={17}
-              style={{ verticalAlign: "middle", marginRight: 8 }}
-            />
+            <LayoutDashboard size={17} />
             Dashboard
           </Link>
-          {admin.adminRole === "SUPER_ADMIN" ? <Link href={"/dashboard/admins" as never}><UsersRound size={17} style={{ verticalAlign: "middle", marginRight: 8 }} />Admins</Link> : null}
+          {admin.adminRole === "SUPER_ADMIN" ? <Link href={"/dashboard/admins" as never}><UsersRound size={17} />Admins</Link> : null}
           {['Customers', 'Properties', 'Listings', 'Reports', 'Transactions', 'Analytics'].map((item) => <span key={item}>{item}</span>)}
           <Link href={"/dashboard/change-password" as never}>Settings</Link>
         </nav>

@@ -24,7 +24,7 @@ export function AuthLayout({
       </aside>
       <section className="form-panel">
         <header className="auth-header">
-          <BrandLogo showName={false} />
+          <BrandLogo />
           <a href="https://berylshelter.com">Keep browsing homes <span aria-hidden>×</span></a>
         </header>
         <div className="form-content">
