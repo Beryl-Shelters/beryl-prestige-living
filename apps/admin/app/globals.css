@@ -9,6 +9,7 @@
   --color-admin-muted: #716d65;
   --color-admin-line: #ded8cd;
   --color-admin-danger: #c53842;
+  --color-admin-success: #25724a;
   --radius-control: 10px;
   --radius-card: 18px;
 }
@@ -299,7 +300,7 @@ input {
   background: #2468a2;
 }
 .password-meter > span[data-strength="strong"] {
-  background: var(--color-admin-brown);
+  background: var(--color-admin-success);
 }
 .password-strength-summary {
   display: flex;
@@ -317,7 +318,7 @@ input {
 }
 .password-strength[data-strength="strong"] .password-strength-summary strong,
 .password-strength[data-strength="strong"] .password-strength-help {
-  color: var(--color-admin-brown);
+  color: var(--color-admin-success);
 }
 .password-strength-help {
   margin: 12px 0 7px;
@@ -338,7 +339,15 @@ input {
   color: var(--color-admin-muted);
 }
 .password-list li[data-valid="true"] {
-  color: #25724a;
+  color: var(--color-admin-success);
+}
+.password-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.password-list li svg {
+  flex: 0 0 auto;
 }
 .dashboard {
   min-height: 100svh;

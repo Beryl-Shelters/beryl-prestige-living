@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { AuthLayout } from "./auth-layout";
-import { FieldError, PasswordField } from "./form-controls";
+import { PasswordField } from "./form-controls";
 import { errorMessage, postApi } from "@/lib/client-api";
 
 const schema = z.object({ temporaryPassword: z.string().min(1, "Enter the temporary password from your invitation email") });
@@ -24,5 +24,5 @@ export function ActivationScreen({ invitationToken }: { invitationToken: string 
       router.replace("/activation-otp" as never);
     } catch (error) { setApiError(errorMessage(error, "Unable to activate this invitation.")); }
   };
-  return <AuthLayout title="Activate your Admin account."><h1 className="page-title">Activate your account</h1><p className="page-copy">You&apos;ve been invited to the admin portal. Enter the temporary password from your invitation email to continue.</p><form className="form-stack" onSubmit={handleSubmit(submit)} noValidate><PasswordField label="Temporary password" autoComplete="current-password" error={errors.temporaryPassword?.message} {...register("temporaryPassword")} /><FieldError>{errors.temporaryPassword?.message}</FieldError>{apiError ? <p className="alert alert-error" role="alert">{apiError}</p> : null}<button className="button button-primary" type="submit" disabled={isSubmitting}>{isSubmitting ? "Continuing…" : "Continue"}</button></form><p className="auth-footnote">This invitation link is single-use and expires soon.</p></AuthLayout>;
+  return <AuthLayout title="Activate your Admin account."><h1 className="page-title">Activate your account</h1><p className="page-copy">You&apos;ve been invited to the admin portal. Enter the temporary password from your invitation email to continue.</p><form className="form-stack" onSubmit={handleSubmit(submit)} noValidate><PasswordField label="Temporary password" autoComplete="current-password" error={errors.temporaryPassword?.message} {...register("temporaryPassword")} />{apiError ? <p className="alert alert-error" role="alert">{apiError}</p> : null}<button className="button button-primary" type="submit" disabled={isSubmitting}>{isSubmitting ? "Continuing…" : "Continue"}</button></form><p className="auth-footnote">This invitation link is single-use and expires soon.</p></AuthLayout>;
 }
