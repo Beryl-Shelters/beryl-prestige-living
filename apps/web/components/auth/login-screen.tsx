@@ -12,6 +12,7 @@ import { InputField, PasswordField } from "@/components/ui/form-controls";
 import { useAuth } from "@/context/auth-provider";
 import { apiErrorOf, friendlyAuthError } from "@/lib/api/errors";
 import { normalizePhone } from "@/lib/phone";
+import { publicWebUrl } from "@/lib/site-urls";
 import { routeForNextAction } from "@/lib/navigation";
 import { loginSchema, type LoginValues } from "@/lib/validation";
 
@@ -31,5 +32,5 @@ export function LoginScreen() {
     } catch (caught) { setError(friendlyAuthError(apiErrorOf(caught))); }
   });
 
-  return <AuthShell intent={pendingSignup?.intent} backHref="/"><h1 className="page-title">Login back to your account</h1><p className="page-copy">Log in to save homes, message agents and manage your listings.</p><form className="form-stack" onSubmit={submit} noValidate><InputField label="Email address / Phone" autoComplete="username" error={form.formState.errors.identifier?.message} {...form.register("identifier")} /><PasswordField label="Password" autoComplete="current-password" error={form.formState.errors.password?.message} {...form.register("password")} />{error ? <ApiAlert>{error}</ApiAlert> : null}<Link className="text-xs font-bold text-brand-brown" href="/forgot-password">Forgot Password?</Link><button className="btn btn-primary" type="submit" disabled={mutation.isPending}>{mutation.isPending ? <><Spinner />Logging in…</> : "Log in"}</button><p className="text-center text-sm">Don&apos;t have an account? <Link className="font-bold text-brand-brown" href="/signup">Create an account</Link></p></form>{routing ? <LoadingOverlay message="Finding best homes for you..." /> : null}</AuthShell>;
+  return <AuthShell intent={pendingSignup?.intent} backHref={publicWebUrl()}><h1 className="page-title">Login back to your account</h1><p className="page-copy">Log in to save homes, message agents and manage your listings.</p><form className="form-stack" onSubmit={submit} noValidate><InputField label="Email address / Phone" autoComplete="username" error={form.formState.errors.identifier?.message} {...form.register("identifier")} /><PasswordField label="Password" autoComplete="current-password" error={form.formState.errors.password?.message} {...form.register("password")} />{error ? <ApiAlert>{error}</ApiAlert> : null}<Link className="text-xs font-bold text-brand-brown" href="/forgot-password">Forgot Password?</Link><button className="btn btn-primary" type="submit" disabled={mutation.isPending}>{mutation.isPending ? <><Spinner />Logging in…</> : "Log in"}</button><p className="text-center text-sm">Don&apos;t have an account? <Link className="font-bold text-brand-brown" href="/signup">Create an account</Link></p></form>{routing ? <LoadingOverlay message="Finding best homes for you..." /> : null}</AuthShell>;
 }

@@ -7,6 +7,7 @@ import swaggerUi from "swagger-ui-express";
 import routes from "./routes";
 import { errorMiddleware } from "./middlewares/error.middleware";
 import { env } from "./config/env";
+import { createCorsOptions } from "./config/cors";
 import { swaggerSpec } from "./config/swagger";
 
 const app = express();
@@ -35,12 +36,7 @@ app.get("/api-docs.json", (_req: Request, res: Response) => {
 
 app.use(helmet());
 
-app.use(
-  cors({
-    origin: [env.clientWebUrl, env.clientMobileUrl].filter(Boolean),
-    credentials: true
-  })
-);
+app.use(cors(createCorsOptions(env.clientWebUrls)));
 
 app.use(
   rateLimit({

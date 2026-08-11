@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import { parseAllowedOrigins } from "./cors";
 
 dotenv.config();
 
@@ -18,8 +19,20 @@ export const env = {
     process.env.PUBLIC_WEB_URL ||
     process.env.CLIENT_WEB_URL ||
     "http://localhost:3000",
+  clientWebUrls: (() => {
+    const configured = parseAllowedOrigins(process.env.CLIENT_WEB_URLS);
+    return configured.length > 0
+      ? configured
+      : parseAllowedOrigins([process.env.PUBLIC_WEB_URL, process.env.CLIENT_WEB_URL].filter(Boolean).join(","));
+  })(),
   clientMobileUrl: process.env.CLIENT_MOBILE_URL || "",
   apiBaseUrl: process.env.API_PUBLIC_URL || process.env.API_BASE_URL || "",
+  swaggerPreviewApiUrl:
+    process.env.SWAGGER_PREVIEW_API_URL ||
+    "https://dev-api.berylshelter.com/api/v1",
+  swaggerProductionApiUrl:
+    process.env.SWAGGER_PRODUCTION_API_URL ||
+    "https://api.berylshelter.com/api/v1",
   adminWebUrl: process.env.ADMIN_WEB_URL || "",
   adminActivationUrl: process.env.ADMIN_ACTIVATION_URL || "",
   adminInvitationTokenSecret: process.env.ADMIN_INVITATION_TOKEN_SECRET || "",
