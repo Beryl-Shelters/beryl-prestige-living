@@ -9,6 +9,8 @@ import { customerApi } from "@/lib/api/client";
 import { apiErrorOf } from "@/lib/api/errors";
 import type { PersonaState, PersonaType } from "@/lib/contracts";
 import { routeForNextAction } from "@/lib/navigation";
+import { customerPersonaForAnalytics, trackCustomerEvent, updateCustomerAnalyticsPersona } from "@/lib/analytics/customer";
+import { prepareOnboardingAnalyticsTrigger } from "@/lib/analytics/onboarding-trigger";
 
 const labels: Record<PersonaType, { title: string; subtitle: string }> = {
   BUYER: { title: "Buyer", subtitle: "Find & save properties" },
@@ -47,7 +49,13 @@ export function PersonaSwitcher({ open, onClose }: { open: boolean; onClose: () 
   const act = async (persona: PersonaState) => {
     setError("");
     try {
+      const targetPersona = customerPersonaForAnalytics(persona.type);
+      const previousPersona = activePersona === "BUYER" || activePersona === "SELLER_DEVELOPER" ? customerPersonaForAnalytics(activePersona) : null;
+      if (!persona.activated) void trackCustomerEvent("Persona Activation Started", { target_persona: targetPersona });
       const result = persona.activated ? await switchPersona.mutateAsync(persona.type) : await activate.mutateAsync(persona.type);
+      await updateCustomerAnalyticsPersona(customerPersonaForAnalytics(result.data.activePersona));
+      if (persona.activated && previousPersona) void trackCustomerEvent("Persona Switched", { from_persona: previousPersona, to_persona: customerPersonaForAnalytics(result.data.activePersona) });
+      if (result.data.nextAction === "COMPLETE_BUYER_ONBOARDING" || result.data.nextAction === "COMPLETE_SELLER_ONBOARDING") prepareOnboardingAnalyticsTrigger({ persona: customerPersonaForAnalytics(result.data.activePersona), source: "persona_activation" });
       onClose();
       router.push(routeForNextAction(result.data.nextAction));
     } catch (caught) { setError(apiErrorOf(caught).message); }

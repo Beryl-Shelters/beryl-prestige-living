@@ -2,6 +2,7 @@ import { env } from "../../config/env";
 import { mailService } from "../../services/mail.service";
 import { AdminAuthService } from "./admin-auth.service";
 import { SupabaseAdminAuthStore } from "./supabase-admin-auth.store";
+import { adminServerAnalytics } from "../../analytics/admin-server-analytics";
 
 export const adminAuthService = new AdminAuthService(new SupabaseAdminAuthStore(), mailService, {
   otpSecret: env.otpSecret,
@@ -21,4 +22,4 @@ export const adminAuthService = new AdminAuthService(new SupabaseAdminAuthStore(
   adminLoginOtpResendCooldownSeconds: env.adminLoginOtpResendCooldownSeconds,
   adminPasswordChangeProofExpiresIn: env.adminPasswordChangeProofExpiresIn,
   adminActivationUrl: env.adminActivationUrl || (env.adminWebUrl ? `${env.adminWebUrl.replace(/\/$/, "")}/activate` : "http://localhost:3001/activate")
-});
+}, adminServerAnalytics);

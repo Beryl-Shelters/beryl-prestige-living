@@ -41,15 +41,19 @@ const protectedPaths = new Set([
   "personas/activate",
   "personas/active"
 ]);
+const preAuthAnalyticsPaths = new Set(["auth/register", "auth/login"]);
+const analyticsDistinctIdHeader = "x-beryl-analytics-distinct-id";
+const anonymousDistinctId = /^\$device:[A-Za-z0-9_-]{1,120}$/;
 
-const backendFetch = (path: string, method: string, body: unknown, accessToken?: string) =>
+const backendFetch = (path: string, method: string, body: unknown, accessToken?: string, analyticsDistinctId?: string) =>
   fetch(backendApiUrl(path), {
     method,
     cache: "no-store",
     headers: {
       accept: "application/json",
       ...(body === undefined ? {} : { "content-type": "application/json" }),
-      ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {})
+      ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
+      ...(analyticsDistinctId ? { [analyticsDistinctIdHeader]: analyticsDistinctId } : {})
     },
     body: body === undefined ? undefined : JSON.stringify(body)
   });
@@ -85,6 +89,10 @@ const handleRequest = async (request: NextRequest, context: Context) => {
   let body = await readJson(request);
   let accessToken = cookieStore.get(SESSION_COOKIES.access)?.value;
   const refreshToken = cookieStore.get(SESSION_COOKIES.refresh)?.value;
+  const suppliedDistinctId = request.headers.get(analyticsDistinctIdHeader);
+  const analyticsDistinctId = preAuthAnalyticsPaths.has(path) && suppliedDistinctId && anonymousDistinctId.test(suppliedDistinctId)
+    ? suppliedDistinctId
+    : undefined;
 
   if (path === "auth/refresh") {
     if (!refreshToken) return NextResponse.json({ success: false, message: "Session not found", code: "SESSION_NOT_FOUND" }, { status: 401 });
@@ -105,7 +113,7 @@ const handleRequest = async (request: NextRequest, context: Context) => {
     body = { ...(body as object), resetToken };
   }
 
-  let backend = await backendFetch(path, request.method, body, protectedPaths.has(path) ? accessToken : undefined);
+  let backend = await backendFetch(path, request.method, body, protectedPaths.has(path) ? accessToken : undefined, analyticsDistinctId);
   let payload = await backend.json();
   if (backend.status === 404) return upstreamNotFound(request.method, path);
 

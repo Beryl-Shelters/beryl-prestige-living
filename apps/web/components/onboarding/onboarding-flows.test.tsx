@@ -8,7 +8,8 @@ import { SellerOnboardingScreen } from "./seller-onboarding-screen";
 const mocks = vi.hoisted(() => ({
   replace: vi.fn(),
   buyer: vi.fn(),
-  seller: vi.fn()
+  seller: vi.fn(),
+  track: vi.fn()
 }));
 
 vi.mock("next/navigation", () => ({
@@ -20,6 +21,10 @@ vi.mock("@/lib/api/client", () => ({
     buyerOnboarding: mocks.buyer,
     sellerOnboarding: mocks.seller
   }
+}));
+vi.mock("@/lib/analytics/customer", () => ({
+  trackCustomerEvent: mocks.track,
+  customerPersonaForAnalytics: (persona: "BUYER" | "SELLER_DEVELOPER") => persona === "BUYER" ? "Buyer" : "Seller-Developer"
 }));
 
 describe("customer onboarding screens", () => {
@@ -55,8 +60,8 @@ describe("customer onboarding screens", () => {
     expect(prefixes()).toEqual(["$", "$"]);
     await userEvent.type(screen.getByLabelText("Minimum"), "5000000");
     await userEvent.type(screen.getByLabelText("Maximum"), "10000000");
-    expect(screen.getByLabelText("Minimum")).toHaveValue("5000000");
-    expect(screen.getByLabelText("Maximum")).toHaveValue("10000000");
+    expect(screen.getByLabelText("Minimum")).toHaveValue("5,000,000");
+    expect(screen.getByLabelText("Maximum")).toHaveValue("10,000,000");
   });
 
   it("validates that maximum buyer budget is not below minimum", async () => {
@@ -66,6 +71,7 @@ describe("customer onboarding screens", () => {
     await userEvent.type(screen.getByLabelText("Maximum"), "10000000");
     await userEvent.click(screen.getByRole("button", { name: /find a property/i }));
     expect(await screen.findByText(/maximum budget must be at least/i)).toBeInTheDocument();
+    expect(mocks.track).not.toHaveBeenCalledWith("Buyer Onboarding Completed", expect.anything());
   });
 
   it("submits buyer skip", async () => {
@@ -73,6 +79,21 @@ describe("customer onboarding screens", () => {
     await userEvent.click(screen.getAllByRole("button", { name: /^skip$/i })[0]);
     await waitFor(() => expect(mocks.buyer.mock.calls[0]?.[0]).toEqual({ skip: true }));
     expect(mocks.replace).toHaveBeenCalledWith("/buyer");
+    expect(mocks.track).not.toHaveBeenCalledWith("Buyer Onboarding Completed", expect.anything());
+  });
+
+  it("tracks buyer completion at the valid client action, before backend confirmation, once", async () => {
+    let resolveRequest!: () => void;
+    mocks.buyer.mockImplementationOnce(() => new Promise<void>((resolve) => { resolveRequest = resolve; }));
+    renderWithQuery(<BuyerOnboardingScreen />);
+    await userEvent.click(screen.getByRole("button", { name: /victoria island, lagos/i }));
+    await userEvent.type(screen.getByLabelText("Minimum"), "5000000");
+    await userEvent.click(screen.getByRole("button", { name: /find a property/i }));
+    await waitFor(() => expect(mocks.track).toHaveBeenCalledWith("Buyer Onboarding Completed", { preferred_locations: ["Victoria Island, Lagos"], budget_provided: true, skipped_budget: false }));
+    expect(mocks.replace).not.toHaveBeenCalled();
+    resolveRequest();
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/buyer"));
+    expect(mocks.track).toHaveBeenCalledTimes(1);
   });
 
   it("submits an individual seller profile", async () => {
@@ -81,7 +102,17 @@ describe("customer onboarding screens", () => {
     await waitFor(() => expect(mocks.seller.mock.calls[0]?.[0]).toEqual({ profileType: "INDIVIDUAL" }));
   });
 
-  it("reveals and submits business fields", async () => {
+  it("does not track an invalid seller completion submission", async () => {
+    renderWithQuery(<SellerOnboardingScreen />);
+    await userEvent.click(screen.getByRole("button", { name: /a business/i }));
+    await userEvent.click(screen.getByRole("button", { name: /list as company/i }));
+    expect(await screen.findByText(/enter your company name/i)).toBeInTheDocument();
+    expect(mocks.track).not.toHaveBeenCalledWith("Seller Onboarding Completed", expect.anything());
+  });
+
+  it("tracks seller completion at the valid client action, before backend confirmation, once", async () => {
+    let resolveRequest!: () => void;
+    mocks.seller.mockImplementationOnce(() => new Promise<void>((resolve) => { resolveRequest = resolve; }));
     renderWithQuery(<SellerOnboardingScreen />);
     await userEvent.click(screen.getByRole("button", { name: /a business/i }));
     await userEvent.type(screen.getByLabelText(/company name/i), "Shelter Homes Limited");
@@ -92,6 +123,11 @@ describe("customer onboarding screens", () => {
       companyName: "Shelter Homes Limited",
       companyAddress: "1 Admiralty Way, Lagos"
     }));
+    expect(mocks.track).toHaveBeenCalledWith("Seller Onboarding Completed", { profile_type: "Business", company_name_provided: true, company_address_provided: true });
+    expect(mocks.replace).not.toHaveBeenCalled();
+    resolveRequest();
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/seller"));
+    expect(mocks.track).toHaveBeenCalledTimes(1);
   });
 
   it("submits seller skip", async () => {

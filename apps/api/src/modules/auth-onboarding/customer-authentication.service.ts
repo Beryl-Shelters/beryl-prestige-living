@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { MailService } from "../../services/mail.service";
 import { AppError } from "../../utils/AppError";
+import { CustomerServerAnalytics, customerPersonaForAnalytics, noOpCustomerServerAnalytics } from "../../analytics/customer-server-analytics";
 import { nextActionFor } from "./customer-onboarding.service";
 import {
   AccountMutationStatus,
@@ -84,7 +85,8 @@ export class CustomerAuthenticationService {
   constructor(
     private readonly store: CustomerAuthenticationStore,
     private readonly mail: MailService,
-    private readonly options: CustomerAuthenticationOptions
+    private readonly options: CustomerAuthenticationOptions,
+    private readonly analytics: CustomerServerAnalytics = noOpCustomerServerAnalytics
   ) {
     this.now = options.now ?? (() => new Date());
     this.generateOtp = options.generateOtp ?? generateSixDigitOtp;
@@ -135,11 +137,14 @@ export class CustomerAuthenticationService {
     }
   }
 
-  async login(input: { identifier: string; password: string }) {
+  async login(input: { identifier: string; password: string }, analyticsDistinctId?: string) {
     this.requireSessionConfiguration();
     return this.safely(async () => {
       const userId = await this.store.authenticate(input.identifier, input.password);
-      if (!userId) throw accountError("ACCOUNT_NOT_FOUND");
+      if (!userId) {
+        this.analytics.loginFailed(analyticsDistinctId);
+        throw accountError("ACCOUNT_NOT_FOUND");
+      }
 
       const state = await this.store.getCustomerState(userId);
       if (!state) throw accountError("ACCOUNT_NOT_FOUND");
@@ -187,6 +192,7 @@ export class CustomerAuthenticationService {
         expiresIn: this.options.accessTokenExpiresIn,
         now
       });
+      this.analytics.customerLoggedIn(state.id, customerPersonaForAnalytics(restoredPersona.type));
 
       return {
         user: {
@@ -332,6 +338,7 @@ export class CustomerAuthenticationService {
             otp,
             expiresInMinutes: this.options.otpExpiryMinutes
           });
+          if (challenge.userId) this.analytics.otpSent(challenge.userId, "forgot_password");
         } catch {
           await this.store
             .invalidatePasswordResetOtp(challenge.challengeId, now)
@@ -395,6 +402,10 @@ export class CustomerAuthenticationService {
         );
       }
 
+      const accountId = await this.store.findCustomerIdByEmail(input.email).catch(() => null);
+      this.analytics.otpVerificationSucceeded(accountId ?? undefined, "forgot_password");
+      this.analytics.passwordResetOtpVerified(accountId ?? undefined);
+
       return {
         resetToken,
         expiresIn: this.options.resetProofExpiresIn,
@@ -427,6 +438,8 @@ export class CustomerAuthenticationService {
           result.status
         );
       }
+      const accountId = await this.store.findCustomerIdByResetProofHash(hashToken(resetToken)).catch(() => null);
+      this.analytics.passwordResetCompleted(accountId ?? undefined);
       return { sessionsInvalidated: true as const, nextAction: "LOGIN" as const };
     }, "Password reset is temporarily unavailable", "PASSWORD_RESET_UNAVAILABLE");
   }

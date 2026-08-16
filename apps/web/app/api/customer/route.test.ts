@@ -12,8 +12,8 @@ vi.mock("next/headers", () => ({
 
 import { PATCH, POST } from "./[...path]/route";
 
-const call = (path: string[], body: object = {}) => POST(
-  new NextRequest(`http://localhost/api/customer/${path.join("/")}`, { method: "POST", body: JSON.stringify(body), headers: { "content-type": "application/json" } }),
+const call = (path: string[], body: object = {}, headers: Record<string, string> = {}) => POST(
+  new NextRequest(`http://localhost/api/customer/${path.join("/")}`, { method: "POST", body: JSON.stringify(body), headers: { "content-type": "application/json", ...headers } }),
   { params: Promise.resolve({ path }) }
 );
 
@@ -42,6 +42,15 @@ describe("customer BFF cookie bridge", () => {
     vi.stubGlobal("fetch", fetchMock);
     await call([path]);
     expect(fetchMock.mock.calls[0]?.[0]).toBe(expectedUrl);
+  });
+
+  it("forwards only a valid anonymous analytics identity on pre-auth requests", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(backendResponse({ success: false }, 401));
+    vi.stubGlobal("fetch", fetchMock);
+    await call(["login"], {}, { "x-beryl-analytics-distinct-id": "$device:anonymous-customer-1" });
+    expect(fetchMock.mock.calls[0]?.[1].headers).toMatchObject({ "x-beryl-analytics-distinct-id": "$device:anonymous-customer-1" });
+    await call(["login"], {}, { "x-beryl-analytics-distinct-id": "spoofed-account-id" });
+    expect(fetchMock.mock.calls[1]?.[1].headers).not.toHaveProperty("x-beryl-analytics-distinct-id");
   });
 
   it("maps an upstream 404 to a stable sanitized error", async () => {

@@ -1,4 +1,5 @@
 import { AppError } from "../../utils/AppError";
+import { CustomerServerAnalytics, customerPersonaForAnalytics, noOpCustomerServerAnalytics } from "../../analytics/customer-server-analytics";
 import {
   PERSONA_TYPES,
   PersonaOnboardingStatus,
@@ -88,7 +89,7 @@ const throwForStatus = (status: MutationStatus): never => {
 };
 
 export class CustomerOnboardingService {
-  constructor(private readonly store: CustomerOnboardingStore) {}
+  constructor(private readonly store: CustomerOnboardingStore, private readonly analytics: CustomerServerAnalytics = noOpCustomerServerAnalytics) {}
 
   private async safely<T>(operation: () => Promise<T>) {
     try {
@@ -219,6 +220,9 @@ export class CustomerOnboardingService {
       const result = await this.store.activatePersona(userId, personaType);
       if (result.status !== "OK") throwForStatus(result.status);
       const onboardingStatus = result.onboardingStatus ?? "NOT_STARTED";
+      if (!result.alreadyActivated) {
+        this.analytics.personaActivated(userId, customerPersonaForAnalytics(personaType));
+      }
 
       return {
         activePersona: personaType,

@@ -4,6 +4,7 @@ import { getAuthUserId } from "../../utils/getAuthUserId";
 import { customerRegistrationService } from "../auth-onboarding/customer-registration.runtime";
 import { customerAuthenticationService } from "../auth-onboarding/customer-authentication.runtime";
 import { AppError } from "../../utils/AppError";
+import { preAuthCustomerAnalyticsDistinctId } from "../../analytics/customer-analytics-identity";
 
 
 export const register = async (
@@ -12,7 +13,7 @@ export const register = async (
   next: NextFunction
 ) => {
   try {
-    const result = await customerRegistrationService.register(req.body);
+    const result = await customerRegistrationService.register(req.body, preAuthCustomerAnalyticsDistinctId(req));
 
     res.status(201).json({
       success: true,
@@ -30,7 +31,7 @@ export const login = async (
   next: NextFunction
 ) => {
   try {
-    const result = await customerAuthenticationService.login(req.body);
+    const result = await customerAuthenticationService.login(req.body, preAuthCustomerAnalyticsDistinctId(req));
 
     res.status(200).json({
       success: true,

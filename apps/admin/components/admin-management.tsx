@@ -7,6 +7,7 @@ import { z } from "zod";
 import { MailPlus, Plus, X } from "lucide-react";
 import { errorMessage, postApi } from "@/lib/client-api";
 import { FieldError } from "./form-controls";
+import { trackAdminEvent } from "@/lib/analytics/admin";
 
 type Staff = { id: string; fullName: string; email: string; phone: string | null; department: "TECH" | "MANAGEMENT"; adminRole: "ADMIN" | "SUPER_ADMIN"; status: "PENDING" | "ACTIVE" | "SUSPENDED" | "LOCKED"; createdAt: string };
 const schema = z.object({ fullName: z.string().trim().min(2, "Enter the Admin's full name"), email: z.string().trim().email("Enter a valid email"), phone: z.string().trim().optional(), department: z.enum(["TECH", "MANAGEMENT"]), adminRole: z.enum(["ADMIN", "SUPER_ADMIN"]) }); type Values = z.infer<typeof schema>;
@@ -16,6 +17,10 @@ export function AdminManagement() {
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { department: "MANAGEMENT", adminRole: "ADMIN" } });
   const load = async () => { try { const response = await fetch("/api/admin/staff", { cache: "no-store" }); const payload = await response.json(); if (response.ok) setStaff(payload.data ?? []); else setMessage(payload.message ?? "Unable to load Admin staff."); } finally { setLoading(false); } };
   useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    if (!open) return;
+    void trackAdminEvent("Invite Admin Form Viewed", {});
+  }, [open]);
   useEffect(() => { if (!open) return; const dialog = dialogRef.current; const first = dialog?.querySelector<HTMLElement>("button, input, select"); first?.focus(); const close = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); if (event.key !== "Tab" || !dialog) return; const controls = Array.from(dialog.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled), select:not(:disabled)")); if (!controls.length) return; const firstControl = controls[0]; const lastControl = controls[controls.length - 1]; if (event.shiftKey && document.activeElement === firstControl) { event.preventDefault(); lastControl.focus(); } else if (!event.shiftKey && document.activeElement === lastControl) { event.preventDefault(); firstControl.focus(); } }; window.addEventListener("keydown", close); return () => window.removeEventListener("keydown", close); }, [open]);
   const invite = async (values: Values) => { setMessage(""); try { const response = await postApi<{ email: string }>("/api/admin/invite", values); setMessage(`Invitation sent to ${response.data?.email ?? values.email}.`); setOpen(false); reset(); await load(); } catch (error) { setMessage(errorMessage(error, "Unable to send this invitation.")); } };
   const resend = async (id: string) => { setResending(id); setMessage(""); try { await postApi(`/api/admin/staff/${id}/resend-invitation`, {}); setMessage("Invitation resent successfully."); await load(); } catch (error) { setMessage(errorMessage(error, "Unable to resend this invitation.")); } finally { setResending(null); } };

@@ -1,4 +1,5 @@
 import { env } from "../../config/env";
+import { customerServerAnalytics } from "../../analytics/customer-server-analytics";
 import { mailService } from "../../services/mail.service";
 import { CustomerAuthenticationService } from "./customer-authentication.service";
 import { SupabaseCustomerAuthenticationStore } from "./supabase-customer-authentication.store";
@@ -16,5 +17,6 @@ export const customerAuthenticationService = new CustomerAuthenticationService(
     otpResendCooldownSeconds: env.otpResendCooldownSeconds,
     otpMaxAttempts: env.otpMaxAttempts,
     resetProofExpiresIn: env.customerPasswordResetProofExpiresIn
-  }
+  },
+  customerServerAnalytics
 );

@@ -14,6 +14,7 @@ import { apiErrorOf, friendlyAuthError } from "@/lib/api/errors";
 import { normalizePhone } from "@/lib/phone";
 import { publicWebUrl } from "@/lib/site-urls";
 import { routeForNextAction } from "@/lib/navigation";
+import { anonymousCustomerAnalyticsDistinctId, trackCustomerEvent } from "@/lib/analytics/customer";
 import { loginSchema, type LoginValues } from "@/lib/validation";
 
 export function LoginScreen() {
@@ -22,9 +23,10 @@ export function LoginScreen() {
   const [error, setError] = useState("");
   const [routing, setRouting] = useState(false);
   const form = useForm<LoginValues>({ resolver: zodResolver(loginSchema), defaultValues: { identifier: "", password: "" } });
-  const mutation = useMutation({ mutationFn: ({ identifier, password }: LoginValues) => login(identifier.includes("@") ? identifier.trim().toLowerCase() : normalizePhone(identifier), password) });
+  const mutation = useMutation({ mutationFn: async ({ identifier, password }: LoginValues) => login(identifier.includes("@") ? identifier.trim().toLowerCase() : normalizePhone(identifier), password, await anonymousCustomerAnalyticsDistinctId()) });
   const submit = form.handleSubmit(async (values) => {
     setError("");
+    void trackCustomerEvent("Login Submitted", { login_identifier_type: values.identifier.includes("@") ? "email" : "phone" });
     try {
       const result = await mutation.mutateAsync(values);
       setRouting(true);

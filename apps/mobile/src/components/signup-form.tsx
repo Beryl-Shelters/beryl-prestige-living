@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
 import { Controller, useForm } from "react-hook-form";
+import { useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { post, ApiError } from "@/api/client";
 import {
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui";
 import { signupSchema, type SignupValues } from "@/schemas/signup";
 import { useAuthFlow } from "@/store/auth-flow";
+import { CUSTOMER_ANALYTICS_DISTINCT_ID_HEADER, customerAnonymousAnalyticsId, trackCustomerEvent, trackCustomerEventOnce } from "@/analytics/customer";
 import { colors, radii, spacing } from "@/theme/tokens";
 
 const messageFor = (error: unknown) => {
@@ -60,6 +62,7 @@ export function SignupForm() {
   });
   const same = watch("isWhatsAppNumber");
   const password = watch("password", "");
+  useEffect(() => { void trackCustomerEventOnce("signup-screen", "Signup Screen Viewed", { entry_point: "direct" }); }, []);
   const submit = async (values: SignupValues) => {
     try {
       const parsed: SignupValues = signupSchema.parse(values);
@@ -69,10 +72,12 @@ export function SignupForm() {
           ? parsed.phone
           : parsed.whatsAppNumber,
       };
+      void trackCustomerEvent("Signup Submitted", { Initial_Persona: payload.gettingStartedAs === "FIND_PROPERTY" ? "Find a Property" : "List a Property" });
+      const anonymousId = await customerAnonymousAnalyticsId();
       const result = await post<{
         maskedEmail: string;
         resendAvailableIn: number;
-      }>("/auth/register", payload);
+      }>("/auth/register", payload, anonymousId ? { [CUSTOMER_ANALYTICS_DISTINCT_ID_HEADER]: anonymousId } : undefined);
       setFlow({
         email: payload.email.trim().toLowerCase(),
         maskedEmail: result.data?.maskedEmail ?? payload.email,

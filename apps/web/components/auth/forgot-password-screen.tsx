@@ -13,6 +13,7 @@ import { customerApi } from "@/lib/api/client";
 import { apiErrorOf } from "@/lib/api/errors";
 import { emailSchema } from "@/lib/validation";
 import { useAuth } from "@/context/auth-provider";
+import { trackCustomerEvent } from "@/lib/analytics/customer";
 
 export function ForgotPasswordScreen() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export function ForgotPasswordScreen() {
   const mutation = useMutation({ mutationFn: customerApi.forgotPassword });
   const submit = form.handleSubmit(async ({ email }) => {
     setError("");
+    void trackCustomerEvent("Forgot Password Requested", {});
     try { await mutation.mutateAsync({ email: email.trim().toLowerCase() }); setResetEmail(email.trim().toLowerCase()); router.push("/verify-reset-otp"); }
     catch (caught) { setError(apiErrorOf(caught).message); }
   });

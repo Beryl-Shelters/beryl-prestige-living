@@ -1,4 +1,5 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, vi } from "vitest";
+import { CustomerServerAnalytics } from "../../analytics/customer-server-analytics";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { MailService, RegistrationOtpMail } from "../../services/mail.service";
@@ -242,12 +243,17 @@ describe("customer registration vertical slice", () => {
   let currentTime: Date;
   let generatedOtp: string;
   let service: CustomerRegistrationService;
+  const analytics = {
+    signupBlockedDuplicate: vi.fn(), accountCreated: vi.fn(), otpSent: vi.fn(), otpVerificationSucceeded: vi.fn(),
+    personaActivated: vi.fn(), customerLoggedIn: vi.fn(), loginFailed: vi.fn(), passwordResetOtpVerified: vi.fn(), passwordResetCompleted: vi.fn()
+  } as unknown as CustomerServerAnalytics;
 
   beforeEach(() => {
     store = new InMemoryRegistrationStore();
     mail = new CapturingMailService();
     currentTime = new Date("2026-07-28T10:00:00.000Z");
     generatedOtp = "123456";
+    vi.clearAllMocks();
     service = new CustomerRegistrationService(store, mail, {
       otpSecret: "test-only-otp-secret-with-sufficient-entropy",
       otpExpiryMinutes: 10,
@@ -255,7 +261,7 @@ describe("customer registration vertical slice", () => {
       otpMaxAttempts: 3,
       now: () => new Date(currentTime),
       generateOtp: () => generatedOtp
-    });
+    }, analytics);
   });
 
   const validInput = () => customerRegisterSchema.parse(registrationBody);
@@ -274,6 +280,8 @@ describe("customer registration vertical slice", () => {
     expect(result).not.toHaveProperty("confirmPassword");
     expect(mail.messages).toHaveLength(1);
     expect(store.accounts.get(registeredAccountId())?.initialPersona).toBe("BUYER");
+    expect(analytics.accountCreated).toHaveBeenCalledWith(registeredAccountId(), "Find a Property");
+    expect(analytics.otpSent).toHaveBeenCalledWith(registeredAccountId(), "signup");
   });
 
   it("registers the Seller/Developer path as pending verification", async () => {
@@ -300,10 +308,11 @@ describe("customer registration vertical slice", () => {
       email: " CUSTOMER@EXAMPLE.COM ",
       phone: "+2348099999999"
     });
-    await expect(service.register(duplicate)).rejects.toMatchObject({
+    await expect(service.register(duplicate, "$device:anonymous-customer-1")).rejects.toMatchObject({
       statusCode: 409,
       code: "EMAIL_ALREADY_REGISTERED"
     });
+    expect(analytics.signupBlockedDuplicate).toHaveBeenCalledWith("email", "$device:anonymous-customer-1");
   });
 
   it("rejects duplicate normalized phone", async () => {
@@ -313,10 +322,11 @@ describe("customer registration vertical slice", () => {
       email: "another@example.com",
       phone: "0801 234 5678"
     });
-    await expect(service.register(duplicate)).rejects.toMatchObject({
+    await expect(service.register(duplicate, "$device:anonymous-customer-1")).rejects.toMatchObject({
       statusCode: 409,
       code: "PHONE_ALREADY_REGISTERED"
     });
+    expect(analytics.signupBlockedDuplicate).toHaveBeenCalledWith("phone", "$device:anonymous-customer-1");
   });
 
   it("accepts a null WhatsApp override when the phone is WhatsApp", () => {
@@ -350,6 +360,7 @@ describe("customer registration vertical slice", () => {
       otp: "123456"
     });
     expect(result).toMatchObject({ accountStatus: "ACTIVE", emailVerified: true });
+    expect(analytics.otpVerificationSucceeded).toHaveBeenCalledWith(registeredAccountId(), "signup");
     expect(store.accounts.get(registeredAccountId())?.authEmailConfirmed).toBe(true);
   });
 
@@ -492,6 +503,20 @@ describe("customer registration vertical slice", () => {
       service.resendVerificationOtp({ email: registrationBody.email })
     ).rejects.toMatchObject({ statusCode: 503, code: "MAIL_DELIVERY_FAILED" });
     expect(store.challenges.at(-1)?.invalidatedAt).toEqual(currentTime);
+  });
+
+  it("tracks account persistence but not OTP delivery when the initial email fails", async () => {
+    mail.shouldFail = true;
+    await expect(service.register(validInput())).rejects.toMatchObject({ code: "REGISTRATION_UNAVAILABLE" });
+    expect(analytics.accountCreated).toHaveBeenCalledWith("user-1", "Find a Property");
+    expect(analytics.otpSent).not.toHaveBeenCalled();
+  });
+
+  it("does not track account creation when persistence fails", async () => {
+    store.createPendingCustomer = async () => { throw new Error("storage unavailable"); };
+    await expect(service.register(validInput())).rejects.toMatchObject({ code: "REGISTRATION_UNAVAILABLE" });
+    expect(analytics.accountCreated).not.toHaveBeenCalled();
+    expect(analytics.otpSent).not.toHaveBeenCalled();
   });
 
   it("keeps persona and customer projections unique under concurrent retry", async () => {

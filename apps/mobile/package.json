@@ -21,6 +21,7 @@
     "expo-router": "latest",
     "expo-secure-store": "latest",
     "expo-status-bar": "latest",
+    "mixpanel-react-native": "^3.6.0",
     "react": "19.2.3",
     "react-hook-form": "^7.84.0",
     "react-native": "latest",

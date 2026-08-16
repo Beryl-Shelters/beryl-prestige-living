@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Home, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import { AuthShell } from "./auth-shell";
@@ -16,10 +16,12 @@ import { apiErrorOf, friendlyAuthError } from "@/lib/api/errors";
 import type { GettingStartedAs } from "@/lib/contracts";
 import { normalizePhone } from "@/lib/phone";
 import { publicWebUrl } from "@/lib/site-urls";
+import { anonymousCustomerAnalyticsDistinctId, initialPersonaForAnalytics, trackCustomerEvent } from "@/lib/analytics/customer";
 import { signupSchema, type SignupValues } from "@/lib/validation";
 import { useAuth } from "@/context/auth-provider";
 
 export function SignupScreen() {
+  const trackedView = useRef(false);
   const router = useRouter();
   const { setPendingSignup } = useAuth();
   const [globalError, setGlobalError] = useState("");
@@ -27,22 +29,30 @@ export function SignupScreen() {
   const intent = form.watch("gettingStartedAs") as GettingStartedAs;
   const isWhatsApp = form.watch("isWhatsAppNumber");
   const password = form.watch("password");
-  const mutation = useMutation({ mutationFn: customerApi.register });
+  const mutation = useMutation({ mutationFn: ({ body, analyticsDistinctId }: { body: Parameters<typeof customerApi.register>[0]; analyticsDistinctId?: string }) => customerApi.register(body, analyticsDistinctId) });
+
+  useEffect(() => {
+    if (trackedView.current) return;
+    trackedView.current = true;
+    void trackCustomerEvent("Signup Screen Viewed", { entry_point: "direct" });
+  }, []);
 
   const submit = form.handleSubmit(async (values) => {
     setGlobalError("");
+    void trackCustomerEvent("Signup Submitted", { Initial_Persona: initialPersonaForAnalytics(values.gettingStartedAs) });
     try {
       const normalizedPhone = normalizePhone(values.phone);
-      const response = await mutation.mutateAsync({
-        fullName: values.fullName.trim(),
-        email: values.email.trim().toLowerCase(),
-        phone: normalizedPhone,
-        isWhatsAppNumber: values.isWhatsAppNumber,
-        whatsAppNumber: values.isWhatsAppNumber ? normalizedPhone : normalizePhone(values.whatsAppNumber ?? ""),
-        gettingStartedAs: values.gettingStartedAs,
-        password: values.password,
-        confirmPassword: values.confirmPassword
-      });
+      const analyticsDistinctId = await anonymousCustomerAnalyticsDistinctId();
+      const response = await mutation.mutateAsync({ body: {
+          fullName: values.fullName.trim(),
+          email: values.email.trim().toLowerCase(),
+          phone: normalizedPhone,
+          isWhatsAppNumber: values.isWhatsAppNumber,
+          whatsAppNumber: values.isWhatsAppNumber ? normalizedPhone : normalizePhone(values.whatsAppNumber ?? ""),
+          gettingStartedAs: values.gettingStartedAs,
+          password: values.password,
+          confirmPassword: values.confirmPassword
+        }, analyticsDistinctId });
       setPendingSignup({ email: values.email.trim().toLowerCase(), maskedEmail: response.data.maskedEmail, intent: values.gettingStartedAs, password: values.password });
       router.push("/verify-email");
     } catch (error) {

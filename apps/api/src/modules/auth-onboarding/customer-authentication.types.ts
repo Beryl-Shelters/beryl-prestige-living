@@ -72,6 +72,8 @@ export type ChangePasswordStatus =
 export interface CustomerAuthenticationStore {
   authenticate(identifier: string, password: string): Promise<string | null>;
   getCustomerState(userId: string): Promise<CustomerIdentityState | null>;
+  findCustomerIdByEmail(email: string): Promise<string | null>;
+  findCustomerIdByResetProofHash(proofHash: string): Promise<string | null>;
   createSession(input: {
     userId: string;
     sessionId: string;

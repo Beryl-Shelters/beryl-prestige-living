@@ -85,5 +85,8 @@ export const env = {
   invitationExpiryHours: Number(process.env.ADMIN_INVITATION_EXPIRY_HOURS || 24),
   resendApiKey: process.env.RESEND_API_KEY || "",
   resendFromEmail: process.env.RESEND_FROM_EMAIL || "",
-  resendFromName: process.env.RESEND_FROM_NAME || ""
+  resendFromName: process.env.RESEND_FROM_NAME || "",
+  mixpanelCustomerToken: process.env.MIXPANEL_CUSTOMER_TOKEN || "",
+  mixpanelAdminToken: process.env.MIXPANEL_ADMIN_TOKEN || "",
+  mixpanelEnvironment: process.env.MIXPANEL_ENVIRONMENT || "test"
 };

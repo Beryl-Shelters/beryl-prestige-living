@@ -8,6 +8,7 @@ import { errorMessage, postApi } from "@/lib/client-api";
 import type { LoginChallenge } from "@/lib/contracts";
 import { PasswordField, FieldError } from "./form-controls";
 import { AuthLayout } from "./auth-layout";
+import { ADMIN_ANALYTICS_DISTINCT_ID_HEADER, adminAnonymousAnalyticsIdentity, trackAdminEvent } from "@/lib/analytics/admin";
 const schema = z.object({
   email: z.string().trim().email("Enter a valid email address"),
   password: z.string().min(1, "Enter your password"),
@@ -23,11 +24,13 @@ export function LoginScreen() {
   } = useForm<Values>({ resolver: zodResolver(schema) });
   const submit = async (values: Values) => {
     setApiError("");
+    void trackAdminEvent("Login Submitted", {});
     try {
+      const anonymousId = await adminAnonymousAnalyticsIdentity();
       const response = await postApi<LoginChallenge>("/api/admin/login", {
         ...values,
         email: values.email.trim().toLowerCase(),
-      });
+      }, anonymousId ? { [ADMIN_ANALYTICS_DISTINCT_ID_HEADER]: anonymousId } : undefined);
       if (!response.data) throw new Error("Missing login challenge");
       sessionStorage.setItem(
         "beryl_admin_login_challenge",

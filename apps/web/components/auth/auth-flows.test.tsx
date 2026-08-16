@@ -11,7 +11,7 @@ import { VerificationScreen } from "./verification-screen";
 const mocks = vi.hoisted(() => ({
   push: vi.fn(), replace: vi.fn(), back: vi.fn(),
   register: vi.fn(), forgot: vi.fn(), verifyEmail: vi.fn(), verifyReset: vi.fn(), resend: vi.fn(), reset: vi.fn(),
-  login: vi.fn(), setPendingSignup: vi.fn(), setResetEmail: vi.fn()
+  login: vi.fn(), setPendingSignup: vi.fn(), setResetEmail: vi.fn(), track: vi.fn()
 }));
 
 let authState: Record<string, unknown>;
@@ -25,6 +25,11 @@ vi.mock("@/lib/api/client", () => ({ customerApi: {
   resendVerificationOtp: mocks.resend,
   resetPassword: mocks.reset
 } }));
+vi.mock("@/lib/analytics/customer", () => ({
+  trackCustomerEvent: mocks.track,
+  initialPersonaForAnalytics: (persona: "FIND_PROPERTY" | "LIST_PROPERTY") => persona === "FIND_PROPERTY" ? "Find a Property" : "List a Property",
+  customerPersonaForAnalytics: (persona: "BUYER" | "SELLER_DEVELOPER") => persona === "BUYER" ? "Buyer" : "Seller-Developer"
+}));
 
 const apiFailure = (code: string, message: string, extra: Record<string, unknown> = {}) => Object.assign(new Error(message), { isAxiosError: true, response: { data: { success: false, code, message, ...extra } } });
 const registerSuccess = { success: true, message: "Created", data: { verificationRequired: true, maskedEmail: "c•••r@example.com", otpLength: 6, resendAvailableIn: 60, nextAction: "VERIFY_EMAIL" } };
@@ -53,6 +58,13 @@ describe("customer authentication screens", () => {
   it("renders signup", () => {
     renderWithQuery(<SignupScreen />);
     expect(screen.getByRole("heading", { name: /create your account/i })).toBeInTheDocument();
+  });
+
+  it("tracks one safe signup-screen view despite normal re-renders", async () => {
+    renderWithQuery(<SignupScreen />);
+    await waitFor(() => expect(mocks.track).toHaveBeenCalledWith("Signup Screen Viewed", { entry_point: "direct" }));
+    await userEvent.click(screen.getByRole("button", { name: /list a property/i }));
+    expect(mocks.track).toHaveBeenCalledTimes(1);
   });
 
   it("changes persona selection and artwork copy", async () => {
@@ -102,6 +114,7 @@ describe("customer authentication screens", () => {
       confirmPassword: "Password123!"
     });
     expect(mocks.setPendingSignup).toHaveBeenCalledWith(expect.objectContaining({ intent: "FIND_PROPERTY", password: "Password123!" }));
+    expect(mocks.track).toHaveBeenCalledWith("Signup Submitted", { Initial_Persona: "Find a Property" });
   });
 
   it("maps duplicate email to the email field", async () => {
@@ -128,6 +141,7 @@ describe("customer authentication screens", () => {
     await userEvent.click(screen.getByRole("button", { name: /^log in$/i }));
     await waitFor(() => expect(mocks.login).toHaveBeenCalled());
     expect(mocks.login).toHaveBeenCalledWith(identifier.includes("@") ? identifier : "+2348012345678", "Password123!");
+    expect(mocks.track).toHaveBeenCalledWith("Login Submitted", { login_identifier_type: identifier.includes("@") ? "email" : "phone" });
   });
 
   it.each([
@@ -148,6 +162,7 @@ describe("customer authentication screens", () => {
     await userEvent.click(screen.getByRole("button", { name: /send reset code/i }));
     await waitFor(() => expect(mocks.forgot.mock.calls[0]?.[0]).toEqual({ email: "customer@example.com" }));
     expect(mocks.push).toHaveBeenCalledWith("/verify-reset-otp");
+    expect(mocks.track).toHaveBeenCalledWith("Forgot Password Requested", {});
   });
 
   it("verifies a reset OTP and routes to reset-password", async () => {
@@ -175,6 +190,7 @@ describe("customer authentication screens", () => {
     renderWithQuery(<VerificationScreen mode="reset" />);
     fireEvent.paste(screen.getByRole("group"), { clipboardData: { getData: () => "135790" } });
     expect(await screen.findByText(expected)).toBeInTheDocument();
+    if (code === "INVALID_OTP" || code === "OTP_EXPIRED") expect(mocks.track).toHaveBeenCalledWith("OTP Verification Failed", expect.objectContaining({ otp_context: "forgot_password", failure_reason: code === "INVALID_OTP" ? "invalid" : "expired" }));
   });
 
   it("disables OTP resend during cooldown", () => {

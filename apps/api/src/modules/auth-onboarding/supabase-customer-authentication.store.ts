@@ -77,6 +77,27 @@ export class SupabaseCustomerAuthenticationStore
     };
   }
 
+  async findCustomerIdByEmail(email: string) {
+    const { data, error } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .ilike("email", email)
+      .maybeSingle();
+    if (error) throw infrastructureFailure();
+    return data?.id ?? null;
+  }
+
+  async findCustomerIdByResetProofHash(proofHash: string) {
+    const { data, error } = await supabaseAdmin
+      .from("otp_challenges")
+      .select("customer_user_id")
+      .eq("purpose", "CUSTOMER_PASSWORD_RESET")
+      .eq("verified_proof_hash", proofHash)
+      .maybeSingle();
+    if (error) throw infrastructureFailure();
+    return data?.customer_user_id ?? null;
+  }
+
   async createSession(input: Parameters<CustomerAuthenticationStore["createSession"]>[0]) {
     const { data, error } = await supabaseAdmin
       .rpc("create_customer_session", {

@@ -2,18 +2,21 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { AuthLayout } from "./auth-layout";
 import { PasswordField } from "./form-controls";
 import { errorMessage, postApi } from "@/lib/client-api";
+import { trackAdminEvent } from "@/lib/analytics/admin";
 
 const schema = z.object({ temporaryPassword: z.string().min(1, "Enter the temporary password from your invitation email") });
 type Values = z.infer<typeof schema>;
 
 export function ActivationScreen({ invitationToken }: { invitationToken: string }) {
   const router = useRouter(); const [apiError, setApiError] = useState("");
+  const tracked = useRef(false);
+  useEffect(() => { if (!tracked.current) { tracked.current = true; void trackAdminEvent("Admin Activation Screen Viewed", {}); } }, []);
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<Values>({ resolver: zodResolver(schema) });
   const submit = async ({ temporaryPassword }: Values) => {
     setApiError("");

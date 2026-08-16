@@ -17,10 +17,10 @@ const client = axios.create({ baseURL: "/api/customer", headers: { "content-type
 const dataOf = <T>(response: { data: ApiSuccess<T> }) => response.data;
 
 export const customerApi = {
-  register: (body: RegisterRequest) => client.post<ApiSuccess<RegisterResult>>("/register", body).then(dataOf),
+  register: (body: RegisterRequest, analyticsDistinctId?: string) => client.post<ApiSuccess<RegisterResult>>("/register", body, { headers: analyticsDistinctId ? { "x-beryl-analytics-distinct-id": analyticsDistinctId } : undefined }).then(dataOf),
   verifyEmail: (body: { email: string; otp: string }) => client.post<ApiSuccess<VerifyEmailResult>>("/verify-email", body).then(dataOf),
   resendVerificationOtp: (body: { email: string }) => client.post<ApiSuccess<{ resendAvailableIn: number }>>("/resend-verification-otp", body).then(dataOf),
-  login: (body: { identifier: string; password: string }) => client.post<ApiSuccess<LoginResult>>("/login", body).then(dataOf),
+  login: (body: { identifier: string; password: string }, analyticsDistinctId?: string) => client.post<ApiSuccess<LoginResult>>("/login", body, { headers: analyticsDistinctId ? { "x-beryl-analytics-distinct-id": analyticsDistinctId } : undefined }).then(dataOf),
   forgotPassword: (body: { email: string }) => client.post<ApiSuccess<ForgotPasswordResult>>("/forgot-password", body).then(dataOf),
   verifyResetOtp: (body: { email: string; otp: string }) => client.post<ApiSuccess<ResetOtpResult>>("/verify-password-reset-otp", body).then(dataOf),
   resetPassword: (body: { newPassword: string; confirmPassword: string }) => client.post<ApiSuccess<SessionsInvalidatedResult>>("/reset-password", body).then(dataOf),

@@ -3,7 +3,7 @@
 import { ArrowLeft, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { AuthShell } from "./auth-shell";
 import { OtpInput } from "./otp-input";
@@ -13,8 +13,13 @@ import { apiErrorOf } from "@/lib/api/errors";
 import { routeForNextAction } from "@/lib/navigation";
 import { useAuth } from "@/context/auth-provider";
 import type { ApiSuccess, ResetOtpResult, VerifyEmailResult } from "@/lib/contracts";
+import { customerPersonaForAnalytics, trackCustomerEvent } from "@/lib/analytics/customer";
+import { prepareOnboardingAnalyticsTrigger } from "@/lib/analytics/onboarding-trigger";
 
 export function VerificationScreen({ mode }: { mode: "email" | "reset" }) {
+  const trackedView = useRef(false);
+  const resendCount = useRef(0);
+  const verificationAttempts = useRef(0);
   const router = useRouter();
   const { pendingSignup, resetEmail, login, setPendingSignup } = useAuth();
   const email = mode === "email" ? pendingSignup?.email ?? "" : resetEmail;
@@ -28,6 +33,12 @@ export function VerificationScreen({ mode }: { mode: "email" | "reset" }) {
   const resend = useMutation({ mutationFn: () => mode === "email" ? customerApi.resendVerificationOtp({ email }) : customerApi.forgotPassword({ email }) });
 
   useEffect(() => {
+    if (trackedView.current || !email) return;
+    trackedView.current = true;
+    void trackCustomerEvent("Verification Screen Viewed", { otp_context: mode === "email" ? "signup" : "forgot_password" });
+  }, [email, mode]);
+
+  useEffect(() => {
     if (countdown <= 0) return;
     const timer = window.setInterval(() => setCountdown((value) => Math.max(0, value - 1)), 1000);
     return () => window.clearInterval(timer);
@@ -35,6 +46,7 @@ export function VerificationScreen({ mode }: { mode: "email" | "reset" }) {
 
   const submitOtp = async (otp: string) => {
     if (!email || verify.isPending) return;
+    verificationAttempts.current += 1;
     setError("");
     try {
       const response = await verify.mutateAsync(otp);
@@ -51,9 +63,15 @@ export function VerificationScreen({ mode }: { mode: "email" | "reset" }) {
         nextAction = "LOGIN";
       }
       setPendingSignup(pendingSignup ? { ...pendingSignup, password: undefined } : null);
+      if (nextAction === "COMPLETE_BUYER_ONBOARDING" || nextAction === "COMPLETE_SELLER_ONBOARDING") {
+        prepareOnboardingAnalyticsTrigger({ persona: customerPersonaForAnalytics(nextAction === "COMPLETE_BUYER_ONBOARDING" ? "BUYER" : "SELLER_DEVELOPER"), source: "signup" });
+      }
       window.setTimeout(() => router.push(routeForNextAction(nextAction)), 650);
     } catch (caught) {
       const apiError = apiErrorOf(caught);
+      if (apiError.code === "INVALID_OTP" || apiError.code === "OTP_EXPIRED") {
+        void trackCustomerEvent("OTP Verification Failed", { otp_context: mode === "email" ? "signup" : "forgot_password", attempt_number: verificationAttempts.current, failure_reason: apiError.code === "INVALID_OTP" ? "invalid" : "expired" });
+      }
       setAttempts(apiError.attemptsRemaining ?? null);
       setError(apiError.code === "INVALID_OTP" ? `That code was not right.${apiError.attemptsRemaining !== undefined ? ` ${apiError.attemptsRemaining} attempts left.` : ""}` : apiError.code === "OTP_EXPIRED" ? "That code has expired. Request a new one." : apiError.code === "OTP_ATTEMPTS_EXCEEDED" ? "Too many tries. Request a new code to continue." : apiError.code === "OTP_NO_LONGER_VALID" ? "That code is no longer valid. Request a new one." : apiError.message);
       setResetKey((value) => value + 1);
@@ -63,6 +81,8 @@ export function VerificationScreen({ mode }: { mode: "email" | "reset" }) {
   const resendCode = async () => {
     if (countdown > 0) return;
     setError("");
+    resendCount.current += 1;
+    void trackCustomerEvent("OTP Resend Requested", { otp_context: mode === "email" ? "signup" : "forgot_password", resend_count: resendCount.current });
     try {
       const response = await resend.mutateAsync();
       setCountdown(response.data.resendAvailableIn);

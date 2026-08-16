@@ -6,11 +6,13 @@ import { ADMIN_COOKIES, clearAdminCookies, setAdminSession } from "@/lib/server/
 import type { AdminSessionState } from "@/lib/contracts";
 
 export async function bodyOf(request: Request) { try { return await request.json(); } catch { return {}; } }
-export async function upstream(path: string, body: unknown, method = "POST", accessToken?: string) {
-  const response = await fetch(backendApiUrl(path), { method, cache: "no-store", headers: { accept: "application/json", "content-type": "application/json", ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
+const analyticsDistinctId = (value: string | null) => value && /^\$device:[A-Za-z0-9_-]{1,120}$/.test(value) ? value : undefined;
+export async function upstream(path: string, body: unknown, method = "POST", accessToken?: string, anonymousAnalyticsId?: string) {
+  const response = await fetch(backendApiUrl(path), { method, cache: "no-store", headers: { accept: "application/json", "content-type": "application/json", ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}), ...(anonymousAnalyticsId ? { "x-beryl-analytics-distinct-id": anonymousAnalyticsId } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
   const payload = await response.json().catch(() => ({ success: false, message: "The authentication service returned an invalid response.", code: "UPSTREAM_INVALID_RESPONSE" }));
   return { response, payload: payload as ApiEnvelope<Record<string, unknown>> };
 }
+export const preAuthAnalyticsId = (request: Request) => analyticsDistinctId(request.headers.get("x-beryl-analytics-distinct-id"));
 const stateFromCookie = (value?: string): AdminSessionState | null => { try { return value ? JSON.parse(value) as AdminSessionState : null; } catch { return null; } };
 export async function protectedAdminRequest(path: string, method: "GET" | "POST" | "PATCH", body?: unknown) {
   const jar = await cookies(); let access = jar.get(ADMIN_COOKIES.access)?.value; const refresh = jar.get(ADMIN_COOKIES.refresh)?.value;

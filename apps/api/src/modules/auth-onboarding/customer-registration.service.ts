@@ -1,5 +1,6 @@
 import { MailService } from "../../services/mail.service";
 import { AppError } from "../../utils/AppError";
+import { CustomerServerAnalytics, initialPersonaForAnalytics, noOpCustomerServerAnalytics } from "../../analytics/customer-server-analytics";
 import { hashOtp, generateSixDigitOtp } from "./otp";
 import {
   CustomerRegistrationConflictError,
@@ -44,7 +45,8 @@ export class CustomerRegistrationService {
   constructor(
     private readonly store: CustomerRegistrationStore,
     private readonly mail: MailService,
-    private readonly options: ServiceOptions
+    private readonly options: ServiceOptions,
+    private readonly analytics: CustomerServerAnalytics = noOpCustomerServerAnalytics
   ) {
     this.now = options.now ?? (() => new Date());
     this.generateOtp = options.generateOtp ?? generateSixDigitOtp;
@@ -69,18 +71,20 @@ export class CustomerRegistrationService {
     };
   }
 
-  async register(input: RegisterCustomerInput) {
+  async register(input: RegisterCustomerInput, analyticsDistinctId?: string) {
     this.requireOtpSecret();
     let pendingUserId: string | undefined;
 
     try {
       const conflict = await this.store.findConflict(input.email, input.phone);
       if (conflict) {
+        this.analytics.signupBlockedDuplicate(conflict === "EMAIL" ? "email" : "phone", analyticsDistinctId);
         throw duplicateError(conflict);
       }
 
       const pending = await this.store.createPendingCustomer(input);
       pendingUserId = pending.id;
+      this.analytics.accountCreated(pending.id, initialPersonaForAnalytics(input.gettingStartedAs));
       const now = this.now();
       const otp = this.generateOtp();
       const { expiresAt, resendAvailableAt } = this.challengeTimes(now);
@@ -108,6 +112,7 @@ export class CustomerRegistrationService {
         otp,
         expiresInMinutes: this.options.otpExpiryMinutes
       });
+      this.analytics.otpSent(pending.id, "signup");
 
       return {
         verificationRequired: true as const,
@@ -122,6 +127,7 @@ export class CustomerRegistrationService {
       }
       if (error instanceof AppError) throw error;
       if (error instanceof CustomerRegistrationConflictError) {
+        this.analytics.signupBlockedDuplicate(error.conflict === "EMAIL" ? "email" : "phone", analyticsDistinctId);
         throw duplicateError(error.conflict);
       }
       throw new AppError(
@@ -178,6 +184,7 @@ export class CustomerRegistrationService {
       if (!result.userId || !result.activePersona || !result.onboardingStatus) {
         throw new CustomerRegistrationInfrastructureError();
       }
+      this.analytics.otpVerificationSucceeded(result.userId, "signup");
 
       return {
         accountStatus: result.accountStatus,
@@ -256,6 +263,7 @@ export class CustomerRegistrationService {
           otp,
           expiresInMinutes: this.options.otpExpiryMinutes
         });
+        if (challenge.userId) this.analytics.otpSent(challenge.userId, "signup");
       } catch {
         await this.store.invalidateVerificationOtp(challenge.challengeId, now);
         throw new AppError(

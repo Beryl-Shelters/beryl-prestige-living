@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MailService } from "../../services/mail.service";
 import { CustomerAuthenticationService } from "./customer-authentication.service";
 import { CustomerAuthenticationStore } from "./customer-authentication.types";
+import { CustomerServerAnalytics } from "../../analytics/customer-server-analytics";
 import {
   issueCustomerRefreshToken,
   verifyCustomerAccessToken
@@ -14,6 +15,8 @@ let currentTime = new Date("2026-08-03T10:00:00.000Z");
 
 const authenticate = vi.fn();
 const getCustomerState = vi.fn();
+const findCustomerIdByEmail = vi.fn();
+const findCustomerIdByResetProofHash = vi.fn();
 const createSession = vi.fn();
 const rotateSession = vi.fn();
 const revokeSession = vi.fn();
@@ -22,10 +25,16 @@ const invalidatePasswordResetOtp = vi.fn();
 const verifyPasswordResetOtp = vi.fn();
 const resetPassword = vi.fn();
 const changePassword = vi.fn();
+const analytics = {
+  signupBlockedDuplicate: vi.fn(), accountCreated: vi.fn(), otpSent: vi.fn(), otpVerificationSucceeded: vi.fn(),
+  personaActivated: vi.fn(), customerLoggedIn: vi.fn(), loginFailed: vi.fn(), passwordResetOtpVerified: vi.fn(), passwordResetCompleted: vi.fn()
+} as unknown as CustomerServerAnalytics;
 
 const store = {
   authenticate,
   getCustomerState,
+  findCustomerIdByEmail,
+  findCustomerIdByResetProofHash,
   createSession,
   rotateSession,
   revokeSession,
@@ -67,7 +76,7 @@ const service = new CustomerAuthenticationService(store, mail, {
   resetProofExpiresIn: 600,
   now: () => currentTime,
   generateOtp: () => "419205"
-});
+}, analytics);
 
 describe("customer authentication service", () => {
   beforeEach(() => {
@@ -75,6 +84,8 @@ describe("customer authentication service", () => {
     currentTime = new Date("2026-08-03T10:00:00.000Z");
     authenticate.mockResolvedValue(userId);
     getCustomerState.mockResolvedValue({ ...buyerState });
+    findCustomerIdByEmail.mockResolvedValue(userId);
+    findCustomerIdByResetProofHash.mockResolvedValue(userId);
     createSession.mockResolvedValue({ status: "OK", sessionVersion: 3 });
     rotateSession.mockResolvedValue({ status: "OK", sessionVersion: 3 });
     revokeSession.mockResolvedValue({ status: "OK" });
@@ -109,6 +120,7 @@ describe("customer authentication service", () => {
     expect(
       verifyCustomerAccessToken(result.accessToken, accessSecret, currentTime)
     ).toMatchObject({ sub: userId, ver: 3, typ: "customer_access" });
+    expect(analytics.customerLoggedIn).toHaveBeenCalledWith(userId, "Buyer");
   });
 
   it("logs in by normalized phone", async () => {
@@ -125,12 +137,13 @@ describe("customer authentication service", () => {
   it("uses one generic invalid-credential error", async () => {
     authenticate.mockResolvedValue(null);
     await expect(
-      service.login({ identifier: "missing@example.com", password: "wrong" })
+      service.login({ identifier: "missing@example.com", password: "wrong" }, "$device:anonymous-customer-1")
     ).rejects.toMatchObject({
       statusCode: 401,
       code: "INVALID_CREDENTIALS",
       message: "Incorrect email/phone or password"
     });
+    expect(analytics.loginFailed).toHaveBeenCalledWith("$device:anonymous-customer-1");
   });
 
   it.each([
@@ -259,6 +272,7 @@ describe("customer authentication service", () => {
     replacePasswordResetOtp.mockResolvedValue({
       status: "REPLACED",
       challengeId: "challenge-id",
+      userId,
       email: "customer@example.com",
       fullName: "Test Customer"
     });
@@ -269,12 +283,14 @@ describe("customer authentication service", () => {
     expect(sendPasswordResetOtp).toHaveBeenCalledWith(
       expect.objectContaining({ otp: "419205" })
     );
+    expect(analytics.otpSent).toHaveBeenCalledWith(userId, "forgot_password");
   });
 
   it("invalidates a reset challenge when email delivery fails", async () => {
     replacePasswordResetOtp.mockResolvedValue({
       status: "REPLACED",
       challengeId: "challenge-id",
+      userId,
       email: "customer@example.com",
       fullName: "Test Customer"
     });
@@ -312,12 +328,15 @@ describe("customer authentication service", () => {
     expect(result).toMatchObject({ expiresIn: 600, nextAction: "SET_NEW_PASSWORD" });
     expect(stored.proofHash).toMatch(/^[a-f0-9]{64}$/);
     expect(stored.proofHash).not.toBe(result.resetToken);
+    expect(analytics.otpVerificationSucceeded).toHaveBeenCalledWith(userId, "forgot_password");
+    expect(analytics.passwordResetOtpVerified).toHaveBeenCalledWith(userId);
   });
 
   it("resets the password and invalidates every session", async () => {
     await expect(
       service.resetPassword("reset-proof-token-at-least-32-characters", "NewPassword123!")
     ).resolves.toEqual({ sessionsInvalidated: true, nextAction: "LOGIN" });
+    expect(analytics.passwordResetCompleted).toHaveBeenCalledWith(userId);
   });
 
   it.each([

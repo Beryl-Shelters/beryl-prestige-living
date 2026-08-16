@@ -2,11 +2,16 @@
 import { LogOut, LayoutDashboard, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import type { AdminSessionState } from "@/lib/contracts";
+import { identifyAdminAnalytics, resetAdminAnalytics, trackAdminEvent } from "@/lib/analytics/admin";
 import { BrandLogo } from "./brand-logo";
 export function AdminShell({ session, children }: { session: AdminSessionState; children: React.ReactNode }) {
   const router = useRouter();
+  useEffect(() => { void identifyAdminAnalytics(session.admin); }, [session.admin]);
   const logout = async () => {
+    void trackAdminEvent("Logout", {});
+    await resetAdminAnalytics();
     await fetch("/api/admin/logout", { method: "POST" });
     router.replace("/login");
     router.refresh();

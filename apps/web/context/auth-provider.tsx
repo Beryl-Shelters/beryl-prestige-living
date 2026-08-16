@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { customerApi } from "@/lib/api/client";
+import { customerPersonaForAnalytics, identifyCustomerAnalytics, resetCustomerAnalytics, trackCustomerEvent } from "@/lib/analytics/customer";
 import type { CustomerSessionState, GettingStartedAs, LoginResult } from "@/lib/contracts";
 
 type PendingSignup = { email: string; maskedEmail: string; intent: GettingStartedAs; password?: string };
@@ -13,7 +14,7 @@ type AuthContextValue = {
   resetEmail: string;
   setPendingSignup: (value: PendingSignup | null) => void;
   setResetEmail: (email: string) => void;
-  login: (identifier: string, password: string) => Promise<LoginResult>;
+  login: (identifier: string, password: string, analyticsDistinctId?: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
   setSession: (state: CustomerSessionState | null) => void;
 };
@@ -29,6 +30,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (restored.data?.data) setSession(restored.data.data);
   }, [restored.data]);
+
+  const activeSession = session ?? restored.data?.data ?? null;
+  const analyticsAccountId = activeSession?.user.id;
+  const analyticsActivePersona = activeSession?.activePersona;
+
+  useEffect(() => {
+    if (!analyticsAccountId || !analyticsActivePersona) return;
+    void identifyCustomerAnalytics(analyticsAccountId, customerPersonaForAnalytics(analyticsActivePersona));
+  }, [analyticsAccountId, analyticsActivePersona]);
 
   useEffect(() => {
     const saved = sessionStorage.getItem("beryl-auth-flow");
@@ -56,16 +66,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     persist(pendingSignup, value);
   };
 
-  const login = async (identifier: string, password: string) => {
-    const result = await customerApi.login({ identifier, password });
+  const login = async (identifier: string, password: string, analyticsDistinctId?: string) => {
+    const result = await customerApi.login({ identifier, password }, analyticsDistinctId);
     setSession(result.data);
     return result.data;
   };
   const logout = async () => {
-    try { await customerApi.logout(); } finally { setSession(null); }
+    void trackCustomerEvent("Logout", {});
+    try { await customerApi.logout(); } finally { await resetCustomerAnalytics(); setSession(null); }
   };
 
-  const value = { session: session ?? restored.data?.data ?? null, sessionLoading: restored.isLoading, pendingSignup, resetEmail, setPendingSignup, setResetEmail, login, logout, setSession };
+  const value = { session: activeSession, sessionLoading: restored.isLoading, pendingSignup, resetEmail, setPendingSignup, setResetEmail, login, logout, setSession };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
