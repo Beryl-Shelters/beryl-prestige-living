@@ -1,0 +1,3 @@
+import { describe, expect, it } from "vitest"; import { readFileSync } from "node:fs"; import path from "node:path";
+const sql=readFileSync(path.resolve(__dirname,"../../../supabase/migrations/202608160001_marketplace_property_drafts.sql"),"utf8");
+describe("marketplace draft migration",()=>{it("is additive and preserves the canonical property domain",()=>{expect(sql).toContain("alter table public.properties");expect(sql).toContain("add column if not exists");expect(sql).toContain("default 'DRAFT'");expect(sql).toContain("default 'PROPERTY_INFORMATION'");expect(sql).not.toMatch(/\bdrop\b/i);expect(sql).not.toContain("marketplace_properties");expect(sql).not.toMatch(/disable row level security/i)})});
