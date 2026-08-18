@@ -40,6 +40,18 @@ const dynamicCustomerPath = (method: string, browserPath: string) => {
   if (method === "GET" && browserPath === "marketplace/seller/properties") return browserPath;
   const management = new RegExp(`^marketplace/seller/properties/(${propertyId})/management$`).exec(browserPath);
   if (management && method === "GET") return `marketplace/seller/properties/${management[1]}/management`;
+  if (method === "POST" && browserPath === "marketplace/seller/properties") return browserPath;
+  const draft = new RegExp(`^marketplace/seller/properties/(${propertyId})$`).exec(browserPath);
+  if (draft && (method === "GET" || method === "PATCH")) return `marketplace/seller/properties/${draft[1]}`;
+  const image = new RegExp(`^marketplace/seller/properties/(${propertyId})/images/(${propertyId})$`).exec(browserPath);
+  if (image && (method === "DELETE" || method === "PATCH")) return `marketplace/seller/properties/${image[1]}/images/${image[2]}${method === "PATCH" ? "/cover" : ""}`;
+  const images = new RegExp(`^marketplace/seller/properties/(${propertyId})/images$`).exec(browserPath);
+  if (images && method === "POST") return `marketplace/seller/properties/${images[1]}/images`;
+  if (images && method === "PATCH") return `marketplace/seller/properties/${images[1]}/images/order`;
+  const document = new RegExp(`^marketplace/seller/properties/(${propertyId})/documents/(${propertyId})$`).exec(browserPath);
+  if (document && method === "DELETE") return `marketplace/seller/properties/${document[1]}/documents/${document[2]}`;
+  const documents = new RegExp(`^marketplace/seller/properties/(${propertyId})/documents$`).exec(browserPath);
+  if (documents && method === "POST") return `marketplace/seller/properties/${documents[1]}/documents`;
   return undefined;
 };
 
@@ -63,15 +75,16 @@ const backendFetch = (path: string, method: string, body: unknown, accessToken?:
     cache: "no-store",
     headers: {
       accept: "application/json",
-      ...(body === undefined ? {} : { "content-type": "application/json" }),
+      ...(body === undefined || body instanceof FormData ? {} : { "content-type": "application/json" }),
       ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
       ...(analyticsDistinctId ? { [analyticsDistinctIdHeader]: analyticsDistinctId } : {})
     },
-    body: body === undefined ? undefined : JSON.stringify(body)
+    body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body)
   });
 
 const readJson = async (request: NextRequest) => {
   if (request.method === "GET" || request.method === "DELETE") return undefined;
+  if (request.headers.get("content-type")?.includes("multipart/form-data")) return request.formData();
   try {
     return await request.json();
   } catch {
@@ -125,7 +138,7 @@ const handleRequest = async (request: NextRequest, context: Context) => {
     body = { ...(body as object), resetToken };
   }
 
-  const isProtectedPath = protectedPaths.has(path) || path.startsWith("properties/") || path.startsWith("marketplace/properties/");
+  const isProtectedPath = protectedPaths.has(path) || path.startsWith("properties/") || path.startsWith("marketplace/properties/") || path.startsWith("marketplace/seller/properties");
   const isAuthenticationPath = path.startsWith("auth/");
   let backend = await backendFetch(path, request.method, body, isProtectedPath ? accessToken : undefined, analyticsDistinctId);
   let payload = await backend.json();

@@ -13,6 +13,8 @@ import type {
   SellerListingListResult,
   SellerListingManagementResult,
   SellerListingStatus,
+  SellerDraft,
+  SellerDraftResult,
   PersonaMutationResult,
   PersonaState,
   RegisterRequest,
@@ -47,6 +49,15 @@ export const customerApi = {
   expressMarketplaceInterest: (propertyId: string, body: MarketplaceInterestRequest) => client.post<ApiSuccess<MarketplaceInterestResult>>(`/marketplace/properties/${propertyId}/interest`, body).then(dataOf),
   sellerListings: (params: { status: SellerListingStatus; page: number; limit: number }) => client.get<ApiSuccess<SellerListingListResult>>("/marketplace/seller/properties", { params }).then(dataOf),
   sellerListingManagement: (propertyId: string) => client.get<ApiSuccess<SellerListingManagementResult>>(`/marketplace/seller/properties/${propertyId}/management`).then(dataOf),
+  createSellerDraft: (body: Partial<SellerDraft>) => client.post<ApiSuccess<SellerDraftResult>>("/marketplace/seller/properties", body).then(dataOf),
+  sellerDraft: (propertyId: string) => client.get<ApiSuccess<SellerDraftResult>>(`/marketplace/seller/properties/${propertyId}`).then(dataOf),
+  saveSellerDraft: (propertyId: string, body: Partial<SellerDraft>) => client.patch<ApiSuccess<SellerDraftResult>>(`/marketplace/seller/properties/${propertyId}`, body).then(dataOf),
+  uploadSellerImages: (propertyId: string, body: FormData) => client.post(`/marketplace/seller/properties/${propertyId}/images`, body, { headers: { "content-type": "multipart/form-data" } }).then(dataOf),
+  deleteSellerImage: (propertyId: string, imageId: string) => client.delete(`/marketplace/seller/properties/${propertyId}/images/${imageId}`).then(dataOf),
+  reorderSellerImages: (propertyId: string, imageIds: string[]) => client.patch(`/marketplace/seller/properties/${propertyId}/images`, { imageIds }).then(dataOf),
+  setSellerCover: (propertyId: string, imageId: string) => client.patch(`/marketplace/seller/properties/${propertyId}/images/${imageId}`, {}).then(dataOf),
+  uploadSellerDocument: (propertyId: string, body: FormData) => client.post(`/marketplace/seller/properties/${propertyId}/documents`, body, { headers: { "content-type": "multipart/form-data" } }).then(dataOf),
+  deleteSellerDocument: (propertyId: string, documentId: string) => client.delete(`/marketplace/seller/properties/${propertyId}/documents/${documentId}`).then(dataOf),
   session: () => axios.get<ApiSuccess<CustomerSessionState>>("/api/session").then(dataOf)
 };
 

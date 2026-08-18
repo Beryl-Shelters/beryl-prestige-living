@@ -13,9 +13,11 @@ describe("Seller Marketplace listing routes", () => {
     expect(sellerListingRouteForAction("VIEW_LIVE_LISTING", id)).toBe(`/marketplace/${id}`);
     expect(sellerListingRouteForAction("VIEW_REVIEW_STATUS", id)).toBe(`/seller/listings/${id}`);
     expect(sellerListingRouteForAction("VIEW_REJECTION", id)).toBe(`/seller/listings/${id}`);
-    for (const action of ["CONTINUE_PROPERTY_INFORMATION", "CONTINUE_PHOTOS_DOCUMENTS", "CONTINUE_SALES_MANDATE", "CONTINUE_REVIEW", "EDIT_REJECTED_LISTING"] as const) {
-      expect(sellerListingRouteForAction(action, id)).toContain(`/seller/listings/${id}?step=`);
-    }
+    expect(sellerListingRouteForAction("CONTINUE_PROPERTY_INFORMATION", id)).toBe(`/seller/listings/${id}/edit?step=property-information`);
+    expect(sellerListingRouteForAction("CONTINUE_PHOTOS_DOCUMENTS", id)).toBe(`/seller/listings/${id}/edit?step=photos-documents`);
+    expect(sellerListingRouteForAction("CONTINUE_SALES_MANDATE", id)).toBe(`/seller/listings/${id}/edit?step=SALES_MANDATE`);
+    expect(sellerListingRouteForAction("CONTINUE_REVIEW", id)).toBe(`/seller/listings/${id}?step=review`);
+    expect(sellerListingRouteForAction("EDIT_REJECTED_LISTING", id)).toBe(`/seller/listings/${id}?step=corrections`);
     expect(sellerListingActionLabel("EDIT_REJECTED_LISTING")).toBe("Make changes");
   });
 });
