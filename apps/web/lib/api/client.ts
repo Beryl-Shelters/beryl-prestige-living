@@ -6,6 +6,10 @@ import type {
   LoginResult,
   MarketplaceSearchParams,
   MarketplaceSearchResult,
+  MarketplaceInterestRequest,
+  MarketplaceInterestResult,
+  MarketplacePropertyDetailResult,
+  MarketplaceSavedPropertyMutation,
   PersonaMutationResult,
   PersonaState,
   RegisterRequest,
@@ -35,11 +39,17 @@ export const customerApi = {
   personas: () => client.get<ApiSuccess<{ activePersona: string; personas: PersonaState[] }>>("/personas").then(dataOf),
   activatePersona: (personaType: string) => client.post<ApiSuccess<PersonaMutationResult>>("/personas/activate", { personaType }).then(dataOf),
   switchPersona: (personaType: string) => client.patch<ApiSuccess<PersonaMutationResult>>("/personas/active", { personaType }).then(dataOf),
+  saveProperty: (propertyId: string) => client.post<ApiSuccess<MarketplaceSavedPropertyMutation>>(`/properties/${propertyId}/save`, {}).then(dataOf),
+  unsaveProperty: (propertyId: string) => client.delete<ApiSuccess<never>>(`/properties/${propertyId}/save`).then(dataOf),
+  expressMarketplaceInterest: (propertyId: string, body: MarketplaceInterestRequest) => client.post<ApiSuccess<MarketplaceInterestResult>>(`/marketplace/properties/${propertyId}/interest`, body).then(dataOf),
   session: () => axios.get<ApiSuccess<CustomerSessionState>>("/api/session").then(dataOf)
 };
 
 export const marketplaceApi = {
   search: (params: MarketplaceSearchParams) => axios
     .get<ApiSuccess<MarketplaceSearchResult>>("/api/marketplace", { params })
+    .then(dataOf),
+  detail: (propertyId: string) => axios
+    .get<ApiSuccess<MarketplacePropertyDetailResult>>(`/api/marketplace/${propertyId}`)
     .then(dataOf)
 };

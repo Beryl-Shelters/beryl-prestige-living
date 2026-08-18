@@ -162,3 +162,66 @@ export type MarketplaceSearchParams = {
   page: number;
   limit: number;
 };
+
+export type MarketplaceGalleryImage = {
+  id: string;
+  url: string;
+  order: number;
+  isCover: boolean;
+};
+
+export type MarketplaceInitialDeposit = {
+  type: "AMOUNT" | "PERCENTAGE" | null;
+  value: number | null;
+};
+
+export type MarketplacePropertyDetail = {
+  id: string;
+  referenceId: string;
+  title: string;
+  description: string;
+  askingPrice: number;
+  negotiable: boolean;
+  propertyType: string;
+  propertyCategory: MarketplacePropertyCategory;
+  publicLocation: string;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  toilets: number | null;
+  parkingSpaces: number | null;
+  numberOfFloors: number | null;
+  parkingCapacity: number | null;
+  condition: string | null;
+  furnishing: string | null;
+  initialDeposit: MarketplaceInitialDeposit | null;
+  amenities: string[];
+  images: MarketplaceGalleryImage[];
+  photoCount: number;
+  verified: boolean;
+  publishedAt: string | null;
+  saved: boolean;
+};
+
+export type MarketplacePropertyDetailResult = { property: MarketplacePropertyDetail };
+
+export type MarketplaceSavedPropertyMutation = {
+  saved_property: { id: string; propertyId: string; savedAt: string };
+};
+
+export type MarketplaceInterestContactMethod = "WHATSAPP" | "CALL" | "EMAIL";
+
+export type MarketplaceInterestRequest = {
+  preferredContactMethod: MarketplaceInterestContactMethod;
+  message?: string;
+};
+
+export type MarketplaceInterestResult = {
+  inquiryId: string;
+  propertyId: string;
+  referenceId: string;
+  title: string;
+  askingPrice: number;
+  preferredContactMethod: MarketplaceInterestContactMethod;
+  submittedAt: string;
+  nextAction: "KEEP_BROWSING";
+};

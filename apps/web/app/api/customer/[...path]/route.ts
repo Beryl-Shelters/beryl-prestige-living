@@ -31,6 +31,15 @@ const upstreamPaths = new Map([
   ["PATCH personas/active", "personas/active"]
 ]);
 
+const propertyId = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}";
+const dynamicCustomerPath = (method: string, browserPath: string) => {
+  const save = new RegExp(`^properties/(${propertyId})/save$`).exec(browserPath);
+  if (save && (method === "POST" || method === "DELETE")) return `properties/${save[1]}/save`;
+  const interest = new RegExp(`^marketplace/properties/(${propertyId})/interest$`).exec(browserPath);
+  if (interest && method === "POST") return `marketplace/properties/${interest[1]}/interest`;
+  return undefined;
+};
+
 const protectedPaths = new Set([
   "auth/logout",
   "auth/change-password",
@@ -59,7 +68,7 @@ const backendFetch = (path: string, method: string, body: unknown, accessToken?:
   });
 
 const readJson = async (request: NextRequest) => {
-  if (request.method === "GET") return undefined;
+  if (request.method === "GET" || request.method === "DELETE") return undefined;
   try {
     return await request.json();
   } catch {
@@ -80,7 +89,7 @@ const upstreamNotFound = (method: string, path: string) => {
 
 const handleRequest = async (request: NextRequest, context: Context) => {
   const browserPath = (await context.params).path.join("/");
-  const path = upstreamPaths.get(`${request.method} ${browserPath}`);
+  const path = upstreamPaths.get(`${request.method} ${browserPath}`) ?? dynamicCustomerPath(request.method, browserPath);
   if (!path) {
     return NextResponse.json({ success: false, message: "Route not found" }, { status: 404 });
   }
@@ -113,18 +122,20 @@ const handleRequest = async (request: NextRequest, context: Context) => {
     body = { ...(body as object), resetToken };
   }
 
-  let backend = await backendFetch(path, request.method, body, protectedPaths.has(path) ? accessToken : undefined, analyticsDistinctId);
+  const isProtectedPath = protectedPaths.has(path) || path.startsWith("properties/") || path.startsWith("marketplace/properties/");
+  const isAuthenticationPath = path.startsWith("auth/");
+  let backend = await backendFetch(path, request.method, body, isProtectedPath ? accessToken : undefined, analyticsDistinctId);
   let payload = await backend.json();
-  if (backend.status === 404) return upstreamNotFound(request.method, path);
+  if (backend.status === 404 && isAuthenticationPath) return upstreamNotFound(request.method, path);
 
-  if (backend.status === 401 && protectedPaths.has(path) && path !== "auth/logout" && refreshToken) {
+  if (backend.status === 401 && isProtectedPath && path !== "auth/logout" && refreshToken) {
     const refreshed = await refreshSession(refreshToken);
     if (refreshed.response.ok) {
       const tokenData = refreshed.payload.data as BackendLoginData;
       accessToken = tokenData.accessToken;
       backend = await backendFetch(path, request.method, body, accessToken);
       payload = await backend.json();
-      if (backend.status === 404) return upstreamNotFound(request.method, path);
+      if (backend.status === 404 && isAuthenticationPath) return upstreamNotFound(request.method, path);
       const retried = NextResponse.json(payload, { status: backend.status });
       const currentState = cookieStore.get(SESSION_COOKIES.state)?.value;
       setSessionCookies(retried, { ...tokenData, state: currentState ? JSON.parse(currentState) : undefined });
@@ -181,3 +192,4 @@ const handle = async (request: NextRequest, context: Context) => {
 export const GET = handle;
 export const POST = handle;
 export const PATCH = handle;
+export const DELETE = handle;

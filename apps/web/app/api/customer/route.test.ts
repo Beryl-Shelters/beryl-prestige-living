@@ -10,7 +10,7 @@ vi.mock("next/headers", () => ({
   }))
 }));
 
-import { PATCH, POST } from "./[...path]/route";
+import { DELETE, PATCH, POST } from "./[...path]/route";
 
 const call = (path: string[], body: object = {}, headers: Record<string, string> = {}) => POST(
   new NextRequest(`http://localhost/api/customer/${path.join("/")}`, { method: "POST", body: JSON.stringify(body), headers: { "content-type": "application/json", ...headers } }),
@@ -19,6 +19,11 @@ const call = (path: string[], body: object = {}, headers: Record<string, string>
 
 const callPatch = (path: string[], body: object = {}) => PATCH(
   new NextRequest(`http://localhost/api/customer/${path.join("/")}`, { method: "PATCH", body: JSON.stringify(body), headers: { "content-type": "application/json" } }),
+  { params: Promise.resolve({ path }) }
+);
+
+const callDelete = (path: string[]) => DELETE(
+  new NextRequest(`http://localhost/api/customer/${path.join("/")}`, { method: "DELETE" }),
   { params: Promise.resolve({ path }) }
 );
 
@@ -128,5 +133,40 @@ describe("customer BFF cookie bridge", () => {
     expect(cookieHeader).toContain("beryl_customer_access=");
     expect(cookieHeader).toContain("beryl_customer_refresh=");
     expect(cookieHeader).toContain("Expires=Thu, 01 Jan 1970 00:00:00 GMT");
+  });
+
+  it("proxies authenticated property save and unsave requests through the secure cookie bridge", async () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    state.cookies.set("beryl_customer_access", "dummy-access-token");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(backendResponse({ success: true, data: { saved_property: { id: "saved", propertyId: id, savedAt: "2026-08-18T10:00:00.000Z" } } }, 201))
+      .mockResolvedValueOnce(backendResponse({ success: true, data: {} }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await call(["properties", id, "save"]);
+    await callDelete(["properties", id, "save"]);
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`http://localhost:5000/api/v1/properties/${id}/save`);
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: "POST", headers: expect.objectContaining({ authorization: "Bearer dummy-access-token" }) });
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(`http://localhost:5000/api/v1/properties/${id}/save`);
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: "DELETE", headers: expect.objectContaining({ authorization: "Bearer dummy-access-token" }), body: undefined });
+  });
+
+  it("proxies Express Interest with its safe request body and preserves domain availability errors", async () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    state.cookies.set("beryl_customer_access", "dummy-access-token");
+    const fetchMock = vi.fn().mockResolvedValue(backendResponse({ success: false, message: "Property not available", code: "PROPERTY_NOT_AVAILABLE" }, 404));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await call(["marketplace", "properties", id, "interest"], { preferredContactMethod: "EMAIL", message: "Please contact me" });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`http://localhost:5000/api/v1/marketplace/properties/${id}/interest`);
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      method: "POST",
+      headers: expect.objectContaining({ authorization: "Bearer dummy-access-token" }),
+      body: JSON.stringify({ preferredContactMethod: "EMAIL", message: "Please contact me" })
+    });
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ code: "PROPERTY_NOT_AVAILABLE" });
   });
 });
