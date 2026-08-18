@@ -37,6 +37,9 @@ const dynamicCustomerPath = (method: string, browserPath: string) => {
   if (save && (method === "POST" || method === "DELETE")) return `properties/${save[1]}/save`;
   const interest = new RegExp(`^marketplace/properties/(${propertyId})/interest$`).exec(browserPath);
   if (interest && method === "POST") return `marketplace/properties/${interest[1]}/interest`;
+  if (method === "GET" && browserPath === "marketplace/seller/properties") return browserPath;
+  const management = new RegExp(`^marketplace/seller/properties/(${propertyId})/management$`).exec(browserPath);
+  if (management && method === "GET") return `marketplace/seller/properties/${management[1]}/management`;
   return undefined;
 };
 

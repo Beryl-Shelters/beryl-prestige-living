@@ -53,7 +53,7 @@ describe("web authentication architecture", () => {
 
   it("redirects unauthenticated protected routes", () => {
     expect(proxy).toContain('new URL("/login"');
-    expect(proxy).toContain('["/buyer", "/seller", "/onboarding/:path*"]');
+    expect(proxy).toContain('"/seller/:path*"');
   });
 
   it("marks all scoped routes noindex and nofollow", () => {

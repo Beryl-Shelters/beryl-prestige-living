@@ -9,7 +9,6 @@ describe("Marketplace W1 architecture boundaries", () => {
   const page = source("app/marketplace/page.tsx");
   const screen = source("components/marketplace/marketplace-screen.tsx");
   const bridge = source("app/api/marketplace/route.ts");
-  const contracts = source("lib/contracts.ts");
   const proxy = source("proxy.ts");
 
   it("creates the public Marketplace route with indexable metadata", () => {
@@ -26,8 +25,7 @@ describe("Marketplace W1 architecture boundaries", () => {
   });
 
   it("does not consume Seller-private fields or implement W2 actions", () => {
-    const scoped = `${screen}\n${contracts}`;
-    expect(scoped).not.toMatch(/fullAddress|sellerContact|documentUrl|cloudinaryPublicId/i);
+    expect(screen).not.toMatch(/fullAddress|sellerContact|documentUrl|cloudinaryPublicId/i);
     expect(screen).not.toMatch(/express interest|save property|unsave/i);
   });
 

@@ -225,3 +225,25 @@ export type MarketplaceInterestResult = {
   submittedAt: string;
   nextAction: "KEEP_BROWSING";
 };
+
+export type SellerListingStatus = "ALL" | "DRAFT" | "IN_REVIEW" | "LIVE" | "REJECTED";
+export type SellerListingStep = "PROPERTY_INFORMATION" | "PHOTOS_DOCUMENTS" | "SALES_MANDATE" | "REVIEW";
+export type SellerListingNextAction = "CONTINUE_PROPERTY_INFORMATION" | "CONTINUE_PHOTOS_DOCUMENTS" | "CONTINUE_SALES_MANDATE" | "CONTINUE_REVIEW" | "EDIT_REJECTED_LISTING" | "VIEW_REVIEW_STATUS" | "VIEW_LIVE_LISTING" | "VIEW_REJECTION";
+export type SellerListingImage = { id: string; url: string; order: number; isCover: boolean };
+export type SellerListingSummary = {
+  id: string; referenceId: string; title: string | null; askingPrice: number | null; status: Exclude<SellerListingStatus, "ALL">;
+  currentStep: SellerListingStep | null; coverImage: SellerListingImage | null; photoCount: number; updatedAt: string;
+  submittedAt: string | null; reviewedAt: string | null; publishedAt: string | null; rejectedAt: string | null;
+  rejectionReason: string | null; rejectionFeedback: string | null;
+  reviewProgress: { submitted: boolean; reviewing: boolean; live: boolean } | null; nextAction: SellerListingNextAction;
+};
+export type SellerListingCounts = { all: number; draft: number; inReview: number; live: number; rejected: number };
+export type SellerListingListResult = { counts: SellerListingCounts; items: SellerListingSummary[]; pagination: MarketplacePagination };
+export type SellerListingManagement = {
+  summary: SellerListingSummary;
+  property: SellerListingSummary & { description: string | null; propertyCategory: string | null; propertyType: string | null; publicLocation: string | null; fullAddress: string | null; images: SellerListingImage[] };
+  documents: { id: string; documentType: string; displayName: string; mimeType: string; sizeBytes: number; uploadedAt: string }[];
+  mandate: { mandateType: string; sellerFullName: string; ownershipConfirmed: boolean; mandateAccepted: boolean; acceptedAt: string | null } | null;
+  reviewHistory: { id: string; previousStatus: string; newStatus: string; action: string; reason: string | null; createdAt: string }[];
+};
+export type SellerListingManagementResult = { management: SellerListingManagement };

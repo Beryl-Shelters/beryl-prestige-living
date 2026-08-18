@@ -10,6 +10,9 @@ import type {
   MarketplaceInterestResult,
   MarketplacePropertyDetailResult,
   MarketplaceSavedPropertyMutation,
+  SellerListingListResult,
+  SellerListingManagementResult,
+  SellerListingStatus,
   PersonaMutationResult,
   PersonaState,
   RegisterRequest,
@@ -42,6 +45,8 @@ export const customerApi = {
   saveProperty: (propertyId: string) => client.post<ApiSuccess<MarketplaceSavedPropertyMutation>>(`/properties/${propertyId}/save`, {}).then(dataOf),
   unsaveProperty: (propertyId: string) => client.delete<ApiSuccess<never>>(`/properties/${propertyId}/save`).then(dataOf),
   expressMarketplaceInterest: (propertyId: string, body: MarketplaceInterestRequest) => client.post<ApiSuccess<MarketplaceInterestResult>>(`/marketplace/properties/${propertyId}/interest`, body).then(dataOf),
+  sellerListings: (params: { status: SellerListingStatus; page: number; limit: number }) => client.get<ApiSuccess<SellerListingListResult>>("/marketplace/seller/properties", { params }).then(dataOf),
+  sellerListingManagement: (propertyId: string) => client.get<ApiSuccess<SellerListingManagementResult>>(`/marketplace/seller/properties/${propertyId}/management`).then(dataOf),
   session: () => axios.get<ApiSuccess<CustomerSessionState>>("/api/session").then(dataOf)
 };
 
