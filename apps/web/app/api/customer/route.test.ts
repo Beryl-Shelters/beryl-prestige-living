@@ -10,7 +10,7 @@ vi.mock("next/headers", () => ({
   }))
 }));
 
-import { DELETE, PATCH, POST } from "./[...path]/route";
+import { DELETE, GET, PATCH, POST, PUT } from "./[...path]/route";
 
 const call = (path: string[], body: object = {}, headers: Record<string, string> = {}) => POST(
   new NextRequest(`http://localhost/api/customer/${path.join("/")}`, { method: "POST", body: JSON.stringify(body), headers: { "content-type": "application/json", ...headers } }),
@@ -26,6 +26,8 @@ const callDelete = (path: string[]) => DELETE(
   new NextRequest(`http://localhost/api/customer/${path.join("/")}`, { method: "DELETE" }),
   { params: Promise.resolve({ path }) }
 );
+const callGet = (path: string[]) => GET(new NextRequest(`http://localhost/api/customer/${path.join("/")}`), { params: Promise.resolve({ path }) });
+const callPut = (path: string[], body: object) => PUT(new NextRequest(`http://localhost/api/customer/${path.join("/")}`, { method: "PUT", body: JSON.stringify(body), headers: { "content-type": "application/json" } }), { params: Promise.resolve({ path }) });
 
 const backendResponse = (data: object, status = 200) => new Response(JSON.stringify(data), {
   status,
@@ -168,5 +170,27 @@ describe("customer BFF cookie bridge", () => {
     });
     expect(response.status).toBe(404);
     expect(await response.json()).toMatchObject({ code: "PROPERTY_NOT_AVAILABLE" });
+  });
+
+  it("securely proxies Seller mandate, review, and submit operations", async () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    state.cookies.set("beryl_customer_access", "dummy-access-token");
+    const fetchMock = vi.fn().mockResolvedValue(backendResponse({ success: true, message: "ok", data: {} }));
+    vi.stubGlobal("fetch", fetchMock);
+    const mandate = { mandateType: "OPEN", sellerFullName: "Test Seller", ownershipConfirmed: true, mandateAccepted: true };
+
+    await callGet(["marketplace", "seller", "properties", id, "mandate"]);
+    await callPut(["marketplace", "seller", "properties", id, "mandate"], mandate);
+    await callGet(["marketplace", "seller", "properties", id, "review"]);
+    await call(["marketplace", "seller", "properties", id, "submit"]);
+
+    expect(fetchMock.mock.calls.map((entry) => entry[0])).toEqual([
+      `http://localhost:5000/api/v1/marketplace/seller/properties/${id}/mandate`,
+      `http://localhost:5000/api/v1/marketplace/seller/properties/${id}/mandate`,
+      `http://localhost:5000/api/v1/marketplace/seller/properties/${id}/review`,
+      `http://localhost:5000/api/v1/marketplace/seller/properties/${id}/submit`
+    ]);
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: "PUT", body: JSON.stringify(mandate), headers: expect.objectContaining({ authorization: "Bearer dummy-access-token" }) });
+    expect(fetchMock.mock.calls[3]?.[1]).toMatchObject({ method: "POST", body: "{}", headers: expect.objectContaining({ authorization: "Bearer dummy-access-token" }) });
   });
 });

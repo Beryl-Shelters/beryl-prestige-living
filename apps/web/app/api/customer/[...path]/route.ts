@@ -43,6 +43,12 @@ const dynamicCustomerPath = (method: string, browserPath: string) => {
   if (method === "POST" && browserPath === "marketplace/seller/properties") return browserPath;
   const draft = new RegExp(`^marketplace/seller/properties/(${propertyId})$`).exec(browserPath);
   if (draft && (method === "GET" || method === "PATCH")) return `marketplace/seller/properties/${draft[1]}`;
+  const mandate = new RegExp(`^marketplace/seller/properties/(${propertyId})/mandate$`).exec(browserPath);
+  if (mandate && (method === "GET" || method === "PUT")) return `marketplace/seller/properties/${mandate[1]}/mandate`;
+  const review = new RegExp(`^marketplace/seller/properties/(${propertyId})/review$`).exec(browserPath);
+  if (review && method === "GET") return `marketplace/seller/properties/${review[1]}/review`;
+  const submit = new RegExp(`^marketplace/seller/properties/(${propertyId})/submit$`).exec(browserPath);
+  if (submit && method === "POST") return `marketplace/seller/properties/${submit[1]}/submit`;
   const image = new RegExp(`^marketplace/seller/properties/(${propertyId})/images/(${propertyId})$`).exec(browserPath);
   if (image && (method === "DELETE" || method === "PATCH")) return `marketplace/seller/properties/${image[1]}/images/${image[2]}${method === "PATCH" ? "/cover" : ""}`;
   const images = new RegExp(`^marketplace/seller/properties/(${propertyId})/images$`).exec(browserPath);
@@ -208,4 +214,5 @@ const handle = async (request: NextRequest, context: Context) => {
 export const GET = handle;
 export const POST = handle;
 export const PATCH = handle;
+export const PUT = handle;
 export const DELETE = handle;

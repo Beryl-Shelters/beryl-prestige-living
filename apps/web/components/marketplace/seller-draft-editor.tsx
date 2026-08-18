@@ -9,8 +9,10 @@ import { ApiAlert, Spinner } from "@/components/ui/feedback";
 import { customerApi } from "@/lib/api/client";
 import type { SellerDraft } from "@/lib/contracts";
 import { continueSellerDraftToSalesMandate } from "@/lib/seller-draft-transition";
+import { SellerMandateStep } from "./seller-mandate-step";
+import { SellerReviewStep } from "./seller-review-step";
 
-type EditorStep = "PROPERTY_INFORMATION" | "PHOTOS_DOCUMENTS" | "SALES_MANDATE";
+type EditorStep = "PROPERTY_INFORMATION" | "PHOTOS_DOCUMENTS" | "SALES_MANDATE" | "REVIEW";
 
 const empty: Partial<SellerDraft> = {
   propertyCategory: "RESIDENTIAL",
@@ -136,7 +138,7 @@ export function SellerDraftEditor({
     return <main className="seller-listings-page"><ApiAlert>We could not restore this draft.</ApiAlert></main>;
   }
 
-  const stepNumber = step === "PROPERTY_INFORMATION" ? 1 : step === "PHOTOS_DOCUMENTS" ? 2 : 3;
+  const stepNumber = step === "PROPERTY_INFORMATION" ? 1 : step === "PHOTOS_DOCUMENTS" ? 2 : step === "SALES_MANDATE" ? 3 : 4;
   return (
     <main className="seller-listings-page seller-editor">
       <header>
@@ -146,8 +148,8 @@ export function SellerDraftEditor({
         <div className="seller-stepper">
           <span className={step === "PROPERTY_INFORMATION" ? "active" : "done"}>1 Property information</span>
           <span className={step === "PHOTOS_DOCUMENTS" ? "active" : step === "SALES_MANDATE" ? "done" : ""}>2 Photos &amp; documents</span>
-          <span className={step === "SALES_MANDATE" ? "active" : ""}>3 Sales mandate</span>
-          <span>4 Review</span>
+          <span className={step === "SALES_MANDATE" ? "active" : step === "REVIEW" ? "done" : ""}>3 Sales mandate</span>
+          <span className={step === "REVIEW" ? "active" : ""}>4 Review</span>
         </div>
       </header>
       {status ? <p role="status">{status}</p> : null}
@@ -164,18 +166,15 @@ export function SellerDraftEditor({
         />
       ) : step === "PHOTOS_DOCUMENTS" ? (
         <MediaStep propertyId={id!} draft={draft} onBack={() => setStep("PROPERTY_INFORMATION")} />
-      ) : (
-        <section className="seller-editor-card" aria-labelledby="sales-mandate-title">
-          <h2 id="sales-mandate-title">Sales Mandate</h2>
-          <p>This step will be available in the next Marketplace implementation slice.</p>
-        </section>
-      )}
+      ) : step === "SALES_MANDATE" ? (
+        <SellerMandateStep propertyId={id!} onBack={() => setStep("PHOTOS_DOCUMENTS")} />
+      ) : <SellerReviewStep propertyId={id!} />}
     </main>
   );
 }
 
 function normalizeStep(step: SellerDraft["currentStep"]): EditorStep {
-  return step === "PHOTOS_DOCUMENTS" || step === "SALES_MANDATE" ? step : "PROPERTY_INFORMATION";
+  return step === "PHOTOS_DOCUMENTS" || step === "SALES_MANDATE" || step === "REVIEW" ? step : "PROPERTY_INFORMATION";
 }
 
 function PropertyInformationStep({

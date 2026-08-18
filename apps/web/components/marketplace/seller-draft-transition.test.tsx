@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   sellerDraft: vi.fn(),
   saveSellerDraft: vi.fn(),
   createSellerDraft: vi.fn()
+  ,sellerMandate: vi.fn(), sellerReview: vi.fn()
 }));
 
 vi.mock("next/navigation", () => ({
@@ -27,6 +28,10 @@ vi.mock("@/lib/api/client", () => ({
     setSellerCover: vi.fn(),
     uploadSellerDocument: vi.fn(),
     deleteSellerDocument: vi.fn()
+    ,sellerMandate: mocks.sellerMandate,
+    saveSellerMandate: vi.fn(),
+    sellerReview: mocks.sellerReview,
+    submitSellerProperty: vi.fn()
   }
 }));
 
@@ -61,6 +66,8 @@ describe("Seller draft Step 2 transition", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.sellerDraft.mockResolvedValue(restoredDraft);
+    mocks.sellerMandate.mockResolvedValue({ success: true, data: { mandate: null } });
+    mocks.sellerReview.mockResolvedValue({ success: true, data: { review: null } });
   });
 
   it("PATCHes the existing draft, waits, disables Continue, and navigates once successful", async () => {

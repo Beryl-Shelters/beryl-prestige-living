@@ -17,7 +17,7 @@ export const sellerListingRouteForAction = (action: SellerListingNextAction, pro
     case "CONTINUE_PROPERTY_INFORMATION": return `/seller/listings/${propertyId}/edit?step=property-information` as Route;
     case "CONTINUE_PHOTOS_DOCUMENTS": return `/seller/listings/${propertyId}/edit?step=photos-documents` as Route;
     case "CONTINUE_SALES_MANDATE": return `/seller/listings/${propertyId}/edit?step=SALES_MANDATE` as Route;
-    case "CONTINUE_REVIEW": return `/seller/listings/${propertyId}?step=review` as Route;
+    case "CONTINUE_REVIEW": return `/seller/listings/${propertyId}/edit?step=REVIEW` as Route;
     case "EDIT_REJECTED_LISTING": return `/seller/listings/${propertyId}?step=corrections` as Route;
   }
 };

@@ -15,6 +15,10 @@ import type {
   SellerListingStatus,
   SellerDraft,
   SellerDraftResult,
+  SellerPropertyReviewResult,
+  SellerSalesMandateInput,
+  SellerSalesMandateResult,
+  SellerSubmissionResult,
   PersonaMutationResult,
   PersonaState,
   RegisterRequest,
@@ -58,6 +62,10 @@ export const customerApi = {
   setSellerCover: (propertyId: string, imageId: string) => client.patch(`/marketplace/seller/properties/${propertyId}/images/${imageId}`, {}).then(dataOf),
   uploadSellerDocument: (propertyId: string, body: FormData) => client.post(`/marketplace/seller/properties/${propertyId}/documents`, body, { headers: { "content-type": "multipart/form-data" } }).then(dataOf),
   deleteSellerDocument: (propertyId: string, documentId: string) => client.delete(`/marketplace/seller/properties/${propertyId}/documents/${documentId}`).then(dataOf),
+  sellerMandate: (propertyId: string) => client.get<ApiSuccess<SellerSalesMandateResult>>(`/marketplace/seller/properties/${propertyId}/mandate`).then(dataOf),
+  saveSellerMandate: (propertyId: string, body: SellerSalesMandateInput) => client.put<ApiSuccess<SellerSalesMandateResult>>(`/marketplace/seller/properties/${propertyId}/mandate`, body).then(dataOf),
+  sellerReview: (propertyId: string) => client.get<ApiSuccess<SellerPropertyReviewResult>>(`/marketplace/seller/properties/${propertyId}/review`).then(dataOf),
+  submitSellerProperty: (propertyId: string) => client.post<ApiSuccess<SellerSubmissionResult>>(`/marketplace/seller/properties/${propertyId}/submit`, {}).then(dataOf),
   session: () => axios.get<ApiSuccess<CustomerSessionState>>("/api/session").then(dataOf)
 };
 

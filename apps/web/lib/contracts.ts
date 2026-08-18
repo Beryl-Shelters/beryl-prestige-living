@@ -21,6 +21,8 @@ export type ApiError = {
   attemptsRemaining?: number;
   retryAfter?: number;
   errors?: { formErrors?: string[]; fieldErrors?: Record<string, string[]> };
+  missingSections?: string[];
+  missingFields?: string[];
 };
 
 export type PersonaState = {
@@ -249,3 +251,55 @@ export type SellerListingManagement = {
 export type SellerListingManagementResult = { management: SellerListingManagement };
 export type SellerDraft = { id: string; title?: string; description?: string; propertyCategory?: "RESIDENTIAL" | "COMMERCIAL"; propertyType?: string; ownershipType?: "PERSONAL" | "THIRD_PARTY"; publicLocation?: string; fullAddress?: string; askingPrice?: number; negotiable?: boolean; initialDepositType?: "AMOUNT" | "PERCENTAGE" | null; initialDepositValue?: number | null; condition?: string; furnishing?: string | null; bedrooms?: number | null; bathrooms?: number | null; toilets?: number | null; parkingSpaces?: number | null; numberOfFloors?: number | null; parkingCapacity?: number | null; amenities?: string[]; currentStep?: "PROPERTY_INFORMATION" | "PHOTOS_DOCUMENTS" | "SALES_MANDATE" | "REVIEW"; images: SellerListingImage[]; documents: { id: string; documentType: string; displayName: string; mimeType: string; sizeBytes: number; uploadedAt: string }[] };
 export type SellerDraftResult = { property: SellerDraft };
+export type SellerSalesMandateInput = {
+  mandateType: "EXCLUSIVE" | "OPEN";
+  sellerFullName: string;
+  ownershipConfirmed: boolean;
+  mandateAccepted: boolean;
+};
+export type SellerSalesMandate = SellerSalesMandateInput & {
+  acceptedAt: string | null;
+  agreementVersion: string | null;
+  commissionPercentage: number | null;
+  commissionAmount: number | null;
+};
+export type SellerSalesMandateResult = { mandate: SellerSalesMandate | null };
+export type SellerPropertyReview = {
+  buyerPreview: {
+    id: string;
+    referenceId: string;
+    title: string | null;
+    description: string | null;
+    propertyType: string | null;
+    propertyCategory: string | null;
+    publicLocation: string | null;
+    askingPrice: number | null;
+    negotiable: boolean;
+    initialDeposit: { type: string | null; value: number | null } | null;
+    condition: string | null;
+    furnishing: string | null;
+    bedrooms: number | null;
+    bathrooms: number | null;
+    toilets: number | null;
+    parkingSpaces: number | null;
+    numberOfFloors: number | null;
+    parkingCapacity: number | null;
+    amenities: string[];
+    images: SellerListingImage[];
+    coverImage: SellerListingImage | null;
+    photoCount: number;
+  };
+  sellerPrivate: { fullAddress: string | null };
+  mandate: SellerSalesMandate | null;
+  currentStep: SellerListingStep | null;
+  status: Exclude<SellerListingStatus, "ALL">;
+  validation: { missingSections: string[]; missingFields: string[] };
+};
+export type SellerPropertyReviewResult = { review: SellerPropertyReview };
+export type SellerSubmissionResult = {
+  propertyId: string;
+  referenceId: string;
+  status: "IN_REVIEW";
+  submittedAt: string;
+  nextAction: "OPEN_MY_LISTINGS";
+};
