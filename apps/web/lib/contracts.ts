@@ -104,3 +104,61 @@ export type PersonaMutationResult = {
   alreadyActive?: boolean;
   nextAction: NextAction;
 };
+
+export type MarketplaceSort =
+  | "DEFAULT"
+  | "PRICE_HIGH_TO_LOW"
+  | "PRICE_LOW_TO_HIGH"
+  | "BEDS"
+  | "MOST_RECENT";
+
+export type MarketplacePropertyCategory = "RESIDENTIAL" | "COMMERCIAL";
+
+export type MarketplaceCoverImage = {
+  id: string;
+  url: string;
+};
+
+export type MarketplacePropertyCard = {
+  id: string;
+  referenceId: string;
+  title: string;
+  askingPrice: number;
+  negotiable: boolean;
+  propertyType: string;
+  propertyCategory: MarketplacePropertyCategory;
+  publicLocation: string;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  toilets: number | null;
+  parkingSpaces: number | null;
+  coverImage: MarketplaceCoverImage | null;
+  photoCount: number;
+  verified: boolean;
+  publishedAt: string | null;
+};
+
+export type MarketplacePagination = {
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+};
+
+export type MarketplaceSearchResult = {
+  properties: MarketplacePropertyCard[];
+  pagination: MarketplacePagination;
+};
+
+export type MarketplaceSearchParams = {
+  q?: string;
+  location?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  propertyType?: string;
+  category?: MarketplacePropertyCategory;
+  bedrooms?: number;
+  sort: MarketplaceSort;
+  page: number;
+  limit: number;
+};

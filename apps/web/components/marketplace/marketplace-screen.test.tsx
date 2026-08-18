@@ -1,0 +1,155 @@
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithQuery } from "@/test/render";
+import type { ApiSuccess, MarketplacePropertyCard, MarketplaceSearchResult } from "@/lib/contracts";
+
+const mocks = vi.hoisted(() => ({ search: vi.fn(), replace: vi.fn() }));
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: mocks.replace }) }));
+vi.mock("@/lib/api/client", () => ({ marketplaceApi: { search: mocks.search } }));
+
+import { MarketplaceScreen } from "./marketplace-screen";
+
+const property: MarketplacePropertyCard = {
+  id: "11111111-1111-4111-8111-111111111111",
+  referenceId: "BRL-1001",
+  title: "Modern four-bedroom duplex",
+  askingPrice: 125000000,
+  negotiable: true,
+  propertyType: "DUPLEX",
+  propertyCategory: "RESIDENTIAL",
+  publicLocation: "Lekki Phase 1, Lagos",
+  bedrooms: 4,
+  bathrooms: 4,
+  toilets: 5,
+  parkingSpaces: 3,
+  coverImage: { id: "image-id", url: "https://res.cloudinary.com/demo/image/upload/property.jpg" },
+  photoCount: 8,
+  verified: true,
+  publishedAt: "2026-08-18T10:00:00.000Z"
+};
+
+const response = (properties = [property], page = 1, totalPages = 1): ApiSuccess<MarketplaceSearchResult> => ({
+  success: true,
+  message: "Marketplace properties fetched successfully",
+  data: { properties, pagination: { page, limit: 12, total: properties.length || 0, total_pages: totalPages } }
+});
+
+describe("public Marketplace screen", () => {
+  beforeEach(() => {
+    mocks.search.mockReset().mockResolvedValue(response());
+    mocks.replace.mockReset();
+  });
+
+  it("renders publicly and performs the initial Marketplace fetch without auth context", async () => {
+    renderWithQuery(<MarketplaceScreen />);
+    expect(screen.getByRole("heading", { name: "Find a home you can trust" })).toBeInTheDocument();
+    await waitFor(() => expect(mocks.search).toHaveBeenCalledWith({ sort: "DEFAULT", page: 1, limit: 12 }));
+  });
+
+  it("maps trimmed search to q and resets page one", async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<MarketplaceScreen initialSearchParams={{ page: "3" }} />);
+    await user.type(screen.getByLabelText("Search properties"), "  lekki ");
+    await user.click(screen.getByRole("button", { name: "Search" }));
+    await waitFor(() => expect(mocks.search).toHaveBeenLastCalledWith(expect.objectContaining({ q: "lekki", page: 1 })));
+    expect(mocks.replace).toHaveBeenLastCalledWith("/marketplace?q=lekki", { scroll: false });
+  });
+
+  it("maps location, price, property type, category and bedrooms to API filters", async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<MarketplaceScreen />);
+    await user.type(screen.getByLabelText("Location"), "Lagos");
+    await user.type(screen.getByLabelText("Minimum price"), "50000000");
+    await user.type(screen.getByLabelText("Maximum price"), "200000000");
+    await user.selectOptions(screen.getByLabelText("Property type"), "DUPLEX");
+    await user.selectOptions(screen.getByLabelText("Category"), "RESIDENTIAL");
+    await user.selectOptions(screen.getByLabelText("Bedrooms"), "4");
+    await user.click(screen.getByRole("button", { name: "Show properties" }));
+    await waitFor(() => expect(mocks.search).toHaveBeenLastCalledWith(expect.objectContaining({ location: "Lagos", minPrice: 50000000, maxPrice: 200000000, propertyType: "DUPLEX", category: "RESIDENTIAL", bedrooms: 4, page: 1 })));
+  });
+
+  it("blocks an invalid client-side price range", async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<MarketplaceScreen />);
+    await user.type(screen.getByLabelText("Minimum price"), "500");
+    await user.type(screen.getByLabelText("Maximum price"), "100");
+    await user.click(screen.getByRole("button", { name: "Show properties" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Minimum price cannot be greater");
+    expect(mocks.search).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps sort labels to the backend enum and resets pagination", async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<MarketplaceScreen initialSearchParams={{ page: "2" }} />);
+    await user.selectOptions(screen.getByLabelText("Sort properties"), "PRICE_HIGH_TO_LOW");
+    await waitFor(() => expect(mocks.search).toHaveBeenLastCalledWith(expect.objectContaining({ sort: "PRICE_HIGH_TO_LOW", page: 1 })));
+  });
+
+  it("requests the selected result page", async () => {
+    mocks.search.mockResolvedValue(response([property], 2, 4));
+    const user = userEvent.setup();
+    renderWithQuery(<MarketplaceScreen initialSearchParams={{ page: "2" }} />);
+    await screen.findByText("Modern four-bedroom duplex");
+    await user.click(screen.getByRole("button", { name: "3" }));
+    await waitFor(() => expect(mocks.search).toHaveBeenLastCalledWith(expect.objectContaining({ page: 3 })));
+    expect(mocks.replace).toHaveBeenLastCalledWith("/marketplace?page=3", { scroll: false });
+  });
+
+  it("renders the safe property-card DTO, cover, badges, metadata and W2 detail link", async () => {
+    renderWithQuery(<MarketplaceScreen />);
+    expect(await screen.findByText(property.title)).toHaveAttribute("href", `/marketplace/${property.id}`);
+    expect(screen.getByAltText(`${property.title} in ${property.publicLocation}`)).toHaveAttribute("src", property.coverImage?.url);
+    expect(screen.getByText("Verified")).toBeInTheDocument();
+    expect(screen.getByText("8")).toBeInTheDocument();
+    expect(screen.getByText(/125,000,000/)).toBeInTheDocument();
+    expect(screen.getByText("Negotiable")).toBeInTheDocument();
+  });
+
+  it("uses an intentional placeholder when the cover is null", async () => {
+    mocks.search.mockResolvedValue(response([{ ...property, coverImage: null, photoCount: 0, verified: false }]));
+    renderWithQuery(<MarketplaceScreen />);
+    expect(await screen.findByText("Property image unavailable")).toBeInTheDocument();
+    expect(screen.queryByText("Verified")).not.toBeInTheDocument();
+  });
+
+  it("shows stable card skeletons while loading", () => {
+    mocks.search.mockReturnValue(new Promise(() => undefined));
+    renderWithQuery(<MarketplaceScreen />);
+    expect(screen.getByLabelText("Loading properties").children).toHaveLength(6);
+  });
+
+  it("shows a resettable empty state", async () => {
+    mocks.search.mockResolvedValue(response([]));
+    const user = userEvent.setup();
+    renderWithQuery(<MarketplaceScreen initialSearchParams={{ q: "missing" }} />);
+    expect(await screen.findByText("No properties match your search")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Clear all filters" }));
+    expect(mocks.replace).toHaveBeenLastCalledWith("/marketplace", { scroll: false });
+  });
+
+  it("shows a safe API error with retry", async () => {
+    mocks.search.mockRejectedValueOnce(new Error("private stack details")).mockResolvedValueOnce(response());
+    const user = userEvent.setup();
+    renderWithQuery(<MarketplaceScreen />);
+    expect(await screen.findByText("We could not load properties")).toBeInTheDocument();
+    expect(screen.queryByText("private stack details")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await screen.findByText(property.title);
+  });
+
+  it("restores URL search state in the initial API request", async () => {
+    renderWithQuery(<MarketplaceScreen initialSearchParams={{ q: "Ikoyi", location: "Lagos", minPrice: "100", propertyType: "APARTMENT", bedrooms: "2", sort: "MOST_RECENT", page: "2" }} />);
+    await waitFor(() => expect(mocks.search).toHaveBeenCalledWith(expect.objectContaining({ q: "Ikoyi", location: "Lagos", minPrice: 100, propertyType: "APARTMENT", bedrooms: 2, sort: "MOST_RECENT", page: 2 })));
+  });
+
+  it("opens and closes the accessible mobile filter dialog", async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<MarketplaceScreen />);
+    await user.click(screen.getByRole("button", { name: "Filters" }));
+    expect(screen.getByRole("dialog", { name: "Filter properties" })).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Filter properties" })).not.toBeInTheDocument();
+  });
+});

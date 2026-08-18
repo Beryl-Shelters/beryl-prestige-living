@@ -4,6 +4,8 @@ import type {
   CustomerSessionState,
   ForgotPasswordResult,
   LoginResult,
+  MarketplaceSearchParams,
+  MarketplaceSearchResult,
   PersonaMutationResult,
   PersonaState,
   RegisterRequest,
@@ -34,4 +36,10 @@ export const customerApi = {
   activatePersona: (personaType: string) => client.post<ApiSuccess<PersonaMutationResult>>("/personas/activate", { personaType }).then(dataOf),
   switchPersona: (personaType: string) => client.patch<ApiSuccess<PersonaMutationResult>>("/personas/active", { personaType }).then(dataOf),
   session: () => axios.get<ApiSuccess<CustomerSessionState>>("/api/session").then(dataOf)
+};
+
+export const marketplaceApi = {
+  search: (params: MarketplaceSearchParams) => axios
+    .get<ApiSuccess<MarketplaceSearchResult>>("/api/marketplace", { params })
+    .then(dataOf)
 };
