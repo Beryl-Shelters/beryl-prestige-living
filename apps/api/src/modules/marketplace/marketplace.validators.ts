@@ -22,3 +22,6 @@ export const publicMarketplaceSearchSchema=z.object({
 }).strict().superRefine((value,context)=>{if(value.minPrice!==undefined&&value.maxPrice!==undefined&&value.minPrice>value.maxPrice)context.addIssue({code:"custom",message:"Minimum price cannot exceed maximum price",path:["minPrice"],params:{errorCode:"INVALID_PRICE_RANGE"}})});
 export type PublicMarketplaceSearchInput=z.infer<typeof publicMarketplaceSearchSchema>;
 export const marketplacePropertyIdSchema=z.string().uuid();
+const optionalInterestMessage=z.preprocess(value=>typeof value==="string"&&value.trim()===""?undefined:value,z.string().trim().max(1000).optional());
+export const marketplaceInterestSchema=z.object({preferredContactMethod:z.enum(["WHATSAPP","CALL","EMAIL"]),message:optionalInterestMessage}).strict();
+export type MarketplaceInterestInput=z.infer<typeof marketplaceInterestSchema>;

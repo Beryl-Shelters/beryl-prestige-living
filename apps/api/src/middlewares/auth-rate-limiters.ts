@@ -38,6 +38,14 @@ export const passwordResetVerificationRateLimiter = authLimiter(10);
 export const passwordResetRateLimiter = authLimiter(5);
 export const sessionRefreshRateLimiter = authLimiter(30);
 export const passwordChangeRateLimiter = authLimiter(5);
+export const marketplaceInterestRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 1,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `${req.user?.id ?? ipKeyGenerator(req.ip || "unknown")}:${req.params.propertyId ?? "unknown"}`,
+  message: { success: false, message: "Please wait before submitting interest in this property again", code: "RATE_LIMIT_EXCEEDED" }
+});
 export const adminLoginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,

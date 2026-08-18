@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../../config/supabase";
 import { AppError } from "../../utils/AppError";
+import type { MarketplaceInterestInput } from "../marketplace/marketplace.validators";
 
 const privilegedRoles = ["admin", "support_agent", "super_admin"];
 
@@ -172,4 +173,25 @@ export const updateInquiryStatus = async (
   }
 
   return data;
+};
+
+export const createMarketplaceInterest=async(propertyId:string,userId:string,input:MarketplaceInterestInput)=>{
+  const [propertyResult,profileResult]=await Promise.all([
+    supabaseAdmin.from("properties").select("id,property_code,title,price,property_type,category,marketplace_status").eq("id",propertyId).eq("marketplace_status","LIVE").maybeSingle(),
+    supabaseAdmin.from("profiles").select("full_name,first_name,last_name,email,phone_number,is_whatsapp_number,whatsapp_number").eq("id",userId).maybeSingle()
+  ]);
+  if(propertyResult.error)throw new AppError("Interest submission is temporarily unavailable",503,"INTEREST_SUBMISSION_FAILED");
+  if(!propertyResult.data)throw new AppError("Property is not available",404,"PROPERTY_NOT_AVAILABLE");
+  if(profileResult.error||!profileResult.data)throw new AppError("Inquiry service is temporarily unavailable",503,"INQUIRY_UNAVAILABLE");
+  const property=propertyResult.data;const profile=profileResult.data;
+  const fullName=String(profile.full_name??`${profile.first_name??""} ${profile.last_name??""}`).trim();
+  const email=typeof profile.email==="string"?profile.email.trim():"";
+  const phone=typeof profile.phone_number==="string"?profile.phone_number.trim():"";
+  const whatsapp=typeof profile.whatsapp_number==="string"&&profile.whatsapp_number.trim()?profile.whatsapp_number.trim():(profile.is_whatsapp_number?phone:"");
+  const available={WHATSAPP:Boolean(whatsapp),CALL:Boolean(phone),EMAIL:Boolean(email)} as const;
+  if(!available[input.preferredContactMethod])throw new AppError("Preferred contact method is unavailable",409,"CONTACT_METHOD_UNAVAILABLE");
+  if(!fullName||!email||!phone)throw new AppError("Inquiry service is temporarily unavailable",503,"INQUIRY_UNAVAILABLE");
+  const {data,error}=await supabaseAdmin.from("inquiries").insert({user_id:userId,property_id:propertyId,inquiry_type:`MARKETPLACE_INTEREST_${input.preferredContactMethod}`,full_name:fullName,email,phone_number:input.preferredContactMethod==="WHATSAPP"?whatsapp:phone,message:input.message??"Marketplace interest submitted",status:"pending"}).select("id,property_id,inquiry_type,status,created_at").single();
+  if(error||!data)throw new AppError("Interest submission is temporarily unavailable",503,"INTEREST_SUBMISSION_FAILED");
+  return {inquiryId:data.id,propertyId:property.id,referenceId:property.property_code,title:property.title,askingPrice:property.price,preferredContactMethod:input.preferredContactMethod,submittedAt:data.created_at,nextAction:"KEEP_BROWSING" as const};
 };

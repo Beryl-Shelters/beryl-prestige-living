@@ -9,7 +9,7 @@ describe("public Marketplace detail and saved-property Swagger",()=>{
     expect(detail.security).toEqual([{}, {bearerAuth:[]}]);
     expect(detail.description).toMatch(/marketplace_status=LIVE.*optional valid customer.*saved.*fullAddress.*excluded/i);
     expect(detail.responses["404"].content["application/json"].example.code).toBe("MARKETPLACE_PROPERTY_NOT_FOUND");
-    expect(Object.keys(specification.paths)).toHaveLength(129);
+    expect(Object.keys(specification.paths)).toHaveLength(130);
   });
 
   it("documents an explicit Buyer-safe detail with ordered gallery and saved state",()=>{
