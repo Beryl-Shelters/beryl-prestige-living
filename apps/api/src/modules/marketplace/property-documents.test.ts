@@ -84,8 +84,8 @@ describe("Seller property document metadata", () => {
   });
 
   it("finds metadata by property and document ID", async () => {
-    database.responses.push(seller, property, { data: [storedDocument], error: null });
-    await expect(findDocumentMetadata("property-1", "doc-1", "seller-1")).resolves.toEqual(safeDocument);
+    database.responses.push(seller, property, { data: storedDocument, error: null });
+    await expect(findDocumentMetadata("property-1", "doc-1", "seller-1")).resolves.toEqual(storedDocument);
   });
 
   it("deletes metadata only after Seller ownership is verified", async () => {

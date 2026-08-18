@@ -22,6 +22,9 @@ type Endpoint = {
     field: string;
     multiple?: boolean;
     schema?: string;
+    fields?: Record<string, unknown>;
+    requiredFields?: string[];
+    contentType?: string;
     description: string;
   };
   badRequestMessage?: string;
@@ -204,6 +207,9 @@ const components = {
     }),
     MarketplaceDraftRequest: objectSchema({ title: { type: "string", nullable: true }, description: { type: "string", nullable: true }, propertyCategory: { type: "string", enum: ["RESIDENTIAL", "COMMERCIAL"], nullable: true }, propertyType: nullableString, ownershipType: { type: "string", enum: ["PERSONAL", "THIRD_PARTY"], nullable: true }, publicLocation: nullableString, fullAddress: { type: "string", nullable: true, description: "Private: returned only to the owning Seller." }, askingPrice: { type: "number", minimum: 0, nullable: true }, negotiable: { type: "boolean", nullable: true }, initialDepositType: { type: "string", enum: ["AMOUNT", "PERCENTAGE"], nullable: true }, initialDepositValue: { type: "number", minimum: 0, nullable: true }, currentStep: { type: "string", enum: ["PROPERTY_INFORMATION", "PHOTOS_DOCUMENTS"] }, amenities: { type: "array", items: { type: "string" } } }),
     MarketplaceImageOrderRequest: objectSchema({ imageIds: { type: "array", minItems: 1, items: uuid } }, ["imageIds"]),
+    MarketplacePropertyDocument: objectSchema({ id: uuid, documentType: { type: "string", enum: ["OWNERSHIP_PAPERS", "SURVEY_PLAN", "DEED", "CERTIFICATE_OF_OCCUPANCY", "OTHER"] }, displayName: { type: "string", maxLength: 180 }, mimeType: { type: "string", enum: ["application/pdf"] }, sizeBytes: { type: "integer", minimum: 0, maximum: 10485760 }, uploadedAt: dateTime }, ["id", "documentType", "displayName", "mimeType", "sizeBytes", "uploadedAt"]),
+    MarketplaceDocumentUploadResult: objectSchema({ document: ref("MarketplacePropertyDocument") }, ["document"]),
+    MarketplaceSellerDraftResult: objectSchema({ property: { allOf: [ref("Property"), { type: "object", properties: { documents: { type: "array", items: ref("MarketplacePropertyDocument"), description: "Private supporting-document metadata visible only to the owning Seller. Provider identifiers and URLs are never returned." } }, required: ["documents"] }] } }, ["property"]),
     Property: {
       type: "object",
       properties: {
@@ -565,13 +571,15 @@ const customerAccessErrors: NonNullable<Endpoint["errorResponses"]> = {
 };
 
 const endpoints: Endpoint[] = [
+  { method: "post", path: "/marketplace/seller/properties/{propertyId}/documents", tag: "Marketplace Draft Documents", summary: "Upload a private supporting document", description: "Seller-only upload to an owned editable DRAFT. The document field accepts one valid PDF up to 10MB. Files use authenticated Cloudinary raw delivery; only safe metadata is returned, never provider URLs or IDs.", successStatus: 201, successMessage: "Property document uploaded successfully", responseSchema: "MarketplaceDocumentUploadResult", security: "required", roles: ["SELLER_DEVELOPER"], pathParams: [{ name: "propertyId", description: "Property draft UUID." }], multipart: { field: "document", fields: { documentType: { type: "string", enum: ["OWNERSHIP_PAPERS", "SURVEY_PLAN", "DEED", "CERTIFICATE_OF_OCCUPANCY", "OTHER"] }, displayName: { type: "string", maxLength: 180, description: "Optional safe display filename." } }, requiredFields: ["documentType"], contentType: "application/pdf", description: "Required PDF document (application/pdf; maximum 10MB), approved documentType, and optional displayName." }, badRequestMessage: "Only valid PDF documents up to 10MB are allowed", forbiddenMessage: "Seller persona is required", notFoundMessage: "Property draft not found" },
+  { method: "delete", path: "/marketplace/seller/properties/{propertyId}/documents/{documentId}", tag: "Marketplace Draft Documents", summary: "Delete a private supporting document", description: "Seller-only deletion from an owned editable DRAFT. The document must belong to the property. An already-missing provider asset does not prevent metadata cleanup; unexpected provider failures return a stable safe error.", successMessage: "Property document deleted successfully", security: "required", roles: ["SELLER_DEVELOPER"], pathParams: [{ name: "propertyId", description: "Property draft UUID." }, { name: "documentId", description: "Property document UUID." }], forbiddenMessage: "Seller persona is required", notFoundMessage: "Property document not found" },
   { method: "post", path: "/marketplace/seller/properties/{propertyId}/images", tag: "Marketplace Draft Photos", summary: "Upload draft photos", description: "Seller-only DRAFT upload. images field accepts JPEG, PNG, or WEBP files up to 5MB each; maximum 10 property photos. The first image becomes cover.", successStatus: 201, successMessage: "Property images uploaded successfully", security: "required", roles: ["SELLER_DEVELOPER"], pathParams: [{ name: "propertyId", description: "Property draft UUID." }], multipart: { field: "images", multiple: true, description: "Up to 10 images total per draft." }, forbiddenMessage: "Seller persona is required" },
   { method: "delete", path: "/marketplace/seller/properties/{propertyId}/images/{imageId}", tag: "Marketplace Draft Photos", summary: "Delete draft photo", description: "Seller-only DRAFT deletion. Deleting the cover assigns the lowest-order remaining image as cover.", successMessage: "Property image deleted successfully", security: "required", roles: ["SELLER_DEVELOPER"], pathParams: [{ name: "propertyId", description: "Property draft UUID." }, { name: "imageId", description: "Property image UUID." }], forbiddenMessage: "Seller persona is required", notFoundMessage: "Property image not found" },
   { method: "patch", path: "/marketplace/seller/properties/{propertyId}/images/order", tag: "Marketplace Draft Photos", summary: "Reorder draft photos", description: "Seller-only DRAFT operation. imageIds must be the complete unique set of property image IDs; ordering is persisted sequentially.", successMessage: "Property images reordered successfully", security: "required", roles: ["SELLER_DEVELOPER"], pathParams: [{ name: "propertyId", description: "Property draft UUID." }], bodySchema: "MarketplaceImageOrderRequest", forbiddenMessage: "Seller persona is required" },
   { method: "patch", path: "/marketplace/seller/properties/{propertyId}/images/{imageId}/cover", tag: "Marketplace Draft Photos", summary: "Set draft cover photo", description: "Seller-only DRAFT operation. The selected property image becomes the sole cover image.", successMessage: "Property cover image updated successfully", security: "required", roles: ["SELLER_DEVELOPER"], pathParams: [{ name: "propertyId", description: "Property draft UUID." }, { name: "imageId", description: "Property image UUID." }], forbiddenMessage: "Seller persona is required", notFoundMessage: "Property image not found" },
   { method: "post", path: "/marketplace/seller/properties", tag: "Marketplace Drafts", summary: "Create Seller property draft", description: "Creates a DRAFT canonical property for a verified Customer with a completed SELLER_DEVELOPER persona. fullAddress is private.", successStatus: 201, successMessage: "Property draft created successfully", responseSchema: "Property", security: "required", roles: ["SELLER_DEVELOPER"], bodySchema: "MarketplaceDraftRequest", forbiddenMessage: "Seller persona is required" },
   { method: "get", path: "/marketplace/seller/properties", tag: "Marketplace Drafts", summary: "List Seller property drafts", description: "Returns only the authenticated Seller's DRAFT properties with pagination.", successMessage: "Property drafts fetched successfully", responseSchema: "Property", security: "required", roles: ["SELLER_DEVELOPER"], query: [...paginationParameters], forbiddenMessage: "Seller persona is required" },
-  { method: "get", path: "/marketplace/seller/properties/{propertyId}", tag: "Marketplace Drafts", summary: "Get Seller property draft", description: "Returns a Seller-owned DRAFT including its private fullAddress.", successMessage: "Property draft fetched successfully", responseSchema: "Property", security: "required", roles: ["SELLER_DEVELOPER"], pathParams: [{ name: "propertyId", description: "Property draft UUID." }], forbiddenMessage: "Seller persona is required", notFoundMessage: "Property draft not found" },
+  { method: "get", path: "/marketplace/seller/properties/{propertyId}", tag: "Marketplace Drafts", summary: "Get Seller property draft", description: "Returns a Seller-owned DRAFT including its private fullAddress and Seller-safe private document metadata.", successMessage: "Property draft fetched successfully", responseSchema: "MarketplaceSellerDraftResult", security: "required", roles: ["SELLER_DEVELOPER"], pathParams: [{ name: "propertyId", description: "Property draft UUID." }], forbiddenMessage: "Seller persona is required", notFoundMessage: "Property draft not found" },
   { method: "patch", path: "/marketplace/seller/properties/{propertyId}", tag: "Marketplace Drafts", summary: "Autosave Seller property draft", description: "Partially updates an owned DRAFT. Only supplied Step 1 fields are changed; fullAddress remains private.", successMessage: "Property draft saved successfully", responseSchema: "Property", security: "required", roles: ["SELLER_DEVELOPER"], pathParams: [{ name: "propertyId", description: "Property draft UUID." }], bodySchema: "MarketplaceDraftRequest", forbiddenMessage: "Seller persona is required", notFoundMessage: "Property draft not found" },
   { method: "get", path: "/health", tag: "Health", summary: "Check API health", description: "Returns API availability and the current server timestamp.", successMessage: "Beryl Shelter Nigeria Limited API is healthy", responseSchema: "StandardSuccessResponse" },
 
@@ -931,7 +939,7 @@ for (const endpoint of endpoints) {
       ? { type: "array", minItems: 1, maxItems: 10, items: { type: "string", format: "binary" } }
       : { type: "string", format: "binary" };
 
-    const mandateFields = endpoint.multipart.field === "document"
+    const mandateFields = endpoint.multipart.schema === "CreateMandateMultipart"
       ? {
           property_id: uuid,
           mandate_type: { type: "string", enum: ["buyer", "seller"] },
@@ -953,14 +961,16 @@ for (const endpoint of endpoints) {
         "multipart/form-data": {
           schema: {
             type: "object",
-            properties: { ...mandateFields, [endpoint.multipart.field]: fileSchema },
-            required: endpoint.multipart.field === "document"
+            properties: { ...mandateFields, ...(endpoint.multipart.fields ?? {}), [endpoint.multipart.field]: fileSchema },
+            required: endpoint.multipart.schema === "CreateMandateMultipart"
               ? ["mandate_type", "full_name", "email", "phone_number", "address", "terms_accepted"]
-              : [endpoint.multipart.field]
+              : [endpoint.multipart.field, ...(endpoint.multipart.requiredFields ?? [])]
           },
           encoding: endpoint.multipart.multiple
             ? { [endpoint.multipart.field]: { contentType: "image/jpeg, image/png, image/webp" } }
-            : undefined
+            : endpoint.multipart.contentType
+              ? { [endpoint.multipart.field]: { contentType: endpoint.multipart.contentType } }
+              : undefined
         }
       },
       description: endpoint.multipart.description
@@ -1026,7 +1036,7 @@ const options: swaggerJSDoc.OAS3Options = {
     tags: [
       "Health", "Authentication", "Onboarding", "Personas", "Profile", "Properties", "Property Images", "Saved Properties", "Analytics",
       "Referrals", "Inquiries", "Support", "Listings", "Reports", "Mandates", "Transactions", "Notifications",
-      "Admin", "Super Admin", "Dashboard", "Admin Authentication", "Admin Staff Management"
+      "Admin", "Super Admin", "Dashboard", "Admin Authentication", "Admin Staff Management", "Marketplace Draft Documents"
     ].map((name) => ({ name })),
     components,
     paths
