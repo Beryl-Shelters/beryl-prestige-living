@@ -11,6 +11,8 @@ import {
   updatePropertySchema
 } from "./property.validators";
 import { authMiddleware } from "../../middlewares/auth.middleware";
+import { customerSessionMiddleware } from "../../middlewares/customer-session.middleware";
+import { requireVerifiedCustomer } from "../../middlewares/customer-auth.middleware";
 import { validate } from "../../middlewares/validate.middleware";
 import { requireRoles } from "../../middlewares/role.middleware";
 import {
@@ -59,19 +61,22 @@ router.delete(
 
 router.get(
   "/saved/me",
-  authMiddleware,
+  customerSessionMiddleware,
+  requireVerifiedCustomer,
   getMySavedPropertiesController
 );
 
 router.post(
   "/:id/save",
-  authMiddleware,
+  customerSessionMiddleware,
+  requireVerifiedCustomer,
   savePropertyController
 );
 
 router.delete(
   "/:id/save",
-  authMiddleware,
+  customerSessionMiddleware,
+  requireVerifiedCustomer,
   unsavePropertyController
 );
 

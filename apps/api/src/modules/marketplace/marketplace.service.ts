@@ -86,3 +86,29 @@ export const searchPublicMarketplace=async(query:PublicMarketplaceSearchInput)=>
   if(error)throw new AppError("Marketplace is temporarily unavailable",503,"MARKETPLACE_UNAVAILABLE");
   return {properties:(data??[]).map(publicCardDto),pagination:{page:query.page,limit:query.limit,total:count??0,total_pages:Math.ceil((count??0)/query.limit)}};
 };
+
+const publicAmenities=(value:unknown)=>{
+  if(!Array.isArray(value))return [];
+  const seen=new Set<string>();
+  return value.filter((item):item is string=>typeof item==="string").map(item=>item.trim()).filter(item=>{const key=item.toLowerCase();if(!item||seen.has(key))return false;seen.add(key);return true});
+};
+
+const publicDetailDto=(property:any,saved:boolean)=>{
+  const seenImages=new Set<string>();
+  const propertyImages=[...(property.property_images??[])].filter((image:any)=>{if(!image?.id||seenImages.has(image.id))return false;seenImages.add(image.id);return true}).sort((a:any,b:any)=>Number(a.sort_order)-Number(b.sort_order)||String(a.id).localeCompare(String(b.id))).map(imageDto);
+  const hasDeposit=property.initial_deposit_type!=null||property.initial_deposit_value!=null;
+  return {id:property.id,referenceId:property.property_code,title:property.title,description:property.description,askingPrice:property.price,negotiable:Boolean(property.negotiable),propertyType:property.property_type,propertyCategory:property.category,publicLocation:property.public_location,bedrooms:property.bedrooms??null,bathrooms:property.bathrooms??null,toilets:property.toilets??null,parkingSpaces:property.parking_spaces??null,numberOfFloors:property.number_of_floors??null,parkingCapacity:property.parking_capacity??null,condition:property.property_condition??null,furnishing:property.furnishing??null,initialDeposit:hasDeposit?{type:property.initial_deposit_type??null,value:property.initial_deposit_value??null}:null,amenities:publicAmenities(property.amenities),images:propertyImages,photoCount:propertyImages.length,verified:property.marketplace_status==="LIVE",publishedAt:property.marketplace_published_at??null,saved};
+};
+
+export const getPublicMarketplaceProperty=async(propertyId:string,userId?:string)=>{
+  const {data:property,error}=await supabaseAdmin.from("properties").select("id,property_code,title,description,category,property_type,public_location,price,negotiable,initial_deposit_type,initial_deposit_value,property_condition,furnishing,bedrooms,bathrooms,toilets,parking_spaces,number_of_floors,parking_capacity,amenities,marketplace_status,marketplace_published_at,property_images(id,image_url,sort_order,is_cover)").eq("id",propertyId).eq("marketplace_status","LIVE").maybeSingle();
+  if(error)throw new AppError("Marketplace is temporarily unavailable",503,"MARKETPLACE_UNAVAILABLE");
+  if(!property)throw new AppError("Marketplace property not found",404,"MARKETPLACE_PROPERTY_NOT_FOUND");
+  let saved=false;
+  if(userId){
+    const {data:savedProperty,error:savedError}=await supabaseAdmin.from("saved_properties").select("id").eq("property_id",propertyId).eq("user_id",userId).maybeSingle();
+    if(savedError)throw new AppError("Saved property state is temporarily unavailable",503,"SAVED_PROPERTY_UNAVAILABLE");
+    saved=Boolean(savedProperty);
+  }
+  return publicDetailDto(property,saved);
+};

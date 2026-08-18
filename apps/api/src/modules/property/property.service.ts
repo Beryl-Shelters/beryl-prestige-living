@@ -351,23 +351,29 @@ export const saveProperty = async (
 ) => {
   const { data: property, error: propertyError } = await supabaseAdmin
     .from("properties")
-    .select("id, saves_count")
+    .select("id, saves_count, marketplace_status")
     .eq("id", propertyId)
-    .single();
+    .maybeSingle();
 
-  if (propertyError || !property) {
-    throw new AppError("Property not found", 404);
+  if (propertyError) {
+    throw new AppError("Saved property is temporarily unavailable", 503, "SAVED_PROPERTY_UNAVAILABLE");
+  }
+  if (!property || property.marketplace_status !== "LIVE") {
+    throw new AppError("Property is not available", 404, "PROPERTY_NOT_AVAILABLE");
   }
 
-  const { data: existingSave } = await supabaseAdmin
+  const { data: existingSave, error: existingSaveError } = await supabaseAdmin
     .from("saved_properties")
-    .select("*")
+    .select("id, property_id, user_id, created_at")
     .eq("property_id", propertyId)
     .eq("user_id", userId)
     .maybeSingle();
 
+  if (existingSaveError) {
+    throw new AppError("Saved property is temporarily unavailable", 503, "SAVED_PROPERTY_UNAVAILABLE");
+  }
   if (existingSave) {
-    throw new AppError("Property already saved", 400);
+    return existingSave;
   }
 
   const { data: savedProperty, error: saveError } = await supabaseAdmin
@@ -376,11 +382,11 @@ export const saveProperty = async (
       property_id: propertyId,
       user_id: userId
     })
-    .select("*")
+    .select("id, property_id, user_id, created_at")
     .single();
 
   if (saveError) {
-    throw new AppError(saveError.message, 400);
+    throw new AppError("Saved property is temporarily unavailable", 503, "SAVED_PROPERTY_UNAVAILABLE");
   }
 
   await supabaseAdmin
@@ -401,21 +407,24 @@ export const unsaveProperty = async (
     .from("properties")
     .select("id, saves_count")
     .eq("id", propertyId)
-    .single();
+    .maybeSingle();
 
-  if (propertyError || !property) {
+  if (propertyError) {
+    throw new AppError("Saved property is temporarily unavailable", 503, "SAVED_PROPERTY_UNAVAILABLE");
+  }
+  if (!property) {
     throw new AppError("Property not found", 404);
   }
 
   const { data: existingSave, error: existingError } = await supabaseAdmin
     .from("saved_properties")
-    .select("*")
+    .select("id")
     .eq("property_id", propertyId)
     .eq("user_id", userId)
     .maybeSingle();
 
   if (existingError) {
-    throw new AppError(existingError.message, 400);
+    throw new AppError("Saved property is temporarily unavailable", 503, "SAVED_PROPERTY_UNAVAILABLE");
   }
 
   if (!existingSave) {
@@ -428,7 +437,7 @@ export const unsaveProperty = async (
     .eq("id", existingSave.id);
 
   if (deleteError) {
-    throw new AppError(deleteError.message, 400);
+    throw new AppError("Saved property is temporarily unavailable", 503, "SAVED_PROPERTY_UNAVAILABLE");
   }
 
   await supabaseAdmin
@@ -454,24 +463,48 @@ export const getMySavedProperties = async (
     .from("saved_properties")
     .select(
       `
-      *,
-      property:properties (
-        *,
-        property_images (*)
+      id,
+      created_at,
+      property:properties!inner (
+        id,
+        property_code,
+        title,
+        category,
+        property_type,
+        public_location,
+        price,
+        negotiable,
+        bedrooms,
+        bathrooms,
+        toilets,
+        parking_spaces,
+        marketplace_status,
+        marketplace_published_at,
+        property_images (id, image_url, sort_order, is_cover)
       )
     `,
       { count: "exact" }
     )
     .eq("user_id", userId)
+    .eq("property.marketplace_status", "LIVE")
     .order("created_at", { ascending: false })
     .range(from, to);
 
   if (error) {
-    throw new AppError(error.message, 400);
+    throw new AppError("Saved properties are temporarily unavailable", 503, "SAVED_PROPERTY_UNAVAILABLE");
   }
 
+  const savedProperties=(data??[]).flatMap((saved:any)=>{
+    const property=Array.isArray(saved.property)?saved.property[0]:saved.property;
+    if(!property||property.marketplace_status!=="LIVE")return [];
+    const seen=new Set<string>();
+    const propertyImages=[...(property.property_images??[])].filter((image:any)=>{if(!image?.id||seen.has(image.id))return false;seen.add(image.id);return true}).sort((a:any,b:any)=>Number(a.sort_order)-Number(b.sort_order)||String(a.id).localeCompare(String(b.id)));
+    const cover=propertyImages.find((image:any)=>Boolean(image.is_cover));
+    return [{id:saved.id,propertyId:property.id,savedAt:saved.created_at,property:{id:property.id,referenceId:property.property_code,title:property.title,askingPrice:property.price,negotiable:Boolean(property.negotiable),propertyType:property.property_type,propertyCategory:property.category,publicLocation:property.public_location,bedrooms:property.bedrooms??null,bathrooms:property.bathrooms??null,toilets:property.toilets??null,parkingSpaces:property.parking_spaces??null,coverImage:cover?{id:cover.id,url:cover.image_url}:null,photoCount:propertyImages.length,verified:true,publishedAt:property.marketplace_published_at??null,saved:true}}];
+  });
+
   return {
-    saved_properties: data,
+    saved_properties: savedProperties,
     pagination: {
       page,
       limit,

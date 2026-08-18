@@ -21,3 +21,4 @@ export const publicMarketplaceSearchSchema=z.object({
   page:z.coerce.number().int().min(1).default(1),limit:z.coerce.number().int().min(1).max(50).default(10)
 }).strict().superRefine((value,context)=>{if(value.minPrice!==undefined&&value.maxPrice!==undefined&&value.minPrice>value.maxPrice)context.addIssue({code:"custom",message:"Minimum price cannot exceed maximum price",path:["minPrice"],params:{errorCode:"INVALID_PRICE_RANGE"}})});
 export type PublicMarketplaceSearchInput=z.infer<typeof publicMarketplaceSearchSchema>;
+export const marketplacePropertyIdSchema=z.string().uuid();

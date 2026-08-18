@@ -135,3 +135,16 @@ export const customerSessionMiddleware = async (
     next(error);
   }
 };
+
+export const optionalCustomerSessionMiddleware = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (req.headers.authorization === undefined) {
+    next();
+    return;
+  }
+
+  void customerSessionMiddleware(req, res, next);
+};

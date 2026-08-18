@@ -24,7 +24,8 @@ vi.mock("../config/supabase", () => ({ supabaseAdmin: { from } }));
 
 import {
   customerLogoutMiddleware,
-  customerSessionMiddleware
+  customerSessionMiddleware,
+  optionalCustomerSessionMiddleware
 } from "./customer-session.middleware";
 
 const now = new Date();
@@ -37,7 +38,10 @@ const token = issueCustomerAccessToken({
   now
 });
 
-const run = async (middleware: typeof customerSessionMiddleware, bearer?: string) => {
+const run = async (
+  middleware: typeof customerSessionMiddleware | typeof optionalCustomerSessionMiddleware,
+  bearer?: string
+) => {
   const req = {
     headers: bearer ? { authorization: `Bearer ${bearer}` } : {}
   } as any;
@@ -96,6 +100,21 @@ describe("customer session middleware", () => {
     expect(next).toHaveBeenCalledWith();
     expect(req.user).toEqual({ id: "user-id" });
     expect(req.customerSession).toEqual({ id: "session-id", version: 3 });
+  });
+
+  it("allows an anonymous optional customer session without database work", async () => {
+    const { req, next } = await run(optionalCustomerSessionMiddleware);
+    expect(next).toHaveBeenCalledWith();
+    expect(req.user).toBeUndefined();
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed credentials supplied to optional authentication", async () => {
+    const req = { headers: { authorization: "Basic not-a-bearer" } } as any;
+    const next = vi.fn();
+    await optionalCustomerSessionMiddleware(req, {} as any, next);
+    expect(next.mock.calls[0][0]).toMatchObject({ statusCode: 401 });
+    expect(req.user).toBeUndefined();
   });
 
   it("rejects stale access tokens after session-version changes", async () => {

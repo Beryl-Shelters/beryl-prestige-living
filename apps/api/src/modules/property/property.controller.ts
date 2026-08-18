@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { AppError } from "../../utils/AppError";
+import { getAuthUserId } from "../../utils/getAuthUserId";
 import {
   archiveProperty,
   createProperty,
@@ -16,14 +16,6 @@ import {
   unsaveProperty,
   getMySavedProperties
 } from "./property.service";
-
-export const getAuthUserId = (req: Request): string => {
-  if (!req.user?.id) {
-    throw new AppError("Authentication required", 401);
-  }
-
-  return getAuthUserId(req);
-};
 
 export const createPropertyController = async (
   req: Request,
@@ -172,7 +164,13 @@ export const savePropertyController = async (
     res.status(201).json({
       success: true,
       message: "Property saved successfully",
-      data: { saved_property: savedProperty }
+      data: {
+        saved_property: {
+          id: savedProperty.id,
+          propertyId: savedProperty.property_id,
+          savedAt: savedProperty.created_at
+        }
+      }
     });
   } catch (error) {
     next(error);
