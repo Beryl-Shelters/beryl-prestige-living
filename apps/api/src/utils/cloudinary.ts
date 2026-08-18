@@ -98,3 +98,11 @@ export const deletePropertyDocument = async (
 
   return result.result === "not found" ? "not_found" : "deleted";
 };
+
+export const createPropertyDocumentAccessUrl = (publicId: string, expiresAt: number): string =>
+  cloudinary.utils.private_download_url(publicId, "", {
+    resource_type: "raw",
+    type: "authenticated",
+    expires_at: expiresAt,
+    attachment: false
+  });

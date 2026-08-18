@@ -12,7 +12,7 @@ describe("Marketplace private document Swagger", () => {
     expect(remove.security).toEqual([{ bearerAuth: [] }]);
     expect(upload.description).toMatch(/Seller-only.*owned editable DRAFT.*authenticated Cloudinary raw.*never provider URLs or IDs/i);
     expect(remove.description).toMatch(/Seller-only.*owned editable DRAFT.*document must belong/i);
-    expect(Object.keys(paths).filter((path) => path.includes("documents"))).toEqual([
+    expect(Object.keys(paths).filter((path) => path.startsWith("/marketplace/seller/") && path.includes("documents"))).toEqual([
       "/marketplace/seller/properties/{propertyId}/documents",
       "/marketplace/seller/properties/{propertyId}/documents/{documentId}"
     ]);

@@ -61,11 +61,11 @@ describe("Marketplace Seller property management",()=>{
     expect(JSON.stringify(item)).not.toMatch(/expectedReview|SLA|working days/i);
   });
 
-  it("does not fabricate LIVE publication or REJECTED timestamps and limits feedback to REJECTED",async()=>{
-    seedList([{...base,marketplace_status:"LIVE",rejection_reason:"legacy text"},{...base,id:"property-2",marketplace_status:"REJECTED",rejection_reason:"Update the title documents"}],2);
+  it("maps authoritative LIVE and REJECTED timestamps and limits feedback to REJECTED",async()=>{
+    seedList([{...base,marketplace_status:"LIVE",marketplace_published_at:"2026-08-18T14:00:00.000Z",rejection_reason:"legacy text"},{...base,id:"property-2",marketplace_status:"REJECTED",marketplace_rejected_at:"2026-08-18T15:00:00.000Z",rejection_reason:"Update the title documents"}],2);
     const items=(await listDrafts("seller-1",{page:1,limit:10,status:"ALL"})).items;
-    expect(items[0]).toMatchObject({publishedAt:null,rejectedAt:null,rejectionFeedback:null,nextAction:"VIEW_LIVE_LISTING"});
-    expect(items[1]).toMatchObject({publishedAt:null,rejectedAt:null,rejectionFeedback:"Update the title documents",nextAction:"VIEW_REJECTION"});
+    expect(items[0]).toMatchObject({publishedAt:"2026-08-18T14:00:00.000Z",rejectedAt:null,rejectionFeedback:null,nextAction:"VIEW_LIVE_LISTING"});
+    expect(items[1]).toMatchObject({publishedAt:null,rejectedAt:"2026-08-18T15:00:00.000Z",rejectionFeedback:"Update the title documents",nextAction:"VIEW_REJECTION"});
   });
 
   it("returns owner-only management details with safe documents and mandate",async()=>{
