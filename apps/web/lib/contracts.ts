@@ -251,6 +251,16 @@ export type SellerListingManagement = {
 export type SellerListingManagementResult = { management: SellerListingManagement };
 export type SellerDraft = { id: string; title?: string; description?: string; propertyCategory?: "RESIDENTIAL" | "COMMERCIAL"; propertyType?: string; ownershipType?: "PERSONAL" | "THIRD_PARTY"; publicLocation?: string; fullAddress?: string; askingPrice?: number; negotiable?: boolean; initialDepositType?: "AMOUNT" | "PERCENTAGE" | null; initialDepositValue?: number | null; condition?: string; furnishing?: string | null; bedrooms?: number | null; bathrooms?: number | null; toilets?: number | null; parkingSpaces?: number | null; numberOfFloors?: number | null; parkingCapacity?: number | null; amenities?: string[]; currentStep?: "PROPERTY_INFORMATION" | "PHOTOS_DOCUMENTS" | "SALES_MANDATE" | "REVIEW"; images: SellerListingImage[]; documents: { id: string; documentType: string; displayName: string; mimeType: string; sizeBytes: number; uploadedAt: string }[] };
 export type SellerDraftResult = { property: SellerDraft };
+export type SellerReopenResult = {
+  propertyId: string;
+  referenceId: string;
+  status: "DRAFT";
+  currentStep: "REVIEW";
+  rejectionReason: string | null;
+  rejectedAt: string | null;
+  reviewedAt: string | null;
+  nextAction: "EDIT_REJECTED_LISTING";
+};
 export type SellerSalesMandateInput = {
   mandateType: "EXCLUSIVE" | "OPEN";
   sellerFullName: string;

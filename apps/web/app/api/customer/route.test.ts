@@ -193,4 +193,15 @@ describe("customer BFF cookie bridge", () => {
     expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: "PUT", body: JSON.stringify(mandate), headers: expect.objectContaining({ authorization: "Bearer dummy-access-token" }) });
     expect(fetchMock.mock.calls[3]?.[1]).toMatchObject({ method: "POST", body: "{}", headers: expect.objectContaining({ authorization: "Bearer dummy-access-token" }) });
   });
+
+  it("proxies a rejected Seller listing reopen with the existing property ID and no client data", async () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    state.cookies.set("beryl_customer_access", "dummy-access-token");
+    const fetchMock = vi.fn().mockResolvedValue(backendResponse({ success: true, message: "Reopened", data: { propertyId: id, status: "DRAFT", currentStep: "REVIEW" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await call(["marketplace", "seller", "properties", id, "reopen"]);
+
+    expect(fetchMock).toHaveBeenCalledWith(`http://localhost:5000/api/v1/marketplace/seller/properties/${id}/reopen`, expect.objectContaining({ method: "POST", body: "{}", headers: expect.objectContaining({ authorization: "Bearer dummy-access-token" }) }));
+  });
 });

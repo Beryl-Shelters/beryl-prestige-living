@@ -44,6 +44,11 @@ export function SellerDraftEditor({
     queryFn: () => customerApi.sellerDraft(id!),
     enabled: Boolean(id)
   });
+  const correction = useQuery({
+    queryKey: ["seller-marketplace-management", id],
+    queryFn: () => customerApi.sellerListingManagement(id!),
+    enabled: Boolean(id)
+  });
 
   useEffect(() => {
     const property = restored.data?.data.property;
@@ -152,6 +157,7 @@ export function SellerDraftEditor({
           <span className={step === "REVIEW" ? "active" : ""}>4 Review</span>
         </div>
       </header>
+      {correction.data?.data.management.summary.rejectionFeedback || correction.data?.data.management.summary.rejectionReason ? <section className="seller-correction-context" aria-labelledby="correction-context-title"><p className="seller-kicker">Correction context</p><h2 id="correction-context-title">Changes needed</h2><p>{correction.data.data.management.summary.rejectionFeedback || correction.data.data.management.summary.rejectionReason}</p></section> : null}
       {status ? <p role="status">{status}</p> : null}
       {step === "PROPERTY_INFORMATION" ? (
         <PropertyInformationStep

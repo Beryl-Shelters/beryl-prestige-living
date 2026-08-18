@@ -17,7 +17,7 @@ describe("Seller Marketplace listing routes", () => {
     expect(sellerListingRouteForAction("CONTINUE_PHOTOS_DOCUMENTS", id)).toBe(`/seller/listings/${id}/edit?step=photos-documents`);
     expect(sellerListingRouteForAction("CONTINUE_SALES_MANDATE", id)).toBe(`/seller/listings/${id}/edit?step=SALES_MANDATE`);
     expect(sellerListingRouteForAction("CONTINUE_REVIEW", id)).toBe(`/seller/listings/${id}/edit?step=REVIEW`);
-    expect(sellerListingRouteForAction("EDIT_REJECTED_LISTING", id)).toBe(`/seller/listings/${id}?step=corrections`);
+    expect(sellerListingRouteForAction("EDIT_REJECTED_LISTING", id)).toBe(`/seller/listings/${id}/edit?step=REVIEW`);
     expect(sellerListingActionLabel("EDIT_REJECTED_LISTING")).toBe("Make changes");
   });
 });

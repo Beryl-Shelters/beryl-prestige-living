@@ -35,7 +35,7 @@ export function SellerReviewStep({ propertyId }: { propertyId: string }) {
       setSubmission(response.data);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["seller-marketplace-listings"] }),
-        queryClient.invalidateQueries({ queryKey: ["seller-management", propertyId] }),
+        queryClient.invalidateQueries({ queryKey: ["seller-marketplace-management", propertyId] }),
         queryClient.invalidateQueries({ queryKey: ["seller-draft", propertyId] }),
         queryClient.invalidateQueries({ queryKey: ["seller-review", propertyId] })
       ]);
