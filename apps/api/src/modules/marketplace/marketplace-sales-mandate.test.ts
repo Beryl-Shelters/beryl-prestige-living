@@ -96,8 +96,7 @@ describe("Marketplace sales mandate", () => {
     await expect(getSalesMandate("property-1", "seller-1")).rejects.toMatchObject({ statusCode: 404, code: "MANDATE_NOT_FOUND" });
   });
 
-  it("supports all three creation steps without adding REVIEW", () => {
-    for (const currentStep of ["PROPERTY_INFORMATION", "PHOTOS_DOCUMENTS", "SALES_MANDATE"]) expect(draftSchema.safeParse({ currentStep }).success).toBe(true);
-    expect(draftSchema.safeParse({ currentStep: "REVIEW" }).success).toBe(false);
+  it("supports all four creation steps including non-submitting REVIEW navigation", () => {
+    for (const currentStep of ["PROPERTY_INFORMATION", "PHOTOS_DOCUMENTS", "SALES_MANDATE", "REVIEW"]) expect(draftSchema.safeParse({ currentStep }).success).toBe(true);
   });
 });
