@@ -52,6 +52,7 @@ describe("Marketplace Seller property management",()=>{
     expect(sellerNextAction("DRAFT","PHOTOS_DOCUMENTS")).toBe("CONTINUE_PHOTOS_DOCUMENTS");
     expect(sellerNextAction("DRAFT","SALES_MANDATE")).toBe("CONTINUE_SALES_MANDATE");
     expect(sellerNextAction("DRAFT","REVIEW")).toBe("CONTINUE_REVIEW");
+    expect(sellerNextAction("DRAFT","REVIEW","2026-08-18T14:00:00.000Z")).toBe("EDIT_REJECTED_LISTING");
   });
 
   it("returns authoritative IN_REVIEW state without an SLA",async()=>{
@@ -71,12 +72,23 @@ describe("Marketplace Seller property management",()=>{
   it("returns owner-only management details with safe documents and mandate",async()=>{
     const document={id:"document-1",document_type:"DEED",display_name:"Deed.pdf",mime_type:"application/pdf",size_bytes:1200,created_at:"2026-08-18T10:00:00.000Z"};
     const mandate={marketplace_mandate_type:"OPEN",full_name:"Test Seller",ownership_confirmed:true,mandate_accepted:true,accepted_at:"2026-08-18T09:00:00.000Z",cloudinary_public_id:"must-not-leak"};
-    database.responses.push(seller,{data:base,error:null},{data:[document],error:null},{data:mandate,error:null});
+    database.responses.push(seller,{data:base,error:null},{data:[document],error:null},{data:mandate,error:null},{data:[],error:null});
     const management=await getSellerPropertyManagement("property-1","seller-1");
     expect(management.property.fullAddress).toBe("12 Private Street");
     expect(management.documents).toEqual([{id:"document-1",documentType:"DEED",displayName:"Deed.pdf",mimeType:"application/pdf",sizeBytes:1200,uploadedAt:"2026-08-18T10:00:00.000Z"}]);
     expect(JSON.stringify(management)).not.toMatch(/cloudinary_public_id|document_url/i);
     expect(database.calls).toContainEqual({table:"properties",method:"eq",args:["owner_id","seller-1"]});
+  });
+
+  it("returns preserved Seller-safe rejection context and history without Admin identity",async()=>{
+    const rejected={...base,marketplace_status:"REJECTED",marketplace_reviewed_at:"2026-08-18T14:00:00.000Z",marketplace_rejected_at:"2026-08-18T14:00:00.000Z",rejection_reason:"Provide a clearer survey plan"};
+    const history={id:"history-1",previous_status:"IN_REVIEW",new_status:"REJECTED",action:"REJECTED",reason:"Provide a clearer survey plan",reviewed_by_admin_id:"must-not-leak",created_at:"2026-08-18T14:00:00.000Z"};
+    database.responses.push(seller,{data:rejected,error:null},{data:[],error:null},{data:null,error:null},{data:[history],error:null});
+    const management=await getSellerPropertyManagement("property-1","seller-1");
+    expect(management.summary).toMatchObject({status:"REJECTED",reviewedAt:rejected.marketplace_reviewed_at,rejectedAt:rejected.marketplace_rejected_at,rejectionReason:rejected.rejection_reason,nextAction:"VIEW_REJECTION"});
+    expect(management.property).toMatchObject({rejectionReason:rejected.rejection_reason,rejectedAt:rejected.marketplace_rejected_at,reviewedAt:rejected.marketplace_reviewed_at});
+    expect(management.reviewHistory).toEqual([{id:"history-1",previousStatus:"IN_REVIEW",newStatus:"REJECTED",action:"REJECTED",reason:rejected.rejection_reason,createdAt:history.created_at}]);
+    expect(JSON.stringify(management)).not.toMatch(/reviewed_by_admin_id|must-not-leak/);
   });
 
   it("rejects another Seller and Buyer-only customers",async()=>{

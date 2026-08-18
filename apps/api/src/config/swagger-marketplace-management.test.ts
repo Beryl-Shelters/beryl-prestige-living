@@ -20,13 +20,15 @@ describe("Marketplace Seller management Swagger",()=>{
     expect(listResult.counts.$ref).toContain("MarketplaceSellerStatusCounts");
     expect(listResult.pagination.$ref).toContain("Pagination");
     expect(specification.components.schemas.MarketplaceSellerStatusCounts.required).toEqual(["all","draft","inReview","live","rejected"]);
-    expect(specification.components.schemas.MarketplaceSellerPropertySummary.properties.nextAction.enum).toEqual(["CONTINUE_PROPERTY_INFORMATION","CONTINUE_PHOTOS_DOCUMENTS","CONTINUE_SALES_MANDATE","CONTINUE_REVIEW","VIEW_REVIEW_STATUS","VIEW_LIVE_LISTING","VIEW_REJECTION"]);
+    expect(specification.components.schemas.MarketplaceSellerPropertySummary.properties.nextAction.enum).toEqual(["CONTINUE_PROPERTY_INFORMATION","CONTINUE_PHOTOS_DOCUMENTS","CONTINUE_SALES_MANDATE","CONTINUE_REVIEW","EDIT_REJECTED_LISTING","VIEW_REVIEW_STATUS","VIEW_LIVE_LISTING","VIEW_REJECTION"]);
   });
 
   it("does not document fabricated timestamps, SLAs, or provider data",()=>{
     const summary=specification.components.schemas.MarketplaceSellerPropertySummary.properties;
     expect(summary.publishedAt).toMatchObject({nullable:true});
     expect(summary.rejectedAt).toMatchObject({nullable:true});
+    expect(specification.components.schemas.MarketplaceSellerManagement.properties.reviewHistory.items.$ref).toContain("MarketplaceSellerReviewHistory");
+    expect(specification.components.schemas.MarketplaceSellerReviewHistory.properties).not.toHaveProperty("reviewedByAdminId");
     expect(JSON.stringify({list,management,schemas:specification.components.schemas.MarketplaceSellerManagement})).not.toMatch(/expectedReviewDate|working days|24 hours|48 hours|cloudinary|publicId|document_url/i);
   });
 });

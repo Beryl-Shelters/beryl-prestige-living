@@ -20,7 +20,7 @@ describe("Swagger server environments", () => {
 
   it("does not retain legacy Render servers and preserves the documented API surface", () => {
     expect(specification.servers?.some((server) => server.url.includes(".onrender.com"))).toBe(false);
-    expect(Object.keys(specification.paths ?? {})).toHaveLength(126);
+    expect(Object.keys(specification.paths ?? {})).toHaveLength(127);
     expect(specification.paths?.["/admin/auth/login"]).toBeDefined();
     expect(specification.paths?.["/auth/register"]).toBeDefined();
   });

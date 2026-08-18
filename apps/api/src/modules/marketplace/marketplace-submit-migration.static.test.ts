@@ -23,4 +23,11 @@ describe("Marketplace submit-for-review migration", () => {
     expect(migration).toContain("mandate_accepted");
     expect(migration).not.toContain("property_documents");
   });
+
+  it("supports reopened DRAFT resubmission without erasing rejection or decision history", () => {
+    const update = migration.slice(migration.indexOf("update public.properties"), migration.indexOf("returning p.* into v_property") + 30);
+    expect(update).toContain("marketplace_submitted_at = now()");
+    expect(update).not.toMatch(/rejection_reason\s*=|marketplace_rejected_at\s*=|marketplace_reviewed_at\s*=/);
+    expect(migration).not.toMatch(/delete from public\.marketplace_property_review_history/i);
+  });
 });

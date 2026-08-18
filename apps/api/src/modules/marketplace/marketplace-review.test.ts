@@ -84,6 +84,15 @@ describe("Marketplace Step 4 review and submission", () => {
     expect(database.calls.filter((call) => call.method === "rpc")).toHaveLength(1);
   });
 
+  it("resubmits a corrected reopened DRAFT with a new server timestamp and without duplicating the property", async () => {
+    const reopened = { ...property, marketplace_status: "DRAFT", marketplace_rejected_at: "2026-08-18T13:00:00.000Z", marketplace_reviewed_at: "2026-08-18T13:00:00.000Z", rejection_reason: "Provide a clearer survey plan" };
+    database.responses.push(seller, { data: reopened, error: null }, { data: photos, error: null }, { data: mandate, error: null });
+    database.rpcResponses.push({ data: [{ outcome: "SUBMITTED", property_id: "property-1", reference_id: "BRL-EXISTING", marketplace_status: "IN_REVIEW", submitted_at: "2026-08-18T15:00:00.000Z", missing_sections: [], missing_fields: [] }], error: null });
+    await expect(submitPropertyForReview("property-1", "seller-1")).resolves.toMatchObject({ propertyId: "property-1", status: "IN_REVIEW", submittedAt: "2026-08-18T15:00:00.000Z", nextAction: "OPEN_MY_LISTINGS" });
+    expect(database.calls.filter((call) => call.method === "rpc")).toHaveLength(1);
+    expect(database.calls.find((call) => call.method === "rpc")?.args[0]).toEqual({ p_property_id: "property-1", p_owner_id: "seller-1" });
+  });
+
   it("does not call the transaction for an incomplete draft", async () => {
     database.responses.push(seller, { data: { ...property, title: null }, error: null }, { data: [], error: null }, { data: null, error: null });
     await expect(submitPropertyForReview("property-1", "seller-1")).rejects.toMatchObject({ code: "LISTING_SUBMISSION_INCOMPLETE", details: { missingSections: ["PROPERTY_INFORMATION", "PHOTOS", "SALES_MANDATE"] } });
