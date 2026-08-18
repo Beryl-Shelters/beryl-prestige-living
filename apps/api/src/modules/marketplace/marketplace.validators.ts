@@ -6,3 +6,18 @@ export const draftListSchema=z.object({page:z.coerce.number().int().min(1).defau
 export const documentMetadataSchema=z.object({documentType:z.enum(["OWNERSHIP_PAPERS","SURVEY_PLAN","DEED","CERTIFICATE_OF_OCCUPANCY","OTHER"]),displayName:z.string().trim().min(1).max(180)});
 export const documentUploadSchema=z.object({documentType:z.enum(["OWNERSHIP_PAPERS","SURVEY_PLAN","DEED","CERTIFICATE_OF_OCCUPANCY","OTHER"]),displayName:z.string().trim().min(1).max(180).optional()});
 export const salesMandateSchema=z.object({mandateType:z.enum(["EXCLUSIVE","OPEN"]),sellerFullName:z.string().trim().min(2).max(180),ownershipConfirmed:z.boolean(),mandateAccepted:z.boolean()}).strict().superRefine((value,context)=>{if(value.mandateAccepted&&!value.ownershipConfirmed)context.addIssue({code:"custom",message:"Ownership confirmation is required before accepting the mandate",path:["ownershipConfirmed"],params:{errorCode:"MANDATE_OWNERSHIP_CONFIRMATION_REQUIRED"}})});
+
+const optionalQueryText=(max:number)=>z.preprocess(value=>typeof value==="string"&&value.trim()===""?undefined:value,z.string().trim().max(max).regex(/^[\p{L}\p{N}\s'&-]+$/u).optional());
+const optionalNumber=z.preprocess(value=>value===""||value===undefined?undefined:value,z.coerce.number().finite().nonnegative().optional());
+const propertyTypes=z.preprocess(value=>{
+  const values=(Array.isArray(value)?value:[value]).flatMap(item=>typeof item==="string"?item.split(","):[]).map(item=>item.trim().toUpperCase()).filter(Boolean);
+  return values.length?Array.from(new Set(values)):undefined;
+},z.array(z.string().min(1).max(80).regex(/^[A-Z0-9_-]+$/)).min(1).max(10).optional());
+export const publicMarketplaceSearchSchema=z.object({
+  q:optionalQueryText(100),location:optionalQueryText(120),minPrice:optionalNumber,maxPrice:optionalNumber,
+  propertyType:propertyTypes,category:z.enum(["RESIDENTIAL","COMMERCIAL"]).optional(),
+  bedrooms:z.preprocess(value=>value===""||value===undefined?undefined:value,z.coerce.number().int().nonnegative().max(100).optional()),
+  sort:z.enum(["DEFAULT","PRICE_HIGH_TO_LOW","PRICE_LOW_TO_HIGH","BEDS","MOST_RECENT"]).default("DEFAULT"),
+  page:z.coerce.number().int().min(1).default(1),limit:z.coerce.number().int().min(1).max(50).default(10)
+}).strict().superRefine((value,context)=>{if(value.minPrice!==undefined&&value.maxPrice!==undefined&&value.minPrice>value.maxPrice)context.addIssue({code:"custom",message:"Minimum price cannot exceed maximum price",path:["minPrice"],params:{errorCode:"INVALID_PRICE_RANGE"}})});
+export type PublicMarketplaceSearchInput=z.infer<typeof publicMarketplaceSearchSchema>;
