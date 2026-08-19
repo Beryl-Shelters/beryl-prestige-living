@@ -5,12 +5,14 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { Building2, Check, Cloud, FileText, Images, KeyRound } from "lucide-react";
 import { ApiAlert, Spinner } from "@/components/ui/feedback";
 import { customerApi } from "@/lib/api/client";
 import type { SellerDraft } from "@/lib/contracts";
 import { continueSellerDraftToSalesMandate } from "@/lib/seller-draft-transition";
 import { SellerMandateStep } from "./seller-mandate-step";
 import { SellerReviewStep } from "./seller-review-step";
+import { SellerShell } from "./seller-shell";
 
 type EditorStep = "PROPERTY_INFORMATION" | "PHOTOS_DOCUMENTS" | "SALES_MANDATE" | "REVIEW";
 
@@ -136,7 +138,7 @@ export function SellerDraftEditor({
     setCustom("");
   };
 
-  if (restored.isLoading) {
+  if (restored.isLoading || (id && correction.isLoading)) {
     return <main className="seller-listings-page"><Spinner label="Loading draft" /></main>;
   }
   if (restored.isError) {
@@ -144,21 +146,21 @@ export function SellerDraftEditor({
   }
 
   const stepNumber = step === "PROPERTY_INFORMATION" ? 1 : step === "PHOTOS_DOCUMENTS" ? 2 : step === "SALES_MANDATE" ? 3 : 4;
-  return (
+  const correctionSummary = correction.data?.data.management.summary;
+  const usesSellerShell = Boolean(correctionSummary && (correctionSummary.status === "LIVE" || correctionSummary.status === "REJECTED" || correctionSummary.rejectionFeedback || correctionSummary.rejectionReason));
+  const editor = (
     <main className="seller-listings-page seller-editor">
-      <header>
-        <p className="seller-kicker">Seller marketplace</p>
-        <h1>Create a listing</h1>
-        <p>Step {stepNumber} of 4</p>
+      {usesSellerShell ? <header className="seller-edit-header"><h1>Edit this property</h1><nav aria-label="Property edit sections"><button type="button" className={step === "PROPERTY_INFORMATION" ? "is-active" : ""} onClick={() => setStep("PROPERTY_INFORMATION")}>Property Details</button><button type="button" className={step === "PHOTOS_DOCUMENTS" ? "is-active" : ""} onClick={() => setStep("PHOTOS_DOCUMENTS")}>Photos</button><button type="button" onClick={() => setStep("PHOTOS_DOCUMENTS")}>Documents</button></nav></header> : <header className="seller-editor-header">
+        <div className="seller-editor-topline"><strong>Property Info.</strong><span className="sr-only">Step {stepNumber} of 4</span><span><Cloud size={15} />{status || "Progress saves as you go"}</span></div>
         <div className="seller-stepper">
-          <span className={step === "PROPERTY_INFORMATION" ? "active" : "done"}>1 Property information</span>
-          <span className={step === "PHOTOS_DOCUMENTS" ? "active" : step === "SALES_MANDATE" ? "done" : ""}>2 Photos &amp; documents</span>
-          <span className={step === "SALES_MANDATE" ? "active" : step === "REVIEW" ? "done" : ""}>3 Sales mandate</span>
-          <span className={step === "REVIEW" ? "active" : ""}>4 Review</span>
+          <span className={step === "PROPERTY_INFORMATION" ? "active" : "done"}><i>{stepNumber > 1 ? <Check size={13} /> : 1}</i>Property Info.</span>
+          <span className={step === "PHOTOS_DOCUMENTS" ? "active" : stepNumber > 2 ? "done" : ""}><i>{stepNumber > 2 ? <Check size={13} /> : 2}</i>Photos &amp; Documents</span>
+          <span className={step === "SALES_MANDATE" ? "active" : stepNumber > 3 ? "done" : ""}><i>{stepNumber > 3 ? <Check size={13} /> : 3}</i>Sales Mandate</span>
+          <span className={step === "REVIEW" ? "active" : ""}><i>4</i>Review</span>
         </div>
-      </header>
+      </header>}
       {correction.data?.data.management.summary.rejectionFeedback || correction.data?.data.management.summary.rejectionReason ? <section className="seller-correction-context" aria-labelledby="correction-context-title"><p className="seller-kicker">Correction context</p><h2 id="correction-context-title">Changes needed</h2><p>{correction.data.data.management.summary.rejectionFeedback || correction.data.data.management.summary.rejectionReason}</p></section> : null}
-      {status ? <p role="status">{status}</p> : null}
+      <div className={`seller-editor-workspace${step === "REVIEW" ? " is-review" : ""}`}>
       {step === "PROPERTY_INFORMATION" ? (
         <PropertyInformationStep
           draft={draft}
@@ -175,8 +177,15 @@ export function SellerDraftEditor({
       ) : step === "SALES_MANDATE" ? (
         <SellerMandateStep propertyId={id!} onBack={() => setStep("PHOTOS_DOCUMENTS")} />
       ) : <SellerReviewStep propertyId={id!} />}
+      {step !== "REVIEW" && !usesSellerShell ? <ListingHelper /> : null}
+      </div>
     </main>
   );
+  return usesSellerShell ? <SellerShell>{editor}</SellerShell> : editor;
+}
+
+function ListingHelper() {
+  return <aside className="seller-listing-helper" aria-label="Listing steps"><Building2 size={34} aria-hidden="true" /><h2>Listing your property is straightforward</h2><ol><li><span>1</span>Tell us about the property</li><li><span>2</span>Add photos &amp; documents</li><li><span>3</span>Agree the sales mandate</li><li><span>4</span>Review and submit</li></ol><p><KeyRound size={15} />Your full address and documents stay private.</p><p><Images size={15} />Add clear photos to attract more interest.</p><p><FileText size={15} />You can save and return at any time.</p></aside>;
 }
 
 function normalizeStep(step: SellerDraft["currentStep"]): EditorStep {
@@ -204,16 +213,19 @@ function PropertyInformationStep({
 }) {
   return (
     <section className="seller-editor-card">
-      <h2>Property information</h2>
-      <label>Title<input value={draft.title ?? ""} onChange={(event) => onChange("title", event.target.value)} /></label>
+      <h2>Tell us about the property</h2>
+      <label>Property Title<input placeholder="Enter property title here" value={draft.title ?? ""} onChange={(event) => onChange("title", event.target.value)} /></label>
       <label>Description<textarea value={draft.description ?? ""} onChange={(event) => onChange("description", event.target.value)} /></label>
       <label>Category<select value={draft.propertyCategory ?? "RESIDENTIAL"} onChange={(event) => onChange("propertyCategory", event.target.value)}><option value="RESIDENTIAL">Residential</option><option value="COMMERCIAL">Commercial</option></select></label>
       <label>Property type<input value={draft.propertyType ?? ""} onChange={(event) => onChange("propertyType", event.target.value)} /></label>
       <label>Ownership<select value={draft.ownershipType ?? ""} onChange={(event) => onChange("ownershipType", event.target.value)}><option value="">Select ownership</option><option value="PERSONAL">Personal</option><option value="THIRD_PARTY">Third party</option></select></label>
-      <label>Public location<input value={draft.publicLocation ?? ""} onChange={(event) => onChange("publicLocation", event.target.value)} /></label>
+      <h3>Tell us about the location</h3>
+      <label>Location<input placeholder="Where is the property located?" value={draft.publicLocation ?? ""} onChange={(event) => onChange("publicLocation", event.target.value)} /></label>
       <label>Full address<input value={draft.fullAddress ?? ""} onChange={(event) => onChange("fullAddress", event.target.value)} /></label>
-      <label>Asking price (NGN)<input type="number" min="0" value={draft.askingPrice ?? ""} onChange={(event) => onChange("askingPrice", event.target.value === "" ? undefined : Number(event.target.value))} /></label>
+      <h3>Let’s discuss pricing</h3>
+      <label>Asking price (NGN)<input type="number" min="0" placeholder="Enter amount here" value={draft.askingPrice ?? ""} onChange={(event) => onChange("askingPrice", event.target.value === "" ? undefined : Number(event.target.value))} /></label>
       <label><input type="checkbox" checked={Boolean(draft.negotiable)} onChange={(event) => onChange("negotiable", event.target.checked)} /> Price is negotiable</label>
+      <h3>Give us more details about the property</h3>
       {draft.propertyCategory === "RESIDENTIAL" ? (
         <>
           <label>Bedrooms<input type="number" min="0" value={draft.bedrooms ?? ""} onChange={(event) => onChange("bedrooms", event.target.value ? Number(event.target.value) : null)} /></label>
@@ -227,14 +239,14 @@ function PropertyInformationStep({
       )}
       <label>Initial deposit<select value={draft.initialDepositType ?? ""} onChange={(event) => onChange("initialDepositType", event.target.value || null)}><option value="">None</option><option value="AMOUNT">Amount</option><option value="PERCENTAGE">Percentage</option></select></label>
       {draft.initialDepositType ? <label>Deposit value<input type="number" min="0" max={draft.initialDepositType === "PERCENTAGE" ? 100 : undefined} value={draft.initialDepositValue ?? ""} onChange={(event) => onChange("initialDepositValue", event.target.value ? Number(event.target.value) : null)} /></label> : null}
-      <div>
+      <div className="seller-amenities-field">
         <strong>Amenities</strong>
         {amenityOptions.map((amenity) => <button type="button" key={amenity} onClick={() => onChange("amenities", draft.amenities?.includes(amenity) ? draft.amenities.filter((item) => item !== amenity) : [...(draft.amenities ?? []), amenity])}>{amenity}</button>)}
         <input value={customAmenity} onChange={(event) => onCustomAmenityChange(event.target.value)} placeholder="Add an amenity" />
         <button type="button" onClick={onAddAmenity}>Add</button>
         <p>{draft.amenities?.join(", ")}</p>
       </div>
-      <div>
+      <div className="seller-editor-actions seller-editor-footer-actions">
         <button className="btn btn-secondary" type="button" disabled={pending} onClick={onSave}>Save as draft</button>
         <button className="btn btn-primary" type="button" disabled={pending} onClick={onContinue}>Continue</button>
       </div>
@@ -313,7 +325,7 @@ function MediaStep({ propertyId, draft, onBack }: { propertyId: string; draft: P
         try { await customerApi.uploadSellerDocument(propertyId, body); refresh(); } catch { setError("Document upload failed. Please try again."); setBusy(false); }
       }} /></label>
       {draft.documents?.length ? <ul>{draft.documents.map((document) => <li key={document.id}>{document.displayName} ({document.documentType}) <button disabled={busy} type="button" onClick={async () => { setBusy(true); await customerApi.deleteSellerDocument(propertyId, document.id); refresh(); }}>Delete</button></li>)}</ul> : <p>No supporting documents uploaded. Documents are optional.</p>}
-      <div>
+      <div className="seller-editor-actions seller-editor-footer-actions">
         <button className="btn btn-secondary" type="button" disabled={busy} onClick={onBack}>Back</button>
         <button className="btn btn-primary" type="button" disabled={busy} onClick={() => void continueToSalesMandate()}>{busy ? "Saving…" : "Continue"}</button>
       </div>

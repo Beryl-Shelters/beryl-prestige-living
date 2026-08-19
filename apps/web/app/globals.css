@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./seller-editor.css";
+@import "./seller-shell.css";
 
 @theme {
   --color-brand-brown: #70521b;
