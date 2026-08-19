@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -15,6 +14,8 @@ import {
   ChevronRight,
   House,
   Images,
+  LayoutGrid,
+  List,
   MapPin,
   RotateCcw,
   Search,
@@ -22,7 +23,7 @@ import {
   Toilet,
   X
 } from "lucide-react";
-import { BerylShelterLogo } from "@/components/brand/beryl-shelter-logo";
+import { MarketplaceHeader } from "@/components/marketplace/marketplace-header";
 import { marketplaceApi } from "@/lib/api/client";
 import type { MarketplacePropertyCard, MarketplaceSort } from "@/lib/contracts";
 import {
@@ -105,8 +106,8 @@ function FilterPanel({ query, onApply, onReset }: FilterPanelProps) {
   </form>;
 }
 
-function PropertyCard({ property }: { property: MarketplacePropertyCard }) {
-  return <article className="marketplace-property-card">
+function PropertyCard({ property, view }: { property: MarketplacePropertyCard; view: "grid" | "list" }) {
+  return <article className="marketplace-property-card" data-view={view}>
     <a className="marketplace-property-image-link" href={`/marketplace/${property.id}`} aria-label={`View ${property.title}`}>
       <div className="marketplace-property-image">
         {property.coverImage
@@ -151,6 +152,7 @@ export function MarketplaceScreen({ initialSearchParams = {} }: { initialSearchP
   const [query, setQuery] = useState(() => parseMarketplaceQuery(initialSearchParams));
   const [searchValue, setSearchValue] = useState(query.q);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [view, setView] = useState<"grid" | "list">("grid");
   const mobileFilterButtonRef = useRef<HTMLButtonElement>(null);
   const mobileFilterDrawerRef = useRef<HTMLElement>(null);
   const params = useMemo(() => marketplaceApiParams(query), [query]);
@@ -198,10 +200,6 @@ export function MarketplaceScreen({ initialSearchParams = {} }: { initialSearchP
     };
   }, [mobileFiltersOpen]);
 
-  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    commit({ q: searchValue.trim() });
-  };
   const resetAll = () => {
     setSearchValue("");
     setMobileFiltersOpen(false);
@@ -215,42 +213,28 @@ export function MarketplaceScreen({ initialSearchParams = {} }: { initialSearchP
   const filterKey = [query.location, query.minPrice, query.maxPrice, query.propertyType, query.category, query.bedrooms].join("|");
   const data = result.data?.data;
   const total = data?.pagination.total ?? 0;
+  const firstResult = total ? (query.page - 1) * (data?.pagination.limit ?? 0) + 1 : 0;
+  const lastResult = total ? Math.min(firstResult + (data?.properties.length ?? 0) - 1, total) : 0;
 
   return <div className="marketplace-page">
-    <header className="marketplace-header">
-      <Link href="/" aria-label="Beryl Shelter home"><BerylShelterLogo /></Link>
-      <nav aria-label="Primary navigation"><Link aria-current="page" href={"/marketplace" as Route}>Marketplace</Link><Link href="/signup?intent=LIST_PROPERTY">List a property</Link></nav>
-      <div className="marketplace-header-actions"><Link href="/login">Log in</Link><Link className="btn btn-primary" href="/signup">Get started</Link></div>
-    </header>
+    <MarketplaceHeader returnTo={marketplaceQueryString(query)} searchValue={searchValue} onSearchChange={setSearchValue} onSearchSubmit={() => commit({ q: searchValue.trim() })} />
 
     <main>
-      <section className="marketplace-hero">
-        <p className="marketplace-eyebrow">Verified property marketplace</p>
-        <h1>Find a home you can trust</h1>
-        <p>Explore verified properties and find the right place for your next move.</p>
-        <form className="marketplace-search" role="search" onSubmit={submitSearch}>
-          <Search aria-hidden="true" size={21} />
-          <label className="sr-only" htmlFor="marketplace-search">Search properties</label>
-          <input id="marketplace-search" value={searchValue} onChange={(event) => setSearchValue(event.target.value)} placeholder="Search by location, property type or keyword" />
-          <button className="btn btn-primary" type="submit">Search</button>
-        </form>
-      </section>
-
       <section className="marketplace-results-shell" aria-labelledby="marketplace-results-heading">
         <button ref={mobileFilterButtonRef} className="marketplace-mobile-filter-button" type="button" onClick={() => setMobileFiltersOpen(true)}><SlidersHorizontal size={18} /> Filters</button>
-        <aside className="marketplace-filter-sidebar" aria-label="Property filters"><FilterPanel key={filterKey} query={query} onApply={applyFilters} onReset={resetAll} /></aside>
         <div className="marketplace-results">
           <div className="marketplace-results-toolbar">
-            <div><h2 id="marketplace-results-heading">Properties for you</h2><p aria-live="polite">{result.isLoading ? "Finding available properties…" : `${total.toLocaleString("en-NG")} ${total === 1 ? "property" : "properties"} found`}</p></div>
-            <label><span>Sort by</span><select aria-label="Sort properties" value={query.sort} onChange={(event) => commit({ sort: event.target.value as MarketplaceSort })}>{sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+            <div><h1 id="marketplace-results-heading">Houses for Sale in Nigeria</h1><p aria-live="polite">{result.isLoading ? "Finding available properties…" : total ? `Showing ${firstResult}–${lastResult} of ${total.toLocaleString("en-NG")} properties` : "No properties found"}</p></div>
+            <div className="marketplace-result-controls"><label><span>Sort by</span><select aria-label="Sort properties" value={query.sort} onChange={(event) => commit({ sort: event.target.value as MarketplaceSort })}>{sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><div className="marketplace-view-toggle" role="group" aria-label="Property result view"><button type="button" aria-label="Grid view" aria-pressed={view === "grid"} onClick={() => setView("grid")}><LayoutGrid size={17} /></button><button type="button" aria-label="List view" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={18} /></button></div></div>
           </div>
 
           {result.isLoading ? <MarketplaceSkeletons /> : null}
           {result.isError ? <div className="marketplace-state-card" role="alert"><House size={36} /><h3>We could not load properties</h3><p>Please check your connection and try again.</p><button className="btn btn-primary" type="button" onClick={() => result.refetch()}>Try again</button></div> : null}
           {!result.isLoading && !result.isError && data?.properties.length === 0 ? <div className="marketplace-state-card"><Search size={36} /><h3>No properties match your search</h3><p>Try changing your search or clearing the filters.</p><button className="btn btn-secondary" type="button" onClick={resetAll}>Clear all filters</button></div> : null}
-          {!result.isLoading && !result.isError && data?.properties.length ? <div className="marketplace-grid">{data.properties.map((property) => <PropertyCard key={property.id} property={property} />)}</div> : null}
+          {!result.isLoading && !result.isError && data?.properties.length ? <div className={`marketplace-grid marketplace-${view}`}>{data.properties.map((property) => <PropertyCard key={property.id} property={property} view={view} />)}</div> : null}
           {data ? <Pagination page={data.pagination.page} totalPages={data.pagination.total_pages} onPage={(page) => commit({ page }, false)} /> : null}
         </div>
+        <aside className="marketplace-filter-sidebar" aria-label="Property filters"><FilterPanel key={filterKey} query={query} onApply={applyFilters} onReset={resetAll} /></aside>
       </section>
     </main>
 

@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 let authState: Record<string, unknown>;
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push, replace: mocks.replace, back: mocks.back }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push, replace: mocks.replace, back: mocks.back }), useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/context/auth-provider", () => ({ useAuth: () => authState }));
 vi.mock("@/lib/api/client", () => ({ customerApi: {
   register: mocks.register,

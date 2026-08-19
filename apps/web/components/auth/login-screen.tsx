@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
@@ -14,11 +14,13 @@ import { apiErrorOf, friendlyAuthError } from "@/lib/api/errors";
 import { normalizePhone } from "@/lib/phone";
 import { publicWebUrl } from "@/lib/site-urls";
 import { routeForNextAction } from "@/lib/navigation";
+import { safeReturnTo } from "@/lib/return-to";
 import { anonymousCustomerAnalyticsDistinctId, trackCustomerEvent } from "@/lib/analytics/customer";
 import { loginSchema, type LoginValues } from "@/lib/validation";
 
 export function LoginScreen() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login, pendingSignup } = useAuth();
   const [error, setError] = useState("");
   const [routing, setRouting] = useState(false);
@@ -30,7 +32,8 @@ export function LoginScreen() {
     try {
       const result = await mutation.mutateAsync(values);
       setRouting(true);
-      window.setTimeout(() => router.push(routeForNextAction(result.nextAction)), 700);
+      const returnTo = safeReturnTo(searchParams.get("returnTo"));
+      window.setTimeout(() => router.push((returnTo ?? routeForNextAction(result.nextAction)) as import("next").Route), 700);
     } catch (caught) { setError(friendlyAuthError(apiErrorOf(caught))); }
   });
 

@@ -12,7 +12,9 @@ export const routeForNextAction = (action: NextAction): Route => {
     case "ACTIVATE_SELLER_PERSONA":
       return "/onboarding/seller";
     case "OPEN_SELLER_DASHBOARD":
-      return "/seller";
+      return "/seller/listings";
+    case "OPEN_BUYER_DASHBOARD":
+      return "/marketplace";
     case "VERIFY_PASSWORD_RESET_OTP":
       return "/verify-reset-otp";
     case "SET_NEW_PASSWORD":
@@ -20,6 +22,6 @@ export const routeForNextAction = (action: NextAction): Route => {
     case "LOGIN":
       return "/login";
     default:
-      return "/buyer";
+      return "/marketplace";
   }
 };

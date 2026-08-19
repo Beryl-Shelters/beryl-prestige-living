@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/context/auth-provider", () => ({ useAuth: () => mocks.auth }));
+vi.mock("@/components/marketplace/marketplace-header", () => ({ MarketplaceHeader: () => null }));
 vi.mock("@/lib/api/client", () => ({
   marketplaceApi: { detail: mocks.detail },
   customerApi: { saveProperty: mocks.save, unsaveProperty: mocks.unsave, expressMarketplaceInterest: mocks.interest }
@@ -135,7 +136,7 @@ describe("Marketplace property detail", () => {
   it("does not submit an invalid contact method and renders safe backend errors", async () => {
     const user = userEvent.setup();
     mocks.auth.session = session;
-    mocks.interest.mockRejectedValueOnce({ response: { data: { code: "CONTACT_METHOD_UNAVAILABLE" } } });
+    mocks.interest.mockRejectedValueOnce(Object.assign(new Error("unavailable"), { isAxiosError: true, response: { data: { code: "CONTACT_METHOD_UNAVAILABLE" } } }));
     renderWithQuery(<MarketplacePropertyDetailScreen propertyId={id} />);
     await screen.findByRole("heading", { name: property.title });
     await user.click(screen.getByRole("button", { name: "I am interested in this property" }));

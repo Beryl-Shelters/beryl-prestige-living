@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({ search: vi.fn(), replace: vi.fn() }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: mocks.replace }) }));
 vi.mock("@/lib/api/client", () => ({ marketplaceApi: { search: mocks.search } }));
+vi.mock("@/components/marketplace/marketplace-header", () => ({ MarketplaceHeader: ({ searchValue, onSearchChange, onSearchSubmit }: { searchValue: string; onSearchChange: (value: string) => void; onSearchSubmit: () => void }) => <form onSubmit={(event) => { event.preventDefault(); onSearchSubmit(); }}><label htmlFor="marketplace-search">Search properties</label><input id="marketplace-search" value={searchValue} onChange={(event) => onSearchChange(event.target.value)} /><button type="submit">Search</button></form> }));
 
 import { MarketplaceScreen } from "./marketplace-screen";
 
@@ -44,7 +45,7 @@ describe("public Marketplace screen", () => {
 
   it("renders publicly and performs the initial Marketplace fetch without auth context", async () => {
     renderWithQuery(<MarketplaceScreen />);
-    expect(screen.getByRole("heading", { name: "Find a home you can trust" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Houses for Sale in Nigeria" })).toBeInTheDocument();
     await waitFor(() => expect(mocks.search).toHaveBeenCalledWith({ sort: "DEFAULT", page: 1, limit: 12 }));
   });
 

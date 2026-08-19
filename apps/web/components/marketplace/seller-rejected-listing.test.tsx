@@ -28,7 +28,7 @@ describe("Seller rejected listing correction", () => {
     mocks.reopenSellerProperty.mockReturnValue(new Promise((done) => { resolve = done; }));
     render(<SellerListingManagementScreen propertyId={propertyId} />, { wrapper });
     fireEvent.click(await screen.findByRole("button", { name: "Make Changes" }));
-    expect(mocks.reopenSellerProperty).toHaveBeenCalledWith(propertyId);
+    await waitFor(() => expect(mocks.reopenSellerProperty).toHaveBeenCalledWith(propertyId));
     expect(mocks.createSellerDraft).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Opening listing…" })).toBeDisabled();
     resolve({ success: true, data: { propertyId, status: "DRAFT", currentStep: "REVIEW", nextAction: "EDIT_REJECTED_LISTING" } });

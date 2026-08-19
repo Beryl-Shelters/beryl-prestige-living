@@ -11,7 +11,7 @@ export function proxy(request: NextRequest) {
   const hasAccessToken = request.cookies.has("beryl_customer_access");
   if (!hasAccessToken) {
     const login = new URL("/login", request.url);
-    login.searchParams.set("returnTo", request.nextUrl.pathname);
+    login.searchParams.set("returnTo", `${request.nextUrl.pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(login);
   }
   return NextResponse.next();

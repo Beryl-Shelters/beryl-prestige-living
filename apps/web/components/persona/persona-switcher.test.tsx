@@ -46,7 +46,7 @@ describe("PersonaSwitcher", () => {
     renderWithQuery(<PersonaSwitcher open onClose={mocks.close} />);
     await userEvent.click(await screen.findByRole("button", { name: /^switch$/i }));
     await waitFor(() => expect(mocks.switchPersona.mock.calls[0]?.[0]).toBe("SELLER_DEVELOPER"));
-    expect(mocks.push).toHaveBeenCalledWith("/seller");
+    expect(mocks.push).toHaveBeenCalledWith("/seller/listings");
     expect(mocks.track).toHaveBeenCalledWith("Persona Switched", { from_persona: "Buyer", to_persona: "Seller-Developer" });
   });
 
