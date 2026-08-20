@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Heart, House, MapPin } from "lucide-react";
+import { BadgeCheck, Bath, BedDouble, Heart, House, Images, MapPin, Toilet } from "lucide-react";
 import { MarketplaceHeader } from "./marketplace-header";
 import { customerApi } from "@/lib/api/client";
 import { formatNaira, humanizeMarketplaceValue } from "@/lib/marketplace";
@@ -25,9 +25,9 @@ export function SavedPropertiesScreen() {
       {saved.isError ? <section className="marketplace-state-card" role="alert"><House size={34} /><h2>We could not load your saved properties</h2><button className="btn btn-primary" type="button" onClick={() => saved.refetch()}>Try again</button></section> : null}
       {!saved.isLoading && !saved.isError && !items.length ? <section className="marketplace-state-card"><Heart size={36} /><h2>No saved properties yet</h2><p>Use the heart on a property to keep it here.</p><Link className="btn btn-primary" href="/marketplace">Browse properties</Link></section> : null}
       {items.length ? <div className="marketplace-grid">{items.map(({ property }) => <article className="marketplace-property-card" key={property.id}>
-        <Link className="marketplace-property-image-link" href={`/marketplace/${property.id}`}><div className="marketplace-property-image">{property.coverImage ? <Image src={property.coverImage.url} alt={`${property.title} in ${property.publicLocation}`} fill sizes="(max-width: 767px) 100vw, 33vw" /> : <div className="marketplace-image-placeholder"><House size={38} /><span>Property image unavailable</span></div>}</div></Link>
+        <Link className="marketplace-property-image-link" href={`/marketplace/${property.id}`}><div className="marketplace-property-image">{property.coverImage ? <Image src={property.coverImage.url} alt={`${property.title} in ${property.publicLocation}`} fill sizes="(max-width: 767px) 100vw, 33vw" /> : <div className="marketplace-image-placeholder"><House size={38} /><span>Property image unavailable</span></div>}{property.verified ? <span className="marketplace-verified-badge"><BadgeCheck aria-hidden="true" size={15} /> Verified</span> : null}{property.photoCount > 0 ? <span className="marketplace-photo-count"><Images aria-hidden="true" size={15} />{property.photoCount}</span> : null}</div></Link>
         <button className="marketplace-card-save" type="button" aria-label={`Remove ${property.title} from saved properties`} disabled={unsave.isPending && unsave.variables === property.id} onClick={() => unsave.mutate(property.id)}><Heart size={19} fill="currentColor" /></button>
-        <div className="marketplace-property-body"><strong className="marketplace-card-price">{formatNaira(property.askingPrice)}</strong><Link className="marketplace-card-title" href={`/marketplace/${property.id}`}>{property.title}</Link><div className="marketplace-card-kicker"><span>{humanizeMarketplaceValue(property.propertyType)}</span></div><p className="marketplace-card-location"><MapPin size={16} />{property.publicLocation}</p></div>
+        <div className="marketplace-property-body"><strong className="marketplace-card-price">{formatNaira(property.askingPrice)}</strong><Link className="marketplace-card-title" href={`/marketplace/${property.id}`}>{property.title}</Link><div className="marketplace-card-kicker"><span>{humanizeMarketplaceValue(property.propertyType)}</span></div><p className="marketplace-card-location"><MapPin size={16} />{property.publicLocation}</p><dl className="marketplace-card-meta">{property.bedrooms !== null ? <div><dt><BedDouble aria-hidden="true" size={15} /></dt><dd>{property.bedrooms} Beds</dd></div> : null}{property.bathrooms !== null ? <div><dt><Bath aria-hidden="true" size={15} /></dt><dd>{property.bathrooms} Baths</dd></div> : null}{property.toilets !== null ? <div><dt><Toilet aria-hidden="true" size={15} /></dt><dd>{property.toilets} Toilets</dd></div> : null}</dl></div>
       </article>)}</div> : null}
     </main>
   </div>;

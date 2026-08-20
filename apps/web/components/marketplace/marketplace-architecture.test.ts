@@ -8,6 +8,7 @@ const source = (path: string) => readFileSync(resolve(process.cwd(), path), "utf
 describe("Marketplace W1 architecture boundaries", () => {
   const page = source("app/marketplace/page.tsx");
   const screen = source("components/marketplace/marketplace-screen.tsx");
+  const propertyOptions = source("lib/marketplace-property-options.ts");
   const bridge = source("app/api/marketplace/route.ts");
   const proxy = source("proxy.ts");
 
@@ -39,7 +40,15 @@ describe("Marketplace W1 architecture boundaries", () => {
     expect(screen).toContain('type="checkbox"');
     expect(screen).toContain("marketplace-bedroom-group");
     expect(screen).toContain('next.join(",")');
-    expect(screen).toContain('["APARTMENT", "Flat / apartment"]');
+    expect(propertyOptions).toContain('["APARTMENT", "Flat / apartment"]');
     expect(screen).toMatch(/conditionOptions|furnishingOptions/);
+  });
+
+  it("keeps the PDF filter hierarchy and list verified state", () => {
+    expect(screen.indexOf('legend>Property Type')).toBeLessThan(screen.indexOf('legend>Bedrooms'));
+    expect(screen.indexOf('legend>Bedrooms')).toBeLessThan(screen.indexOf('legend>Condition'));
+    expect(screen.indexOf('legend>Condition')).toBeLessThan(screen.indexOf('legend>Furnishing'));
+    const styles = source("app/globals.css");
+    expect(styles).toContain('.marketplace-list .marketplace-verified-badge{display:inline-flex;left:62px}');
   });
 });

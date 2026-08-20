@@ -126,6 +126,13 @@ describe("public Marketplace screen", () => {
     await waitFor(() => expect(mocks.search).toHaveBeenLastCalledWith(expect.objectContaining({ condition: "NEWLY_BUILT,OFF_PLAN", furnishing: "FULLY_FURNISHED", bedrooms: "5+" })));
   });
 
+  it("clears every applied filter without discarding the live Marketplace route", async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<MarketplaceScreen initialSearchParams={{ q: "Lekki", propertyType: "DUPLEX", condition: "NEWLY_BUILT", furnishing: "FULLY_FURNISHED", bedrooms: "5+" }} />);
+    await user.click(screen.getByRole("button", { name: "Clear" }));
+    expect(mocks.replace).toHaveBeenLastCalledWith("/marketplace", { scroll: false });
+  });
+
   it("saves and unsaves from a result card for an authenticated customer", async () => {
     mocks.session = { user: { id: "customer-a" } };
     const user = userEvent.setup();
@@ -152,6 +159,7 @@ describe("public Marketplace screen", () => {
     expect(results).toHaveClass("marketplace-grid");
     await user.click(screen.getByRole("button", { name: "List view" }));
     expect(results).toHaveClass("marketplace-list");
+    expect(screen.getByText("Verified")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Grid view" }));
     expect(results).toHaveClass("marketplace-grid");
   });

@@ -129,6 +129,8 @@ describe("Marketplace property detail", () => {
     await user.click(screen.getByRole("button", { name: "Send Interest" }));
     await waitFor(() => expect(mocks.interest).toHaveBeenCalledWith(id, { preferredContactMethod: "EMAIL", message: "Please share available viewing times." }));
     expect(await screen.findByRole("heading", { name: "Interest Sent" })).toBeInTheDocument();
+    expect(screen.getByText("Preferred contact: Email")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "What happens next?" })).toBeInTheDocument();
   });
 
   it("does not submit an invalid contact method and renders safe backend errors", async () => {
