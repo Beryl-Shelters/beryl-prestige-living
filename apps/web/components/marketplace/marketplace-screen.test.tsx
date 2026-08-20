@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithQuery } from "@/test/render";
@@ -58,17 +58,18 @@ describe("public Marketplace screen", () => {
     expect(mocks.replace).toHaveBeenLastCalledWith("/marketplace?q=lekki", { scroll: false });
   });
 
-  it("maps location, price, property type, category and bedrooms to API filters", async () => {
+  it("maps location, price, multiple property-type checkboxes and an exact bedroom pill to API filters", async () => {
     const user = userEvent.setup();
-    renderWithQuery(<MarketplaceScreen />);
-    await user.type(screen.getByLabelText("Location"), "Lagos");
+    renderWithQuery(<MarketplaceScreen initialSearchParams={{ category: "RESIDENTIAL" }} />);
+    await user.type(screen.getByLabelText("Explore States"), "Lagos");
     await user.type(screen.getByLabelText("Minimum price"), "50000000");
     await user.type(screen.getByLabelText("Maximum price"), "200000000");
-    await user.selectOptions(screen.getByLabelText("Property type"), "DUPLEX");
-    await user.selectOptions(screen.getByLabelText("Category"), "RESIDENTIAL");
-    await user.selectOptions(screen.getByLabelText("Bedrooms"), "4");
-    await user.click(screen.getByRole("button", { name: "Show properties" }));
-    await waitFor(() => expect(mocks.search).toHaveBeenLastCalledWith(expect.objectContaining({ location: "Lagos", minPrice: 50000000, maxPrice: 200000000, propertyType: "DUPLEX", category: "RESIDENTIAL", bedrooms: 4, page: 1 })));
+    await user.click(screen.getByRole("checkbox", { name: "Flat / apartment" }));
+    await user.click(screen.getByRole("checkbox", { name: "Duplex" }));
+    await user.click(screen.getByRole("button", { name: "4" }));
+    await user.click(screen.getByRole("button", { name: "Apply Filters" }));
+    await waitFor(() => expect(mocks.search).toHaveBeenLastCalledWith(expect.objectContaining({ location: "Lagos", minPrice: 50000000, maxPrice: 200000000, propertyType: "APARTMENT,DUPLEX", category: "RESIDENTIAL", bedrooms: 4, page: 1 })));
+    expect(screen.getByRole("button", { name: /5 or more bedrooms/i })).toBeDisabled();
   });
 
   it("blocks an invalid client-side price range", async () => {
@@ -76,7 +77,7 @@ describe("public Marketplace screen", () => {
     renderWithQuery(<MarketplaceScreen />);
     await user.type(screen.getByLabelText("Minimum price"), "500");
     await user.type(screen.getByLabelText("Maximum price"), "100");
-    await user.click(screen.getByRole("button", { name: "Show properties" }));
+    await user.click(screen.getByRole("button", { name: "Apply Filters" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Minimum price cannot be greater");
     expect(mocks.search).toHaveBeenCalledTimes(1);
   });
@@ -93,7 +94,7 @@ describe("public Marketplace screen", () => {
     const user = userEvent.setup();
     renderWithQuery(<MarketplaceScreen initialSearchParams={{ page: "2" }} />);
     await screen.findByText("Modern four-bedroom duplex");
-    await user.click(screen.getByRole("button", { name: "3" }));
+    await user.click(within(screen.getByRole("navigation", { name: "Marketplace result pages" })).getByRole("button", { name: "3" }));
     await waitFor(() => expect(mocks.search).toHaveBeenLastCalledWith(expect.objectContaining({ page: 3 })));
     expect(mocks.replace).toHaveBeenLastCalledWith("/marketplace?page=3", { scroll: false });
   });
@@ -106,6 +107,19 @@ describe("public Marketplace screen", () => {
     expect(screen.getByText("8")).toBeInTheDocument();
     expect(screen.getByText(/125,000,000/)).toBeInTheDocument();
     expect(screen.getByText("Negotiable")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: `View and save ${property.title}` })).toHaveAttribute("href", `/marketplace/${property.id}`);
+  });
+
+  it("switches between the supplied grid and list result presentations", async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<MarketplaceScreen />);
+    await screen.findByText(property.title);
+    const results = screen.getByText(property.title).closest(".marketplace-grid");
+    expect(results).toHaveClass("marketplace-grid");
+    await user.click(screen.getByRole("button", { name: "List view" }));
+    expect(results).toHaveClass("marketplace-list");
+    await user.click(screen.getByRole("button", { name: "Grid view" }));
+    expect(results).toHaveClass("marketplace-grid");
   });
 
   it("uses an intentional placeholder when the cover is null", async () => {

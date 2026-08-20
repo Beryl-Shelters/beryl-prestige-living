@@ -9,15 +9,14 @@ import {
   BadgeCheck,
   Bath,
   BedDouble,
-  CarFront,
   ChevronLeft,
   ChevronRight,
+  Heart,
   House,
   Images,
   LayoutGrid,
   List,
   MapPin,
-  RotateCcw,
   Search,
   SlidersHorizontal,
   Toilet,
@@ -46,14 +45,14 @@ const sortOptions: { value: MarketplaceSort; label: string }[] = [
 ];
 
 const propertyTypes = [
-  ["", "All property types"],
-  ["APARTMENT", "Apartment"],
+  ["APARTMENT", "Flat / apartment"],
+  ["MINI_FLAT", "Mini Flat"],
+  ["SELF_CONTAIN_STUDIO", "Self-Contain / Studio"],
   ["DUPLEX", "Duplex"],
-  ["DETACHED_HOUSE", "Detached house"],
-  ["SEMI_DETACHED_HOUSE", "Semi-detached house"],
-  ["TERRACE", "Terrace"],
+  ["DETACHED_HOUSE", "Detached House"],
+  ["SEMI_DETACHED_HOUSE", "Semi-Detached House"],
+  ["TERRACE", "Terrace House"],
   ["BUNGALOW", "Bungalow"],
-  ["LAND", "Land"]
 ] as const;
 
 type FilterPanelProps = {
@@ -67,9 +66,16 @@ function FilterPanel({ query, onApply, onReset }: FilterPanelProps) {
   const [minPrice, setMinPrice] = useState(query.minPrice);
   const [maxPrice, setMaxPrice] = useState(query.maxPrice);
   const [propertyType, setPropertyType] = useState(query.propertyType);
-  const [category, setCategory] = useState(query.category);
+  const [category] = useState(query.category);
   const [bedrooms, setBedrooms] = useState(query.bedrooms);
   const [rangeError, setRangeError] = useState("");
+  const selectedPropertyTypes = propertyType ? propertyType.split(",").filter(Boolean) : [];
+  const togglePropertyType = (value: string) => {
+    const next = selectedPropertyTypes.includes(value)
+      ? selectedPropertyTypes.filter((selected) => selected !== value)
+      : [...selectedPropertyTypes, value];
+    setPropertyType(next.join(","));
+  };
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -89,20 +95,19 @@ function FilterPanel({ query, onApply, onReset }: FilterPanelProps) {
   };
 
   return <form className="marketplace-filter-form" onSubmit={submit}>
-    <div className="marketplace-filter-heading"><h2>Filter properties</h2><button className="marketplace-reset-link" type="button" onClick={onReset}><RotateCcw size={15} /> Reset all</button></div>
-    <label className="marketplace-filter-field"><span>Location</span><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="City or area" /></label>
+    <div className="marketplace-filter-heading"><h2>Filters</h2><button className="marketplace-reset-link" type="button" onClick={onReset}>Clear</button></div>
     <fieldset className="marketplace-filter-group">
-      <legend>Price range</legend>
+      <legend>Price Range</legend>
       <div className="marketplace-price-row">
-        <label><span>Minimum</span><span className="marketplace-money-input"><b>₦</b><input aria-label="Minimum price" inputMode="numeric" min="0" type="number" value={minPrice} onChange={(event) => setMinPrice(event.target.value)} placeholder="0" /></span></label>
-        <label><span>Maximum</span><span className="marketplace-money-input"><b>₦</b><input aria-label="Maximum price" inputMode="numeric" min="0" type="number" value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)} placeholder="Any" /></span></label>
+        <label><span className="sr-only">Minimum</span><span className="marketplace-money-input"><b>₦</b><input aria-label="Minimum price" inputMode="numeric" min="0" type="number" value={minPrice} onChange={(event) => setMinPrice(event.target.value)} placeholder="Min. Price" /></span></label>
+        <label><span className="sr-only">Maximum</span><span className="marketplace-money-input"><b>₦</b><input aria-label="Maximum price" inputMode="numeric" min="0" type="number" value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)} placeholder="Max. Price" /></span></label>
       </div>
       {rangeError ? <p className="marketplace-filter-error" role="alert">{rangeError}</p> : null}
     </fieldset>
-    <label className="marketplace-filter-field"><span>Property type</span><select value={propertyType} onChange={(event) => setPropertyType(event.target.value)}>{propertyTypes.map(([value, label]) => <option key={value || "all"} value={value}>{label}</option>)}</select></label>
-    <label className="marketplace-filter-field"><span>Category</span><select value={category} onChange={(event) => setCategory(event.target.value as MarketplaceQueryState["category"])}><option value="">All categories</option><option value="RESIDENTIAL">Residential</option><option value="COMMERCIAL">Commercial</option></select></label>
-    <label className="marketplace-filter-field"><span>Bedrooms</span><select value={bedrooms} onChange={(event) => setBedrooms(event.target.value)}><option value="">Any number</option>{[1, 2, 3, 4, 5].map((number) => <option key={number} value={number}>{number} bedroom{number === 1 ? "" : "s"}</option>)}</select></label>
-    <button className="btn btn-primary marketplace-apply-button" type="submit">Show properties</button>
+    <fieldset className="marketplace-filter-group marketplace-checkbox-group"><legend>Property Type</legend>{propertyTypes.map(([value, label]) => <label key={value}><input type="checkbox" value={value} checked={selectedPropertyTypes.includes(value)} onChange={() => togglePropertyType(value)} /><span>{label}</span></label>)}</fieldset>
+    <fieldset className="marketplace-filter-group marketplace-bedroom-group"><legend>Bedrooms</legend><div>{[1, 2, 3, 4].map((number) => <button type="button" key={number} aria-pressed={bedrooms === String(number)} onClick={() => setBedrooms(bedrooms === String(number) ? "" : String(number))}>{number}</button>)}<button type="button" disabled aria-label="5 or more bedrooms is not available with the current search API" title="The current search supports exact bedroom counts only">5+</button></div></fieldset>
+    <label className="marketplace-filter-field marketplace-state-field"><span>Explore States</span><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Search states" /></label>
+    <button className="btn btn-primary marketplace-apply-button" type="submit">Apply Filters</button>
   </form>;
 }
 
@@ -117,16 +122,16 @@ function PropertyCard({ property, view }: { property: MarketplacePropertyCard; v
         {property.verified ? <span className="marketplace-verified-badge"><BadgeCheck aria-hidden="true" size={15} /> Verified</span> : null}
       </div>
     </a>
+    <a className="marketplace-card-save" href={`/marketplace/${property.id}`} aria-label={`View and save ${property.title}`}><Heart aria-hidden="true" size={19} /></a>
     <div className="marketplace-property-body">
-      <div className="marketplace-card-kicker"><span>{humanizeMarketplaceValue(property.propertyType)}</span><span>{humanizeMarketplaceValue(property.propertyCategory)}</span></div>
-      <a className="marketplace-card-title" href={`/marketplace/${property.id}`}>{property.title}</a>
-      <p className="marketplace-card-location"><MapPin aria-hidden="true" size={16} />{property.publicLocation}</p>
       <div className="marketplace-card-price"><strong>{formatNaira(property.askingPrice)}</strong>{property.negotiable ? <span>Negotiable</span> : null}</div>
+      <a className="marketplace-card-title" href={`/marketplace/${property.id}`}>{property.title}</a>
+      <div className="marketplace-card-kicker"><span>{humanizeMarketplaceValue(property.propertyType)}</span></div>
+      <p className="marketplace-card-location"><MapPin aria-hidden="true" size={16} />{property.publicLocation}</p>
       <dl className="marketplace-card-meta">
-        {property.bedrooms !== null ? <div><dt><BedDouble aria-hidden="true" size={17} /><span className="sr-only">Bedrooms</span></dt><dd>{property.bedrooms}</dd></div> : null}
-        {property.bathrooms !== null ? <div><dt><Bath aria-hidden="true" size={17} /><span className="sr-only">Bathrooms</span></dt><dd>{property.bathrooms}</dd></div> : null}
-        {property.toilets !== null ? <div><dt><Toilet aria-hidden="true" size={17} /><span className="sr-only">Toilets</span></dt><dd>{property.toilets}</dd></div> : null}
-        {property.parkingSpaces !== null ? <div><dt><CarFront aria-hidden="true" size={17} /><span className="sr-only">Parking spaces</span></dt><dd>{property.parkingSpaces}</dd></div> : null}
+        {property.bedrooms !== null ? <div><dt><BedDouble aria-hidden="true" size={15} /></dt><dd>{property.bedrooms} Beds</dd></div> : null}
+        {property.bathrooms !== null ? <div><dt><Bath aria-hidden="true" size={15} /></dt><dd>{property.bathrooms} Baths</dd></div> : null}
+        {property.toilets !== null ? <div><dt><Toilet aria-hidden="true" size={15} /></dt><dd>{property.toilets} Toilets</dd></div> : null}
       </dl>
     </div>
   </article>;
@@ -224,8 +229,8 @@ export function MarketplaceScreen({ initialSearchParams = {} }: { initialSearchP
         <button ref={mobileFilterButtonRef} className="marketplace-mobile-filter-button" type="button" onClick={() => setMobileFiltersOpen(true)}><SlidersHorizontal size={18} /> Filters</button>
         <div className="marketplace-results">
           <div className="marketplace-results-toolbar">
-            <div><h1 id="marketplace-results-heading">Houses for Sale in Nigeria</h1><p aria-live="polite">{result.isLoading ? "Finding available properties…" : total ? `Showing ${firstResult}–${lastResult} of ${total.toLocaleString("en-NG")} properties` : "No properties found"}</p></div>
-            <div className="marketplace-result-controls"><label><span>Sort by</span><select aria-label="Sort properties" value={query.sort} onChange={(event) => commit({ sort: event.target.value as MarketplaceSort })}>{sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><div className="marketplace-view-toggle" role="group" aria-label="Property result view"><button type="button" aria-label="Grid view" aria-pressed={view === "grid"} onClick={() => setView("grid")}><LayoutGrid size={17} /></button><button type="button" aria-label="List view" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={18} /></button></div></div>
+            <div className="marketplace-results-intro"><h1 id="marketplace-results-heading">Houses for Sale in Nigeria</h1><p>Explore properties published after review by the Beryl Shelter team.</p></div>
+            <div className="marketplace-results-control-row"><p aria-live="polite">{result.isLoading ? "Finding available properties…" : total ? `Showing ${firstResult}–${lastResult} of ${total.toLocaleString("en-NG")}` : "No properties found"}</p><div className="marketplace-result-controls"><label><span>Sort:</span><select aria-label="Sort properties" value={query.sort} onChange={(event) => commit({ sort: event.target.value as MarketplaceSort })}>{sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><div className="marketplace-view-toggle" role="group" aria-label="Property result view"><button type="button" aria-label="Grid view" aria-pressed={view === "grid"} onClick={() => setView("grid")}><LayoutGrid size={17} /></button><button type="button" aria-label="List view" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={18} /></button></div></div></div>
           </div>
 
           {result.isLoading ? <MarketplaceSkeletons /> : null}

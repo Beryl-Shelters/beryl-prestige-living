@@ -31,7 +31,15 @@ describe("Marketplace W1 architecture boundaries", () => {
 
   it("keeps search, filtering, sorting and pagination server authoritative", () => {
     expect(screen).toContain('queryKey: ["marketplace-properties", params]');
-    expect(screen).not.toMatch(/\.sort\(|\.filter\(/);
+    expect(screen).not.toContain("data.properties.filter");
     for (const key of ["q", "location", "minPrice", "maxPrice", "propertyType", "category", "bedrooms", "sort", "page", "limit"]) expect(bridge).toContain(`"${key}"`);
+  });
+
+  it("uses the PDF filter controls without fabricating unsupported public filters", () => {
+    expect(screen).toContain('type="checkbox"');
+    expect(screen).toContain("marketplace-bedroom-group");
+    expect(screen).toContain('next.join(",")');
+    expect(screen).toContain('["APARTMENT", "Flat / apartment"]');
+    expect(screen).not.toMatch(/condition:|furnishing:/);
   });
 });

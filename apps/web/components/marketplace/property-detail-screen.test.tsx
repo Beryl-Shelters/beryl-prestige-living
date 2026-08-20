@@ -75,7 +75,7 @@ describe("Marketplace property detail", () => {
     expect(mocks.detail).toHaveBeenCalledWith(id);
     expect(screen.getByText("Lekki Phase 1, Lagos")).toBeInTheDocument();
     expect(screen.getByText(/125,000,000/)).toBeInTheDocument();
-    expect(screen.getByText("Verified")).toBeInTheDocument();
+    expect(screen.getByText("Verified by Beryl")).toBeInTheDocument();
     expect(screen.getByText("Security")).toBeInTheDocument();
     expect(screen.queryByText(/full address/i)).not.toBeInTheDocument();
   });
@@ -98,11 +98,11 @@ describe("Marketplace property detail", () => {
     renderWithQuery(<MarketplacePropertyDetailScreen propertyId={id} />);
     await screen.findByRole("heading", { name: property.title });
     await user.click(screen.getAllByRole("button", { name: "Save property" }).at(-1)!);
-    expect(screen.getByRole("dialog", { name: "Save this property" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Set up a free account to continue" })).toBeInTheDocument();
     expect(mocks.save).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Close sign in prompt" }));
-    await user.click(screen.getByRole("button", { name: "I am interested in this property" }));
-    expect(screen.getByRole("dialog", { name: "Register your interest" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Send Interest" }));
+    expect(screen.getByRole("dialog", { name: "Set up a free account to continue" })).toBeInTheDocument();
     expect(mocks.interest).not.toHaveBeenCalled();
   });
 
@@ -114,8 +114,8 @@ describe("Marketplace property detail", () => {
     const saveButton = screen.getAllByRole("button", { name: "Save property" }).at(-1)!;
     await user.click(saveButton);
     await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(id));
-    expect(await screen.findByRole("button", { name: "Saved" })).toHaveAttribute("aria-pressed", "true");
-    await user.click(screen.getByRole("button", { name: "Saved" }));
+    expect(await screen.findByRole("button", { name: "Remove saved property" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: "Remove saved property" }));
     await waitFor(() => expect(mocks.unsave).toHaveBeenCalledWith(id));
   });
 
@@ -124,13 +124,11 @@ describe("Marketplace property detail", () => {
     mocks.auth.session = session;
     renderWithQuery(<MarketplacePropertyDetailScreen propertyId={id} />);
     await screen.findByRole("heading", { name: property.title });
-    await user.click(screen.getByRole("button", { name: "I am interested in this property" }));
-    expect(screen.getByRole("dialog", { name: "I am interested in this property" })).toBeInTheDocument();
     await user.click(screen.getByRole("radio", { name: /Email/i }));
-    await user.type(screen.getByLabelText(/Message/i), "  Please share available viewing times.  ");
-    await user.click(screen.getByRole("button", { name: "Submit interest" }));
+    await user.type(screen.getByRole("textbox", { name: /Anything you'd like to ask/i }), "  Please share available viewing times.  ");
+    await user.click(screen.getByRole("button", { name: "Send Interest" }));
     await waitFor(() => expect(mocks.interest).toHaveBeenCalledWith(id, { preferredContactMethod: "EMAIL", message: "Please share available viewing times." }));
-    expect(await screen.findByRole("heading", { name: "Interest submitted" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Interest Sent" })).toBeInTheDocument();
   });
 
   it("does not submit an invalid contact method and renders safe backend errors", async () => {
@@ -139,12 +137,11 @@ describe("Marketplace property detail", () => {
     mocks.interest.mockRejectedValueOnce(Object.assign(new Error("unavailable"), { isAxiosError: true, response: { data: { code: "CONTACT_METHOD_UNAVAILABLE" } } }));
     renderWithQuery(<MarketplacePropertyDetailScreen propertyId={id} />);
     await screen.findByRole("heading", { name: property.title });
-    await user.click(screen.getByRole("button", { name: "I am interested in this property" }));
-    await user.click(screen.getByRole("button", { name: "Submit interest" }));
+    await user.click(screen.getByRole("button", { name: "Send Interest" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Choose how you would like to be contacted.");
     expect(mocks.interest).not.toHaveBeenCalled();
     await user.click(screen.getByRole("radio", { name: /Call/i }));
-    await user.click(screen.getByRole("button", { name: "Submit interest" }));
+    await user.click(screen.getByRole("button", { name: "Send Interest" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("That contact method is not available");
   });
 
