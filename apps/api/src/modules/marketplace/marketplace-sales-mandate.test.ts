@@ -50,12 +50,17 @@ describe("Marketplace sales mandate", () => {
     for (const field of ["acceptedAt", "commissionPercentage", "commissionAmount", "agreementVersion", "userId", "sellerId"]) expect(salesMandateSchema.safeParse({ ...acceptedInput, [field]: field === "acceptedAt" ? "2000-01-01" : 99 }).success).toBe(false);
   });
 
-  it("saves an accepted mandate for the Seller's own DRAFT with server-owned terms", async () => {
-    database.responses.push(seller, property, profile, { data: null, error: null }, { data: stored, error: null });
-    await expect(saveSalesMandate("property-1", "seller-1", acceptedInput)).resolves.toEqual(safe);
+  it.each(["EXCLUSIVE", "OPEN"] as const)("persists and restores a first accepted %s mandate for the Seller's own DRAFT", async (mandateType) => {
+    const storedMandate = { ...stored, marketplace_mandate_type: mandateType };
+    const expected = { ...safe, mandateType };
+    database.responses.push(seller, property, profile, { data: null, error: null }, { data: storedMandate, error: null });
+    await expect(saveSalesMandate("property-1", "seller-1", { ...acceptedInput, mandateType })).resolves.toEqual(expected);
     const insert = database.calls.find((call) => call.table === "mandates" && call.method === "insert");
-    expect(insert?.args[0]).toMatchObject({ user_id: "seller-1", property_id: "property-1", mandate_type: "seller", marketplace_mandate_type: "EXCLUSIVE", ownership_confirmed: true, mandate_accepted: true, agreement_version: null, commission_percentage: null, commission_amount: null });
+    expect(insert?.args[0]).toMatchObject({ user_id: "seller-1", property_id: "property-1", mandate_type: "seller", status: "submitted", marketplace_mandate_type: mandateType, ownership_confirmed: true, mandate_accepted: true, agreement_version: null, commission_percentage: null, commission_amount: null });
+    expect(insert?.args[0]).not.toMatchObject({ status: "pending" });
     expect((insert?.args[0] as any).accepted_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    database.responses.push(seller, property, { data: storedMandate, error: null });
+    await expect(getSalesMandate("property-1", "seller-1")).resolves.toEqual(expected);
   });
 
   it("allows saving an unaccepted Step 3 draft without fabricating acceptance", async () => {
@@ -63,6 +68,8 @@ describe("Marketplace sales mandate", () => {
     database.responses.push(seller, property, profile, { data: null, error: null }, { data: unaccepted, error: null });
     const result = await saveSalesMandate("property-1", "seller-1", { ...acceptedInput, ownershipConfirmed: false, mandateAccepted: false });
     expect(result).toMatchObject({ ownershipConfirmed: false, mandateAccepted: false, acceptedAt: null });
+    const insert = database.calls.find((call) => call.table === "mandates" && call.method === "insert");
+    expect(insert?.args[0]).toMatchObject({ status: "draft", terms_accepted: false, accepted_at: null });
   });
 
   it("rejects Buyer-only and other-Seller access before mandate persistence", async () => {
@@ -78,7 +85,7 @@ describe("Marketplace sales mandate", () => {
     await saveSalesMandate("property-1", "seller-1", { mandateType: "OPEN", sellerFullName: "Test Seller", ownershipConfirmed: false, mandateAccepted: false });
     expect(database.calls.filter((call) => call.table === "mandates" && call.method === "insert")).toHaveLength(0);
     const update = database.calls.find((call) => call.table === "mandates" && call.method === "update");
-    expect(update?.args[0]).toMatchObject({ marketplace_mandate_type: "OPEN", ownership_confirmed: true, mandate_accepted: true, accepted_at: stored.accepted_at });
+    expect(update?.args[0]).toMatchObject({ marketplace_mandate_type: "OPEN", status: "submitted", ownership_confirmed: true, mandate_accepted: true, accepted_at: stored.accepted_at });
     expect(update?.args[0]).not.toHaveProperty("commission_percentage");
     expect(update?.args[0]).not.toHaveProperty("commission_amount");
   });
