@@ -37,6 +37,7 @@ import {
   type MarketplacePageSearchParams,
   type MarketplaceQueryState
 } from "@/lib/marketplace";
+import { sellerPropertyTypes as propertyTypes } from "@/lib/marketplace-property-options";
 
 const sortOptions: { value: MarketplaceSort; label: string }[] = [
   { value: "DEFAULT", label: "Recommended" },
@@ -46,16 +47,6 @@ const sortOptions: { value: MarketplaceSort; label: string }[] = [
   { value: "BEDS", label: "Most bedrooms" }
 ];
 
-const propertyTypes = [
-  ["APARTMENT", "Flat / apartment"],
-  ["MINI_FLAT", "Mini Flat"],
-  ["SELF_CONTAIN_STUDIO", "Self-Contain / Studio"],
-  ["DUPLEX", "Duplex"],
-  ["DETACHED_HOUSE", "Detached House"],
-  ["SEMI_DETACHED_HOUSE", "Semi-Detached House"],
-  ["TERRACE", "Terrace House"],
-  ["BUNGALOW", "Bungalow"],
-] as const;
 const conditionOptions = [["NEWLY_BUILT", "Newly-Built"], ["OFF_PLAN", "Off-Plan"], ["UNDER_CONSTRUCTION", "Under Construction"], ["FAIRLY_USED", "Fairly-Used"]] as const;
 const furnishingOptions = [["FULLY_FURNISHED", "Fully Furnished"], ["UNFURNISHED", "Unfurnished"], ["SEMI_FURNISHED", "Semi Furnished"]] as const;
 

@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../../config/supabase";
 import { AppError } from "../../utils/AppError";
+import { marketplaceCategoryFromStorage } from "../marketplace/marketplace.contract";
 import {
   deleteImageFromCloudinary,
   uploadImageWithPublicId
@@ -500,7 +501,7 @@ export const getMySavedProperties = async (
     const seen=new Set<string>();
     const propertyImages=[...(property.property_images??[])].filter((image:any)=>{if(!image?.id||seen.has(image.id))return false;seen.add(image.id);return true}).sort((a:any,b:any)=>Number(a.sort_order)-Number(b.sort_order)||String(a.id).localeCompare(String(b.id)));
     const cover=propertyImages.find((image:any)=>Boolean(image.is_cover));
-    return [{id:saved.id,propertyId:property.id,savedAt:saved.created_at,property:{id:property.id,referenceId:property.property_code,title:property.title,askingPrice:property.price,negotiable:Boolean(property.negotiable),propertyType:property.property_type,propertyCategory:property.category,publicLocation:property.public_location,bedrooms:property.bedrooms??null,bathrooms:property.bathrooms??null,toilets:property.toilets??null,parkingSpaces:property.parking_spaces??null,coverImage:cover?{id:cover.id,url:cover.image_url}:null,photoCount:propertyImages.length,verified:true,publishedAt:property.marketplace_published_at??null,saved:true}}];
+    return [{id:saved.id,propertyId:property.id,savedAt:saved.created_at,property:{id:property.id,referenceId:property.property_code,title:property.title,askingPrice:property.price,negotiable:Boolean(property.negotiable),propertyType:property.property_type,propertyCategory:marketplaceCategoryFromStorage(property.category),publicLocation:property.public_location,bedrooms:property.bedrooms??null,bathrooms:property.bathrooms??null,toilets:property.toilets??null,parkingSpaces:property.parking_spaces??null,coverImage:cover?{id:cover.id,url:cover.image_url}:null,photoCount:propertyImages.length,verified:true,publishedAt:property.marketplace_published_at??null,saved:true}}];
   });
 
   return {

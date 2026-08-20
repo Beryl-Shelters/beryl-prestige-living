@@ -20,4 +20,19 @@ describe("Seller draft request mapper", () => {
   it("clears stale hidden residential fields when Commercial is selected", () => {
     expect(toSellerDraftPayload({ propertyCategory: "COMMERCIAL", bedrooms: 4, bathrooms: 3, numberOfFloors: 6 })).toMatchObject({ bedrooms: null, bathrooms: null, toilets: null, parkingSpaces: null, numberOfFloors: 6 });
   });
+
+  it("rejects arbitrary property types, clears a removed deposit, and deduplicates amenities case-insensitively", () => {
+    const payload = toSellerDraftPayload({ propertyType: "resd" as never, initialDepositType: null, initialDepositValue: 25, amenities: [" Pool ", "pool", "Security", " security "] });
+    expect(payload).not.toHaveProperty("propertyType");
+    expect(payload).toMatchObject({ initialDepositType: null, initialDepositValue: null, amenities: ["Pool", "Security"] });
+  });
+
+  it("omits invalid percentage and negative numeric values", () => {
+    const payload = toSellerDraftPayload({ initialDepositType: "PERCENTAGE", initialDepositValue: 101, askingPrice: -1, bedrooms: -2, bathrooms: 2.5 });
+    expect(payload).toMatchObject({ initialDepositType: "PERCENTAGE" });
+    expect(payload).not.toHaveProperty("initialDepositValue");
+    expect(payload).not.toHaveProperty("askingPrice");
+    expect(payload).not.toHaveProperty("bedrooms");
+    expect(payload).not.toHaveProperty("bathrooms");
+  });
 });

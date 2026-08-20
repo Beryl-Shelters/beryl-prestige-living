@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Building2, Check, Cloud, FileText, Images, KeyRound } from "lucide-react";
 import { ApiAlert, Spinner } from "@/components/ui/feedback";
 import { customerApi } from "@/lib/api/client";
+import { apiErrorOf } from "@/lib/api/errors";
 import type { SellerDraft } from "@/lib/contracts";
+import { sellerPropertyTypes } from "@/lib/marketplace-property-options";
 import { continueSellerDraftToSalesMandate } from "@/lib/seller-draft-transition";
 import { toSellerDraftPayload } from "@/lib/seller-draft-payload";
 import { SellerMandateStep } from "./seller-mandate-step";
@@ -24,6 +26,21 @@ const empty: Partial<SellerDraft> = {
   currentStep: "PROPERTY_INFORMATION"
 };
 const amenityOptions = ["Security", "Swimming pool", "Generator", "Gym", "Balcony", "CCTV"];
+
+const sellerDraftErrorMessage = (error: unknown) => {
+  const apiError = apiErrorOf(error);
+  const fields = apiError.errors?.fieldErrors ?? {};
+  if (fields.propertyType?.length) return "Select a supported property type.";
+  if (fields.propertyCategory?.length) return "Select Residential or Commercial.";
+  if (fields.ownershipType?.length) return "Select a supported ownership type.";
+  if (fields.askingPrice?.length) return "Enter a valid non-negative asking price.";
+  if (fields.initialDepositValue?.length || fields.initialDepositType?.length) return "Check the initial deposit type and value.";
+  if (apiError.code === "SELLER_PERSONA_REQUIRED") return "Switch to a completed Seller profile before creating a listing.";
+  if (apiError.code === "INVALID_DRAFT_PAYLOAD") return "Check the property information and try again.";
+  if (apiError.code === "DRAFT_PERSISTENCE_UNAVAILABLE") return "We couldn’t save this property draft right now. Please try again.";
+  if (apiError.code === "NETWORK_ERROR" || apiError.code === "UPSTREAM_UNAVAILABLE") return "We couldn’t connect to save your draft. Please try again.";
+  return "We couldn’t save this property draft. Please try again.";
+};
 
 export function SellerDraftEditor({
   propertyId: initialId,
@@ -41,7 +58,10 @@ export function SellerDraftEditor({
   const hydrated = useRef(false);
   const savedSnapshot = useRef("");
   const saveSequence = useRef(0);
-  const saveInFlight = useRef(false);
+  const idRef = useRef(initialId);
+  const writeQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const pendingWrites = useRef(0);
+  const [pending, setPending] = useState(false);
 
   const restored = useQuery({
     queryKey: ["seller-draft", id],
@@ -60,37 +80,57 @@ export function SellerDraftEditor({
 
     setDraft(property);
     setStep(initialStep ?? normalizeStep(property.currentStep));
-    savedSnapshot.current = JSON.stringify(property);
+    idRef.current = property.id;
+    savedSnapshot.current = JSON.stringify(toSellerDraftPayload(property));
     hydrated.current = true;
   }, [initialStep, restored.data]);
 
-  const persist = useMutation({
-    mutationFn: async (next: Partial<SellerDraft>) => {
-      const payload = toSellerDraftPayload(next);
-      if (id) return customerApi.saveSellerDraft(id, payload);
+  useEffect(() => {
+    if (initialId) return;
+    savedSnapshot.current = JSON.stringify(toSellerDraftPayload(empty));
+    hydrated.current = true;
+  }, [initialId]);
+
+  const persist = useCallback((next: Partial<SellerDraft>) => {
+    const payload = toSellerDraftPayload(next);
+    pendingWrites.current += 1;
+    setPending(true);
+    const operation = writeQueue.current.catch(() => undefined).then(async () => {
+      const currentId = idRef.current;
+      if (currentId) return customerApi.saveSellerDraft(currentId, payload);
 
       const created = await customerApi.createSellerDraft(payload);
       const createdId = created.data.property.id;
+      if (!createdId) throw new Error("Draft response did not include a property ID");
+      idRef.current = createdId;
       setId(createdId);
       router.replace(`/seller/listings/${createdId}/edit` as Route);
       return created;
-    }
-  });
+    });
+    writeQueue.current = operation.then(
+      () => undefined,
+      () => undefined
+    ).finally(() => {
+      pendingWrites.current -= 1;
+      if (pendingWrites.current === 0) setPending(false);
+    });
+    return operation;
+  }, [router]);
 
   const save = async (next: Partial<SellerDraft> = draft) => {
-    if (saveInFlight.current) return false;
-    saveInFlight.current = true;
+    const sequence = ++saveSequence.current;
+    const snapshot = JSON.stringify(toSellerDraftPayload(next));
     setStatus("Saving…");
     try {
-      await persist.mutateAsync(next);
-      savedSnapshot.current = JSON.stringify(toSellerDraftPayload(next));
-      setStatus("Saved");
+      await persist(next);
+      if (sequence === saveSequence.current) {
+        savedSnapshot.current = snapshot;
+        setStatus("Saved");
+      }
       return true;
-    } catch {
-      setStatus("Save failed. Please try again.");
+    } catch (error) {
+      if (sequence === saveSequence.current) setStatus(sellerDraftErrorMessage(error));
       return false;
-    } finally {
-      saveInFlight.current = false;
     }
   };
 
@@ -99,27 +139,28 @@ export function SellerDraftEditor({
   };
 
   useEffect(() => {
-    if (!id || !hydrated.current || step !== "PROPERTY_INFORMATION" || persist.isPending) return;
+    if (!hydrated.current || step !== "PROPERTY_INFORMATION") return;
     const payload = toSellerDraftPayload(draft);
     const snapshot = JSON.stringify(payload);
     if (snapshot === savedSnapshot.current) return;
 
     const timer = window.setTimeout(async () => {
+      if (snapshot === savedSnapshot.current) return;
       const sequence = ++saveSequence.current;
       setStatus("Saving…");
       try {
-        await customerApi.saveSellerDraft(id, payload);
+        await persist(draft);
         if (sequence === saveSequence.current) {
           savedSnapshot.current = snapshot;
           setStatus("Saved");
         }
-      } catch {
-        if (sequence === saveSequence.current) setStatus("Couldn’t save changes");
+      } catch (error) {
+        if (sequence === saveSequence.current) setStatus(sellerDraftErrorMessage(error));
       }
     }, 900);
 
     return () => window.clearTimeout(timer);
-  }, [draft, id, persist.isPending, step]);
+  }, [draft, persist, step]);
 
   const continueStepOne = async () => {
     if (
@@ -134,9 +175,12 @@ export function SellerDraftEditor({
       return;
     }
 
+    if (!(await save(draft))) return;
     const next = { ...draft, currentStep: "PHOTOS_DOCUMENTS" as const };
-    setDraft(next);
-    if (await save(next)) setStep("PHOTOS_DOCUMENTS");
+    if (await save(next)) {
+      setDraft(next);
+      setStep("PHOTOS_DOCUMENTS");
+    }
   };
 
   const addAmenity = () => {
@@ -173,7 +217,7 @@ export function SellerDraftEditor({
         <PropertyInformationStep
           draft={draft}
           customAmenity={custom}
-          pending={persist.isPending}
+          pending={pending}
           onChange={change}
           onCustomAmenityChange={setCustom}
           onAddAmenity={addAmenity}
@@ -225,7 +269,7 @@ function PropertyInformationStep({
       <label>Property Title<input placeholder="Enter property title here" value={draft.title ?? ""} onChange={(event) => onChange("title", event.target.value)} /></label>
       <label>Description<textarea value={draft.description ?? ""} onChange={(event) => onChange("description", event.target.value)} /></label>
       <label>Category<select value={draft.propertyCategory ?? "RESIDENTIAL"} onChange={(event) => onChange("propertyCategory", event.target.value)}><option value="RESIDENTIAL">Residential</option><option value="COMMERCIAL">Commercial</option></select></label>
-      <label>Property type<input value={draft.propertyType ?? ""} onChange={(event) => onChange("propertyType", event.target.value)} /></label>
+      <label>Property type<select value={draft.propertyType ?? ""} onChange={(event) => onChange("propertyType", event.target.value || undefined)}><option value="">Select property type</option>{sellerPropertyTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       <label>Ownership<select value={draft.ownershipType ?? ""} onChange={(event) => onChange("ownershipType", event.target.value)}><option value="">Select ownership</option><option value="PERSONAL">Personal</option><option value="THIRD_PARTY">Third party</option></select></label>
       <h3>Tell us about the location</h3>
       <label>Location<input placeholder="Where is the property located?" value={draft.publicLocation ?? ""} onChange={(event) => onChange("publicLocation", event.target.value)} /></label>
@@ -236,15 +280,17 @@ function PropertyInformationStep({
       <h3>Give us more details about the property</h3>
       {draft.propertyCategory === "RESIDENTIAL" ? (
         <>
-          <label>Bedrooms<input type="number" min="0" value={draft.bedrooms ?? ""} onChange={(event) => onChange("bedrooms", event.target.value ? Number(event.target.value) : null)} /></label>
-          <label>Bathrooms<input type="number" min="0" value={draft.bathrooms ?? ""} onChange={(event) => onChange("bathrooms", event.target.value ? Number(event.target.value) : null)} /></label>
+          <label>Bedrooms<input type="number" min="0" step="1" value={draft.bedrooms ?? ""} onChange={(event) => onChange("bedrooms", event.target.value ? Number(event.target.value) : null)} /></label>
+          <label>Bathrooms<input type="number" min="0" step="1" value={draft.bathrooms ?? ""} onChange={(event) => onChange("bathrooms", event.target.value ? Number(event.target.value) : null)} /></label>
         </>
       ) : (
         <>
-          <label>Number of floors<input type="number" min="0" value={draft.numberOfFloors ?? ""} onChange={(event) => onChange("numberOfFloors", event.target.value ? Number(event.target.value) : null)} /></label>
-          <label>Parking capacity<input type="number" min="0" value={draft.parkingCapacity ?? ""} onChange={(event) => onChange("parkingCapacity", event.target.value ? Number(event.target.value) : null)} /></label>
+          <label>Number of floors<input type="number" min="0" step="1" value={draft.numberOfFloors ?? ""} onChange={(event) => onChange("numberOfFloors", event.target.value ? Number(event.target.value) : null)} /></label>
+          <label>Parking capacity<input type="number" min="0" step="1" value={draft.parkingCapacity ?? ""} onChange={(event) => onChange("parkingCapacity", event.target.value ? Number(event.target.value) : null)} /></label>
         </>
       )}
+      <label>Condition<select value={draft.condition ?? ""} onChange={(event) => onChange("condition", event.target.value || undefined)}><option value="">Select condition</option><option value="OFF_PLAN">Off plan</option><option value="UNDER_CONSTRUCTION">Under construction</option><option value="NEWLY_BUILT">Newly built</option><option value="FAIRLY_USED">Fairly used</option></select></label>
+      <label>Furnishing<select value={draft.furnishing ?? ""} onChange={(event) => onChange("furnishing", event.target.value || null)}><option value="">Not selected</option><option value="FULLY_FURNISHED">Fully furnished</option><option value="SEMI_FURNISHED">Semi furnished</option><option value="UNFURNISHED">Unfurnished</option></select></label>
       <label>Initial deposit<select value={draft.initialDepositType ?? ""} onChange={(event) => onChange("initialDepositType", event.target.value || null)}><option value="">None</option><option value="AMOUNT">Amount</option><option value="PERCENTAGE">Percentage</option></select></label>
       {draft.initialDepositType ? <label>Deposit value<input type="number" min="0" max={draft.initialDepositType === "PERCENTAGE" ? 100 : undefined} value={draft.initialDepositValue ?? ""} onChange={(event) => onChange("initialDepositValue", event.target.value ? Number(event.target.value) : null)} /></label> : null}
       <div className="seller-amenities-field">

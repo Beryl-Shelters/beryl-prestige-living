@@ -163,6 +163,32 @@ describe("customer BFF cookie bridge", () => {
     expect(fetchMock).toHaveBeenCalledWith("http://localhost:5000/api/v1/properties/saved/me", expect.objectContaining({ method: "GET", headers: expect.objectContaining({ authorization: "Bearer dummy-access-token" }) }));
   });
 
+  it("forwards Seller draft POST and PATCH JSON with the HttpOnly customer session", async () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    const body = { title: "3 bedroom", propertyCategory: "RESIDENTIAL", propertyType: "DUPLEX", ownershipType: "PERSONAL", askingPrice: 75000000 };
+    state.cookies.set("beryl_customer_access", "seller-access-token");
+    const fetchMock = vi.fn().mockResolvedValue(backendResponse({ success: true, message: "Saved", data: { property: { id } } }, 201));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await call(["marketplace", "seller", "properties"], body);
+    await callPatch(["marketplace", "seller", "properties", id], { ...body, currentStep: "PHOTOS_DOCUMENTS" });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("http://localhost:5000/api/v1/marketplace/seller/properties");
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: "POST", body: JSON.stringify(body), headers: expect.objectContaining({ authorization: "Bearer seller-access-token", "content-type": "application/json" }) });
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(`http://localhost:5000/api/v1/marketplace/seller/properties/${id}`);
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: "PATCH", body: JSON.stringify({ ...body, currentStep: "PHOTOS_DOCUMENTS" }), headers: expect.objectContaining({ authorization: "Bearer seller-access-token", "content-type": "application/json" }) });
+  });
+
+  it("preserves safe Seller draft validation errors through the BFF", async () => {
+    state.cookies.set("beryl_customer_access", "seller-access-token");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(backendResponse({ success: false, message: "Validation failed", code: "INVALID_DRAFT_PAYLOAD", errors: { fieldErrors: { propertyType: ["Invalid enum value"] } } }, 400)));
+
+    const response = await call(["marketplace", "seller", "properties"], { propertyType: "resd" });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ code: "INVALID_DRAFT_PAYLOAD", errors: { fieldErrors: { propertyType: expect.any(Array) } } });
+  });
+
   it("proxies Express Interest with its safe request body and preserves domain availability errors", async () => {
     const id = "11111111-1111-4111-8111-111111111111";
     state.cookies.set("beryl_customer_access", "dummy-access-token");
