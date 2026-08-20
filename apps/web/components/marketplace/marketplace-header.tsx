@@ -28,7 +28,7 @@ export function MarketplaceHeader({ returnTo, searchValue, onSearchChange, onSea
   };
 
   return <header className="marketplace-header">
-    <Link className="marketplace-brand" href="/marketplace" aria-label="Beryl Shelters Marketplace"><BerylShelterLogo /><span className="marketplace-brand-name">Beryl Shelters</span></Link>
+    <Link className="marketplace-brand" href="/marketplace" aria-label="Beryl Shelter Marketplace"><BerylShelterLogo /><span className="marketplace-brand-name">Beryl Shelter</span></Link>
     <form className="marketplace-header-search" role="search" action="/marketplace" method="get" onSubmit={submitSearch}>
       <Search aria-hidden="true" size={19} />
       <label className="sr-only" htmlFor="marketplace-search">Search properties</label>

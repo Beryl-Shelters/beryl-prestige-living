@@ -53,7 +53,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
       <button className="seller-mobile-menu" type="button" aria-label="Open Seller navigation" onClick={() => setMenuOpen(true)}><Menu size={21} /></button>
       {menuOpen ? <button className="seller-sidebar-backdrop" type="button" aria-label="Close Seller navigation" onClick={() => setMenuOpen(false)} /> : null}
       <aside className={`seller-sidebar${menuOpen ? " is-open" : ""}`} aria-label="Seller navigation">
-        <div className="seller-sidebar-brand"><Image src="/brand/android-chrome-192x192.png" alt="" width={34} height={34} /><strong>Beryl Shelters</strong><button type="button" aria-label="Close Seller navigation" onClick={() => setMenuOpen(false)}><X size={19} /></button></div>
+        <div className="seller-sidebar-brand"><Image src="/brand/android-chrome-192x192.png" alt="" width={34} height={34} /><strong>Beryl Shelter</strong><button type="button" aria-label="Close Seller navigation" onClick={() => setMenuOpen(false)}><X size={19} /></button></div>
         <nav className="seller-sidebar-nav">
           {primaryNavigation.map(({ label, icon: Icon, href }) => href ? <Link key={label} href={href} className={label === "My Listings" ? "is-active" : ""} onClick={() => setMenuOpen(false)}><Icon size={19} aria-hidden="true" /><span>{label}</span></Link> : <button key={label} type="button" disabled title="Coming soon"><Icon size={19} aria-hidden="true" /><span>{label}</span></button>)}
         </nav>
