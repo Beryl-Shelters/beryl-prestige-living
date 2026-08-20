@@ -31,7 +31,8 @@ const seller = { data: { persona_type: "SELLER_DEVELOPER", onboarding_status: "C
 const property = { id: "property-1", owner_id: "seller-1", property_code: "BRL-EXISTING", marketplace_status: "DRAFT", marketplace_current_step: "REVIEW", title: "Four bedroom home", description: "A complete description", category: "RESIDENTIAL", property_type: "DETACHED", ownership_type: "PERSONAL", public_location: "Lekki, Lagos", full_address: "12 Private Street", price: 250000000, negotiable: true, initial_deposit_type: "PERCENTAGE", initial_deposit_value: 20, property_condition: "NEWLY_BUILT", furnishing: "UNFURNISHED", bedrooms: 4, bathrooms: 4, toilets: 5, parking_spaces: 3, number_of_floors: null, parking_capacity: null, amenities: ["Pool"] };
 const photos = [
   { id: "image-1", image_url: "https://example.com/cover.jpg", cloudinary_public_id: "private-cover", sort_order: 0, is_cover: true },
-  { id: "image-2", image_url: "https://example.com/second.jpg", cloudinary_public_id: "private-second", sort_order: 1, is_cover: false }
+  { id: "image-2", image_url: "https://example.com/second.jpg", cloudinary_public_id: "private-second", sort_order: 1, is_cover: false },
+  { id: "image-3", image_url: "https://example.com/third.jpg", cloudinary_public_id: "private-third", sort_order: 2, is_cover: false }
 ];
 const mandate = { id: "mandate-1", marketplace_mandate_type: "EXCLUSIVE", full_name: "Test Seller", ownership_confirmed: true, mandate_accepted: true, accepted_at: "2026-08-18T12:00:00.000Z", agreement_version: null, commission_percentage: null, commission_amount: null, email: "private@example.com", address: "private" };
 
@@ -46,9 +47,9 @@ describe("Marketplace Step 4 review and submission", () => {
   it("returns an ordered, privacy-safe Seller review DTO", async () => {
     database.responses.push(seller, { data: property, error: null }, { data: photos, error: null }, { data: mandate, error: null });
     const review = await getPropertyReview("property-1", "seller-1");
-    expect(review.buyerPreview.images.map((image) => image.id)).toEqual(["image-1", "image-2"]);
+    expect(review.buyerPreview.images.map((image) => image.id)).toEqual(["image-1", "image-2", "image-3"]);
     expect(review.buyerPreview.coverImage?.id).toBe("image-1");
-    expect(review.buyerPreview.photoCount).toBe(2);
+    expect(review.buyerPreview.photoCount).toBe(3);
     expect(review.buyerPreview).not.toHaveProperty("fullAddress");
     expect(review.sellerPrivate).toEqual({ fullAddress: "12 Private Street" });
     expect(JSON.stringify(review.buyerPreview)).not.toMatch(/cloudinary|private street|document/i);
@@ -82,6 +83,27 @@ describe("Marketplace Step 4 review and submission", () => {
     database.rpcResponses.push({ data: [{ outcome: "SUBMITTED", property_id: "property-1", reference_id: "BRL-EXISTING", marketplace_status: "IN_REVIEW", submitted_at: "2026-08-18T13:00:00.000Z", missing_sections: [], missing_fields: [] }], error: null });
     await expect(submitPropertyForReview("property-1", "seller-1")).resolves.toEqual({ propertyId: "property-1", referenceId: "BRL-EXISTING", status: "IN_REVIEW", submittedAt: "2026-08-18T13:00:00.000Z", nextAction: "OPEN_MY_LISTINGS" });
     expect(database.calls.filter((call) => call.method === "rpc")).toHaveLength(1);
+    expect(database.calls.find((call) => call.method === "rpc")).toMatchObject({
+      table: "submit_marketplace_property_for_review",
+      args: [{ p_property_id: "property-1", p_owner_id: "seller-1" }]
+    });
+  });
+
+  it("submits the same complete three-photo contract with an OPEN mandate", async () => {
+    database.responses.push(seller, { data: property, error: null }, { data: photos, error: null }, { data: { ...mandate, marketplace_mandate_type: "OPEN" }, error: null });
+    database.rpcResponses.push({ data: [{ outcome: "SUBMITTED", property_id: "property-1", reference_id: "BRL-EXISTING", marketplace_status: "IN_REVIEW", submitted_at: "2026-08-18T13:30:00.000Z", missing_sections: [], missing_fields: [] }], error: null });
+    await expect(submitPropertyForReview("property-1", "seller-1")).resolves.toMatchObject({ status: "IN_REVIEW", nextAction: "OPEN_MY_LISTINGS" });
+    expect(database.calls.filter((call) => call.method === "rpc")).toHaveLength(1);
+  });
+
+  it("maps the RPC's deterministic incomplete outcome without collapsing it to infrastructure failure", async () => {
+    database.responses.push(seller, { data: property, error: null }, { data: photos, error: null }, { data: mandate, error: null });
+    database.rpcResponses.push({ data: [{ outcome: "INCOMPLETE", property_id: "property-1", reference_id: "BRL-EXISTING", marketplace_status: "DRAFT", submitted_at: null, missing_sections: ["PHOTOS"], missing_fields: ["coverImage"] }], error: null });
+    await expect(submitPropertyForReview("property-1", "seller-1")).rejects.toMatchObject({
+      statusCode: 400,
+      code: "LISTING_SUBMISSION_INCOMPLETE",
+      details: { missingSections: ["PHOTOS"], missingFields: ["coverImage"] }
+    });
   });
 
   it("resubmits a corrected reopened DRAFT with a new server timestamp and without duplicating the property", async () => {
