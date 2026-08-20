@@ -115,9 +115,12 @@ describe("Seller Marketplace W5 flow", () => {
     expect(mocks.submitSellerProperty).toHaveBeenCalledTimes(1); expect(screen.getByRole("button", { name: "Submitting…" })).toBeDisabled();
     submit.resolve({ success: true, data: { propertyId, referenceId: "BRL-1001", status: "IN_REVIEW", submittedAt: "2026-08-18T12:00:00.000Z", nextAction: "OPEN_MY_LISTINGS" } });
     expect(await screen.findByText("Your listing has been submitted to our team")).toBeVisible(); expect(screen.getByText("BRL-1001")).toBeVisible();
-    expect(screen.getByRole("link", { name: "View My Listings" })).toHaveAttribute("href", "/seller/listings");
+    expect(screen.getByRole("link", { name: "Open My Listings" })).toHaveAttribute("href", "/seller/listings");
     expect(screen.queryByText(/24 hours|48 hours|working days/i)).not.toBeInTheDocument();
-    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["seller-marketplace-listings"] }));
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["seller-marketplace-listings"], refetchType: "all" }));
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["seller-marketplace-management", propertyId], refetchType: "all" });
+    expect(invalidate).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: ["seller-draft", propertyId] }));
+    expect(invalidate).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: ["seller-review", propertyId] }));
   });
 
   it("renders incomplete submission safely with section-specific correction links", async () => {

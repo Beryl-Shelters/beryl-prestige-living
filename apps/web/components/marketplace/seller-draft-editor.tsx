@@ -2,19 +2,22 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { useQuery } from "@tanstack/react-query";
 import { Building2, Check, ChevronDown, Cloud, FileText, Images, KeyRound, Minus, Plus, Upload, X } from "lucide-react";
-import { ApiAlert, Spinner } from "@/components/ui/feedback";
+import { BerylShelterLogo } from "@/components/brand/beryl-shelter-logo";
+import { ApiAlert } from "@/components/ui/feedback";
 import { customerApi } from "@/lib/api/client";
 import { apiErrorOf } from "@/lib/api/errors";
-import type { SellerDraft } from "@/lib/contracts";
+import type { SellerDraft, SellerSubmissionResult } from "@/lib/contracts";
 import { sellerPropertyTypes } from "@/lib/marketplace-property-options";
 import { continueSellerDraftToSalesMandate } from "@/lib/seller-draft-transition";
 import { toSellerDraftPayload } from "@/lib/seller-draft-payload";
+import { sellerListingRouteForAction } from "@/lib/seller-listings";
 import { SellerMandateStep } from "./seller-mandate-step";
-import { SellerReviewStep } from "./seller-review-step";
+import { SellerReviewStep, SellerSubmissionSuccess } from "./seller-review-step";
 import { SellerShell } from "./seller-shell";
 
 type EditorStep = "PROPERTY_INFORMATION" | "PHOTOS_DOCUMENTS" | "SALES_MANDATE" | "REVIEW";
@@ -62,17 +65,26 @@ export function SellerDraftEditor({
   const writeQueue = useRef<Promise<unknown>>(Promise.resolve());
   const pendingWrites = useRef(0);
   const [pending, setPending] = useState(false);
+  const [submission, setSubmission] = useState<SellerSubmissionResult | null>(null);
 
   const restored = useQuery({
     queryKey: ["seller-draft", id],
     queryFn: () => customerApi.sellerDraft(id!),
-    enabled: Boolean(id)
+    enabled: Boolean(id) && !submission
   });
   const correction = useQuery({
     queryKey: ["seller-marketplace-management", id],
     queryFn: () => customerApi.sellerListingManagement(id!),
-    enabled: Boolean(id)
+    enabled: Boolean(id) && !submission
   });
+
+  const correctionSummary = correction.data?.data.management.summary;
+  const transitionedListing = Boolean(restored.isError && correctionSummary && correctionSummary.status !== "DRAFT");
+
+  useEffect(() => {
+    if (!transitionedListing || !correctionSummary || !id) return;
+    router.replace(sellerListingRouteForAction(correctionSummary.nextAction, id));
+  }, [correctionSummary, id, router, transitionedListing]);
 
   useEffect(() => {
     const property = restored.data?.data.property;
@@ -190,15 +202,21 @@ export function SellerDraftEditor({
     setCustom("");
   };
 
-  if (restored.isLoading || (id && correction.isLoading)) {
-    return <main className="seller-listings-page"><Spinner label="Loading draft" /></main>;
+  if (submission) {
+    return <main className="seller-submit-page"><SellerSubmissionSuccess submission={submission} /></main>;
+  }
+  if (initialId && !restored.data && (restored.isLoading || correction.isLoading)) {
+    return <SellerListingLoader />;
   }
   if (restored.isError) {
-    return <main className="seller-listings-page"><ApiAlert>We could not restore this draft.</ApiAlert></main>;
+    if (transitionedListing) return <SellerListingLoader message="Opening listing status…" />;
+    const draftCode = apiErrorOf(restored.error).code;
+    const managementCode = apiErrorOf(correction.error).code;
+    const genuinelyMissing = draftCode === "PROPERTY_NOT_FOUND" && managementCode === "PROPERTY_NOT_FOUND";
+    return <main className="seller-listings-page"><section className="seller-listing-state"><ApiAlert>{genuinelyMissing ? "This property could not be found." : "We could not load this listing right now."}</ApiAlert><Link className="btn btn-secondary" href="/seller/listings">Back to My Listings</Link></section></main>;
   }
 
   const stepNumber = step === "PROPERTY_INFORMATION" ? 1 : step === "PHOTOS_DOCUMENTS" ? 2 : step === "SALES_MANDATE" ? 3 : 4;
-  const correctionSummary = correction.data?.data.management.summary;
   const usesSellerShell = Boolean(correctionSummary && (correctionSummary.status === "LIVE" || correctionSummary.status === "REJECTED" || correctionSummary.rejectionFeedback || correctionSummary.rejectionReason));
   const editor = (
     <main className="seller-listings-page seller-editor">
@@ -229,12 +247,16 @@ export function SellerDraftEditor({
         <MediaStep propertyId={id!} draft={draft} onBack={() => setStep("PROPERTY_INFORMATION")} />
       ) : step === "SALES_MANDATE" ? (
         <SellerMandateStep propertyId={id!} onBack={() => setStep("PHOTOS_DOCUMENTS")} />
-      ) : <SellerReviewStep propertyId={id!} />}
+      ) : <SellerReviewStep propertyId={id!} onSubmitted={setSubmission} />}
       {step !== "REVIEW" && !usesSellerShell ? <ListingHelper /> : null}
       </div>
     </main>
   );
   return usesSellerShell ? <SellerShell>{editor}</SellerShell> : editor;
+}
+
+export function SellerListingLoader({ message = "Loading listing…" }: { message?: string }) {
+  return <main className="seller-listing-loader" role="status" aria-live="polite"><BerylShelterLogo className="seller-loading-brand" /><p>{message}</p></main>;
 }
 
 function ListingHelper() {

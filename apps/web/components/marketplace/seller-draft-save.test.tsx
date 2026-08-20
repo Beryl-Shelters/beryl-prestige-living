@@ -50,7 +50,11 @@ describe("Seller draft Step 1 persistence", () => {
     expect(screen.getByRole("option", { name: "Duplex" })).toHaveValue("DUPLEX");
 
     fireEvent.change(screen.getByLabelText("Property Title"), { target: { value: "3 bedroom" } });
+    expect(screen.getByRole("heading", { name: "Tell us about the property" })).toBeVisible();
+    expect(screen.queryByText("Loading listing…")).not.toBeInTheDocument();
     await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(1), { timeout: 2500 });
+    expect(screen.getByRole("heading", { name: "Tell us about the property" })).toBeVisible();
+    expect(screen.queryByText("Loading listing…")).not.toBeInTheDocument();
     fireEvent.change(await screen.findByLabelText("Description"), { target: { value: "A three bedroom property" } });
     await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(propertyId, expect.objectContaining({ description: "A three bedroom property" })), { timeout: 2500 });
     expect(mocks.create).toHaveBeenCalledTimes(1);

@@ -47,4 +47,15 @@ describe("Seller desktop UI architecture", () => {
     expect(editor).toContain("Documents");
     expect(editor).toContain("Listing your property is straightforward");
   });
+
+  it("uses the branded hydration state instead of the malformed bare spinner", () => {
+    const editor = source("./seller-draft-editor.tsx");
+    const styles = source("../../app/seller-editor.css");
+    expect(editor).toContain("<SellerListingLoader />");
+    expect(editor).toContain("<BerylShelterLogo className=\"seller-loading-brand\"");
+    expect(editor).not.toContain("<Spinner label=\"Loading draft\"");
+    expect(styles).toContain(".seller-listing-loader");
+    expect(styles).toContain("seller-brand-pulse");
+    expect(styles).toContain("@media(prefers-reduced-motion:reduce)");
+  });
 });

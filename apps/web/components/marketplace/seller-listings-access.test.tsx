@@ -24,6 +24,27 @@ describe("Seller listings persona guard", () => {
     expect(screen.queryByText(/Seller access required/i)).not.toBeInTheDocument();
   });
 
+  it("renders authoritative submitted metadata and action for an IN_REVIEW listing", async () => {
+    mocks.session = { activePersona: "SELLER_DEVELOPER", personas: [{ type: "SELLER_DEVELOPER", onboardingStatus: "COMPLETED", activated: true }] };
+    mocks.sellerListings.mockResolvedValue({ success: true, data: {
+      counts: { all: 1, draft: 0, inReview: 1, live: 0, rejected: 0 },
+      items: [{
+        id: "11111111-1111-4111-8111-111111111111", referenceId: "BRL-1001", title: "Four bedroom home", askingPrice: 250000000,
+        status: "IN_REVIEW", currentStep: "REVIEW", coverImage: null, photoCount: 1, updatedAt: "2026-08-20T12:00:00.000Z",
+        submittedAt: "2026-08-20T12:00:00.000Z", reviewedAt: null, publishedAt: null, rejectedAt: null,
+        rejectionReason: null, rejectionFeedback: null, reviewProgress: { submitted: true, reviewing: true, live: false }, nextAction: "VIEW_REVIEW_STATUS"
+      }],
+      pagination: { page: 1, limit: 12, total: 1, total_pages: 1 }
+    } });
+
+    render(<SellerListingsScreen />, { wrapper });
+    expect(await screen.findByText("Four bedroom home")).toBeVisible();
+    expect(screen.getAllByText("In Review")).toHaveLength(2);
+    expect(screen.getByText(/^Sent /)).toBeVisible();
+    expect(screen.getByRole("link", { name: "View details" })).toHaveAttribute("href", "/seller/listings/11111111-1111-4111-8111-111111111111");
+    expect(screen.getByRole("tab", { name: /In Review/ })).toHaveTextContent("1");
+  });
+
   it("routes an active incomplete Seller to onboarding without requesting listings", async () => {
     mocks.session = { activePersona: "SELLER_DEVELOPER", personas: [{ type: "SELLER_DEVELOPER", onboardingStatus: "IN_PROGRESS", activated: true }] };
     render(<SellerListingsScreen />, { wrapper });

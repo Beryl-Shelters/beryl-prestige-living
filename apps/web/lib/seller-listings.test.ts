@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { sellerListingActionLabel, sellerListingRouteForAction, sellerListingTabs } from "./seller-listings";
+import { sellerListingActionLabel, sellerListingRouteForAction, sellerListingTabs, sellerSubmissionRouteForAction } from "./seller-listings";
 
 describe("Seller Marketplace listing routes", () => {
   it("keeps the backend status filters and count tabs explicit", () => {
@@ -19,5 +19,6 @@ describe("Seller Marketplace listing routes", () => {
     expect(sellerListingRouteForAction("CONTINUE_REVIEW", id)).toBe(`/seller/listings/${id}/edit?step=REVIEW`);
     expect(sellerListingRouteForAction("EDIT_REJECTED_LISTING", id)).toBe(`/seller/listings/${id}/edit?step=REVIEW`);
     expect(sellerListingActionLabel("EDIT_REJECTED_LISTING")).toBe("Make changes");
+    expect(sellerSubmissionRouteForAction("OPEN_MY_LISTINGS")).toBe("/seller/listings");
   });
 });

@@ -5,26 +5,21 @@ import Image from "next/image";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2 } from "lucide-react";
-import { ApiAlert, Spinner } from "@/components/ui/feedback";
+import { ApiAlert } from "@/components/ui/feedback";
 import { customerApi } from "@/lib/api/client";
 import { apiErrorOf } from "@/lib/api/errors";
 import type { SellerPropertyReview, SellerSubmissionResult } from "@/lib/contracts";
 import { formatNaira, humanizeMarketplaceValue } from "@/lib/marketplace";
-import { sellerListingRouteForAction } from "@/lib/seller-listings";
+import { sellerListingRouteForAction, sellerSubmissionRouteForAction } from "@/lib/seller-listings";
 import { incompleteSectionCopy } from "@/lib/seller-w5";
 
-export function SellerReviewStep({ propertyId }: { propertyId: string }) {
+export function SellerReviewStep({ propertyId, onSubmitted }: { propertyId: string; onSubmitted?: (submission: SellerSubmissionResult) => void }) {
   const queryClient = useQueryClient();
-  const successHeading = useRef<HTMLHeadingElement>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [missingSections, setMissingSections] = useState<string[]>([]);
   const [submission, setSubmission] = useState<SellerSubmissionResult | null>(null);
-  const reviewQuery = useQuery({ queryKey: ["seller-review", propertyId], queryFn: () => customerApi.sellerReview(propertyId) });
-
-  useEffect(() => {
-    if (submission) successHeading.current?.focus();
-  }, [submission]);
+  const reviewQuery = useQuery({ queryKey: ["seller-review", propertyId], queryFn: () => customerApi.sellerReview(propertyId), enabled: !submission });
 
   const submit = async () => {
     if (pending) return;
@@ -34,11 +29,12 @@ export function SellerReviewStep({ propertyId }: { propertyId: string }) {
     try {
       const response = await customerApi.submitSellerProperty(propertyId);
       setSubmission(response.data);
+      onSubmitted?.(response.data);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["seller-marketplace-listings"] }),
-        queryClient.invalidateQueries({ queryKey: ["seller-marketplace-management", propertyId] }),
-        queryClient.invalidateQueries({ queryKey: ["seller-draft", propertyId] }),
-        queryClient.invalidateQueries({ queryKey: ["seller-review", propertyId] })
+        queryClient.cancelQueries({ queryKey: ["seller-draft", propertyId], exact: true }),
+        queryClient.cancelQueries({ queryKey: ["seller-review", propertyId], exact: true }),
+        queryClient.invalidateQueries({ queryKey: ["seller-marketplace-listings"], refetchType: "all" }),
+        queryClient.invalidateQueries({ queryKey: ["seller-marketplace-management", propertyId], refetchType: "all" })
       ]);
     } catch (caught) {
       const apiError = apiErrorOf(caught);
@@ -63,20 +59,10 @@ export function SellerReviewStep({ propertyId }: { propertyId: string }) {
   };
 
   if (submission) {
-    return (
-      <section className="seller-editor-card seller-submit-success" aria-labelledby="submission-success-title">
-        <CheckCircle2 className="seller-success-icon" size={56} aria-hidden="true" />
-        <p className="seller-kicker">Listing submitted</p>
-        <h2 id="submission-success-title" ref={successHeading} tabIndex={-1}>Your listing has been submitted to our team</h2>
-        <p>We’ll review the information you provided and show its latest status in My Listings.</p>
-        <dl><div><dt>Reference ID</dt><dd>{submission.referenceId}</dd></div><div><dt>Status</dt><dd>In review</dd></div></dl>
-        <div className="seller-next-steps"><h3>What happens next</h3><ol><li><span>1</span>Our team reviews your listing.</li><li><span>2</span>You can follow its status in My Listings.</li><li><span>3</span>We’ll let you know if any changes are needed.</li></ol></div>
-        <Link className="btn btn-primary" href="/seller/listings">View My Listings</Link>
-      </section>
-    );
+    return <SellerSubmissionSuccess submission={submission} />;
   }
 
-  if (reviewQuery.isLoading) return <section className="seller-editor-card"><Spinner label="Loading listing review" /></section>;
+  if (reviewQuery.isLoading) return <section className="seller-editor-card seller-review-loading" role="status" aria-live="polite"><span className="sr-only">Loading listing review…</span><div /><div /><div /></section>;
   if (reviewQuery.isError || !reviewQuery.data) return <section className="seller-editor-card"><ApiAlert>We could not load your listing review.</ApiAlert><button className="btn btn-secondary" type="button" onClick={() => reviewQuery.refetch()}>Try again</button></section>;
 
   const review = reviewQuery.data.data.review;
@@ -109,6 +95,22 @@ export function SellerReviewStep({ propertyId }: { propertyId: string }) {
         <article className="seller-review-private"><h3>Seller-private information</h3><p>This address is not included in the public listing preview.</p><strong>{review.sellerPrivate.fullAddress || "Full address not provided"}</strong></article>
       </div>
       <div className="seller-submit-panel"><p>By submitting, you’re sending this listing to Beryl Shelter for review.</p><button className="btn btn-primary" type="button" disabled={pending} onClick={() => void submit()}>{pending ? "Submitting…" : "Submit for Review"}</button></div>
+    </section>
+  );
+}
+
+export function SellerSubmissionSuccess({ submission }: { submission: SellerSubmissionResult }) {
+  const successHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { successHeading.current?.focus(); }, []);
+  return (
+    <section className="seller-editor-card seller-submit-success" aria-labelledby="submission-success-title">
+      <CheckCircle2 className="seller-success-icon" size={56} aria-hidden="true" />
+      <p className="seller-kicker">Listing submitted</p>
+      <h2 id="submission-success-title" ref={successHeading} tabIndex={-1}>Your listing has been submitted to our team</h2>
+      <p>We’ll review the information you provided and show its latest status in My Listings.</p>
+      <dl><div><dt>Reference ID</dt><dd>{submission.referenceId}</dd></div><div><dt>Status</dt><dd>In review</dd></div></dl>
+      <div className="seller-next-steps"><h3>What happens next</h3><ol><li><span>1</span>Our team reviews your listing.</li><li><span>2</span>You can follow its status in My Listings.</li><li><span>3</span>We’ll let you know if any changes are needed.</li></ol></div>
+      <Link className="btn btn-primary" href={sellerSubmissionRouteForAction(submission.nextAction)}>Open My Listings</Link>
     </section>
   );
 }

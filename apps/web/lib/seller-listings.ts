@@ -1,5 +1,5 @@
 import type { Route } from "next";
-import type { SellerListingNextAction, SellerListingStatus } from "./contracts";
+import type { SellerListingNextAction, SellerListingStatus, SellerSubmissionResult } from "./contracts";
 
 export const sellerListingTabs: { label: string; status: SellerListingStatus; countKey: "all" | "live" | "inReview" | "rejected" | "draft" }[] = [
   { label: "All", status: "ALL", countKey: "all" },
@@ -19,6 +19,12 @@ export const sellerListingRouteForAction = (action: SellerListingNextAction, pro
     case "CONTINUE_SALES_MANDATE": return `/seller/listings/${propertyId}/edit?step=SALES_MANDATE` as Route;
     case "CONTINUE_REVIEW": return `/seller/listings/${propertyId}/edit?step=REVIEW` as Route;
     case "EDIT_REJECTED_LISTING": return `/seller/listings/${propertyId}/edit?step=REVIEW` as Route;
+  }
+};
+
+export const sellerSubmissionRouteForAction = (action: SellerSubmissionResult["nextAction"]): Route => {
+  switch (action) {
+    case "OPEN_MY_LISTINGS": return "/seller/listings" as Route;
   }
 };
 
