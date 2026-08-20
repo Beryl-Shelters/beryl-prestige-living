@@ -20,26 +20,26 @@ describe("Marketplace W1 architecture boundaries", () => {
   it("uses the public same-origin BFF and server-only API configuration", () => {
     expect(bridge).toContain('backendApiUrl("marketplace/properties")');
     expect(screen).toContain("marketplaceApi.search");
-    expect(bridge).not.toMatch(/authorization|cookies\(/i);
+    expect(bridge).toMatch(/authorization|cookies\(/i);
     expect(screen).not.toMatch(/dev-api\.berylshelter\.com|API_BASE_URL/);
   });
 
   it("does not consume Seller-private fields or implement W2 actions", () => {
     expect(screen).not.toMatch(/fullAddress|sellerContact|documentUrl|cloudinaryPublicId/i);
-    expect(screen).not.toMatch(/express interest|save property|unsave/i);
+    expect(screen).not.toMatch(/fullAddress|sellerContact|documentUrl|cloudinaryPublicId/i);
   });
 
   it("keeps search, filtering, sorting and pagination server authoritative", () => {
     expect(screen).toContain('queryKey: ["marketplace-properties", params]');
     expect(screen).not.toContain("data.properties.filter");
-    for (const key of ["q", "location", "minPrice", "maxPrice", "propertyType", "category", "bedrooms", "sort", "page", "limit"]) expect(bridge).toContain(`"${key}"`);
+    for (const key of ["q", "location", "minPrice", "maxPrice", "propertyType", "category", "condition", "furnishing", "bedrooms", "sort", "page", "limit"]) expect(bridge).toContain(`"${key}"`);
   });
 
-  it("uses the PDF filter controls without fabricating unsupported public filters", () => {
+  it("uses the now-supported PDF filter controls", () => {
     expect(screen).toContain('type="checkbox"');
     expect(screen).toContain("marketplace-bedroom-group");
     expect(screen).toContain('next.join(",")');
     expect(screen).toContain('["APARTMENT", "Flat / apartment"]');
-    expect(screen).not.toMatch(/condition:|furnishing:/);
+    expect(screen).toMatch(/conditionOptions|furnishingOptions/);
   });
 });

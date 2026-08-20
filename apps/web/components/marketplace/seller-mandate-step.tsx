@@ -14,7 +14,10 @@ import { sellerListingRouteForAction } from "@/lib/seller-listings";
 import { mandatePayload } from "@/lib/seller-w5";
 
 const mandateSchema = z.object({
-  mandateType: z.enum(["EXCLUSIVE", "OPEN"], { required_error: "Choose a mandate type." }),
+  mandateType: z.enum(["EXCLUSIVE", "OPEN"], {
+    required_error: "Choose a mandate type.",
+    invalid_type_error: "Choose a mandate type."
+  }),
   sellerFullName: z.string().trim().min(2, "Enter the Seller's full name."),
   ownershipConfirmed: z.boolean().refine(Boolean, "Confirm that you own or are authorized to list this property."),
   mandateAccepted: z.boolean().refine(Boolean, "Accept the Sales Mandate before continuing.")

@@ -13,6 +13,8 @@ export type MarketplaceQueryState = {
   maxPrice: string;
   propertyType: string;
   category: "" | MarketplacePropertyCategory;
+  condition: string;
+  furnishing: string;
   bedrooms: string;
   sort: MarketplaceSort;
   page: number;
@@ -27,6 +29,8 @@ export const marketplaceDefaults: MarketplaceQueryState = {
   maxPrice: "",
   propertyType: "",
   category: "",
+  condition: "",
+  furnishing: "",
   bedrooms: "",
   sort: "DEFAULT",
   page: 1
@@ -65,7 +69,9 @@ export function parseMarketplaceQuery(params: MarketplacePageSearchParams): Mark
     maxPrice: nonNegativePrice(params.maxPrice),
     propertyType: cleanText(params.propertyType).toUpperCase(),
     category: category === "RESIDENTIAL" || category === "COMMERCIAL" ? category : "",
-    bedrooms: nonNegativeInteger(params.bedrooms),
+    condition: cleanText(params.condition).toUpperCase(),
+    furnishing: cleanText(params.furnishing).toUpperCase(),
+    bedrooms: cleanText(params.bedrooms) === "5+" ? "5+" : nonNegativeInteger(params.bedrooms),
     sort: marketplaceSorts.has(sort) ? sort : "DEFAULT",
     page: positivePage(params.page)
   };
@@ -79,7 +85,9 @@ export function marketplaceApiParams(state: MarketplaceQueryState): MarketplaceS
     ...(state.maxPrice ? { maxPrice: Number(state.maxPrice) } : {}),
     ...(state.propertyType ? { propertyType: state.propertyType } : {}),
     ...(state.category ? { category: state.category } : {}),
-    ...(state.bedrooms ? { bedrooms: Number(state.bedrooms) } : {}),
+    ...(state.condition ? { condition: state.condition } : {}),
+    ...(state.furnishing ? { furnishing: state.furnishing } : {}),
+    ...(state.bedrooms ? { bedrooms: state.bedrooms === "5+" ? "5+" : Number(state.bedrooms) } : {}),
     sort: state.sort,
     page: state.page,
     limit: MARKETPLACE_PAGE_SIZE
@@ -94,6 +102,8 @@ export function marketplaceQueryString(state: MarketplaceQueryState) {
   if (state.maxPrice) params.set("maxPrice", state.maxPrice);
   if (state.propertyType) params.set("propertyType", state.propertyType);
   if (state.category) params.set("category", state.category);
+  if (state.condition) params.set("condition", state.condition);
+  if (state.furnishing) params.set("furnishing", state.furnishing);
   if (state.bedrooms) params.set("bedrooms", state.bedrooms);
   if (state.sort !== "DEFAULT") params.set("sort", state.sort);
   if (state.page > 1) params.set("page", String(state.page));

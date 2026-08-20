@@ -33,6 +33,7 @@ const upstreamPaths = new Map([
 
 const propertyId = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}";
 const dynamicCustomerPath = (method: string, browserPath: string) => {
+  if (method === "GET" && browserPath === "properties/saved/me") return browserPath;
   const save = new RegExp(`^properties/(${propertyId})/save$`).exec(browserPath);
   if (save && (method === "POST" || method === "DELETE")) return `properties/${save[1]}/save`;
   const interest = new RegExp(`^marketplace/properties/(${propertyId})/interest$`).exec(browserPath);
@@ -76,6 +77,18 @@ const protectedPaths = new Set([
 const preAuthAnalyticsPaths = new Set(["auth/register", "auth/login"]);
 const analyticsDistinctIdHeader = "x-beryl-analytics-distinct-id";
 const anonymousDistinctId = /^\$device:[A-Za-z0-9_-]{1,120}$/;
+const queryParametersByPath = new Map([
+  ["properties/saved/me", new Set(["page", "limit"])],
+  ["marketplace/seller/properties", new Set(["status", "page", "limit"])]
+]);
+
+const withSafeQuery = (path: string, request: NextRequest) => {
+  const allowed = queryParametersByPath.get(path);
+  if (!allowed) return path;
+  const query = new URLSearchParams();
+  request.nextUrl.searchParams.forEach((value, key) => { if (allowed.has(key)) query.append(key, value); });
+  return query.size ? `${path}?${query}` : path;
+};
 
 const backendFetch = (path: string, method: string, body: unknown, accessToken?: string, analyticsDistinctId?: string) =>
   fetch(backendApiUrl(path), {
@@ -117,6 +130,7 @@ const handleRequest = async (request: NextRequest, context: Context) => {
   if (!path) {
     return NextResponse.json({ success: false, message: "Route not found" }, { status: 404 });
   }
+  const upstreamPath = withSafeQuery(path, request);
 
   const cookieStore = await cookies();
   let body = await readJson(request);
@@ -148,7 +162,7 @@ const handleRequest = async (request: NextRequest, context: Context) => {
 
   const isProtectedPath = protectedPaths.has(path) || path.startsWith("properties/") || path.startsWith("marketplace/properties/") || path.startsWith("marketplace/seller/properties");
   const isAuthenticationPath = path.startsWith("auth/");
-  let backend = await backendFetch(path, request.method, body, isProtectedPath ? accessToken : undefined, analyticsDistinctId);
+  let backend = await backendFetch(upstreamPath, request.method, body, isProtectedPath ? accessToken : undefined, analyticsDistinctId);
   let payload = await backend.json();
   if (backend.status === 404 && isAuthenticationPath) return upstreamNotFound(request.method, path);
 
@@ -157,7 +171,7 @@ const handleRequest = async (request: NextRequest, context: Context) => {
     if (refreshed.response.ok) {
       const tokenData = refreshed.payload.data as BackendLoginData;
       accessToken = tokenData.accessToken;
-      backend = await backendFetch(path, request.method, body, accessToken);
+      backend = await backendFetch(upstreamPath, request.method, body, accessToken);
       payload = await backend.json();
       if (backend.status === 404 && isAuthenticationPath) return upstreamNotFound(request.method, path);
       const retried = NextResponse.json(payload, { status: backend.status });

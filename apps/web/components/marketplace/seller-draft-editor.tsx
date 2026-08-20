@@ -10,6 +10,7 @@ import { ApiAlert, Spinner } from "@/components/ui/feedback";
 import { customerApi } from "@/lib/api/client";
 import type { SellerDraft } from "@/lib/contracts";
 import { continueSellerDraftToSalesMandate } from "@/lib/seller-draft-transition";
+import { toSellerDraftPayload } from "@/lib/seller-draft-payload";
 import { SellerMandateStep } from "./seller-mandate-step";
 import { SellerReviewStep } from "./seller-review-step";
 import { SellerShell } from "./seller-shell";
@@ -40,6 +41,7 @@ export function SellerDraftEditor({
   const hydrated = useRef(false);
   const savedSnapshot = useRef("");
   const saveSequence = useRef(0);
+  const saveInFlight = useRef(false);
 
   const restored = useQuery({
     queryKey: ["seller-draft", id],
@@ -64,9 +66,10 @@ export function SellerDraftEditor({
 
   const persist = useMutation({
     mutationFn: async (next: Partial<SellerDraft>) => {
-      if (id) return customerApi.saveSellerDraft(id, next);
+      const payload = toSellerDraftPayload(next);
+      if (id) return customerApi.saveSellerDraft(id, payload);
 
-      const created = await customerApi.createSellerDraft(next);
+      const created = await customerApi.createSellerDraft(payload);
       const createdId = created.data.property.id;
       setId(createdId);
       router.replace(`/seller/listings/${createdId}/edit` as Route);
@@ -75,15 +78,19 @@ export function SellerDraftEditor({
   });
 
   const save = async (next: Partial<SellerDraft> = draft) => {
+    if (saveInFlight.current) return false;
+    saveInFlight.current = true;
     setStatus("Saving…");
     try {
       await persist.mutateAsync(next);
-      savedSnapshot.current = JSON.stringify(next);
+      savedSnapshot.current = JSON.stringify(toSellerDraftPayload(next));
       setStatus("Saved");
       return true;
     } catch {
       setStatus("Save failed. Please try again.");
       return false;
+    } finally {
+      saveInFlight.current = false;
     }
   };
 
@@ -93,14 +100,15 @@ export function SellerDraftEditor({
 
   useEffect(() => {
     if (!id || !hydrated.current || step !== "PROPERTY_INFORMATION" || persist.isPending) return;
-    const snapshot = JSON.stringify(draft);
+    const payload = toSellerDraftPayload(draft);
+    const snapshot = JSON.stringify(payload);
     if (snapshot === savedSnapshot.current) return;
 
     const timer = window.setTimeout(async () => {
       const sequence = ++saveSequence.current;
       setStatus("Saving…");
       try {
-        await customerApi.saveSellerDraft(id, draft);
+        await customerApi.saveSellerDraft(id, payload);
         if (sequence === saveSequence.current) {
           savedSnapshot.current = snapshot;
           setStatus("Saved");

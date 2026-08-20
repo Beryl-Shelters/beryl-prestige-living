@@ -154,6 +154,15 @@ describe("customer BFF cookie bridge", () => {
     expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: "DELETE", headers: expect.objectContaining({ authorization: "Bearer dummy-access-token" }), body: undefined });
   });
 
+  it("proxies the authenticated canonical saved-property list", async () => {
+    state.cookies.set("beryl_customer_access", "dummy-access-token");
+    const fetchMock = vi.fn().mockResolvedValue(backendResponse({ success: true, data: { saved_properties: [], pagination: { page: 1, limit: 10, total: 0, total_pages: 0 } } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await callGet(["properties", "saved", "me"]);
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:5000/api/v1/properties/saved/me", expect.objectContaining({ method: "GET", headers: expect.objectContaining({ authorization: "Bearer dummy-access-token" }) }));
+  });
+
   it("proxies Express Interest with its safe request body and preserves domain availability errors", async () => {
     const id = "11111111-1111-4111-8111-111111111111";
     state.cookies.set("beryl_customer_access", "dummy-access-token");

@@ -40,7 +40,7 @@ import type {
 import { formatNaira, humanizeMarketplaceValue } from "@/lib/marketplace";
 import { loginHrefFor } from "@/lib/return-to";
 
-type AuthPromptAction = "save" | "interest";
+export type AuthPromptAction = "save" | "interest";
 
 const contactMethods: { value: MarketplaceInterestContactMethod; label: string; description: string }[] = [
   { value: "WHATSAPP", label: "WhatsApp", description: "Use your WhatsApp number" },
@@ -112,7 +112,7 @@ function DetailSkeleton() {
   return <main className="property-detail-page" aria-label="Loading property details" aria-live="polite"><div className="property-detail-skeleton"><div className="property-detail-skeleton-gallery" /><div className="property-detail-skeleton-lines"><span /><span /><span /><span /></div></div></main>;
 }
 
-function AuthPrompt({ action, onClose, trigger, returnTo }: { action: AuthPromptAction; onClose: () => void; trigger: React.RefObject<HTMLElement | null>; returnTo: string }) {
+export function AuthPrompt({ action, onClose, trigger, returnTo }: { action: AuthPromptAction; onClose: () => void; trigger: React.RefObject<HTMLElement | null>; returnTo: string }) {
   const dialog = useRef<HTMLDivElement>(null);
   useDialogFocus(true, onClose, dialog, trigger);
   return <div className="property-detail-modal-backdrop"><button type="button" className="property-detail-modal-dismiss" aria-label="Dismiss sign in prompt" onClick={onClose} /><div ref={dialog} className="property-detail-modal property-detail-auth-prompt" role="dialog" aria-modal="true" aria-labelledby="auth-prompt-title"><button className="property-detail-dialog-close" type="button" aria-label="Close sign in prompt" onClick={onClose}><X size={20} /></button><ShieldCheck size={42} aria-hidden="true" /><h2 id="auth-prompt-title">Set up a free account to continue</h2><p>An account lets you {action === "save" ? "save properties and compare them later" : "register interest and hear back about this property"}.</p><div className="property-detail-auth-benefits"><span><MessageCircle size={18} />Register Interest</span><span><MapPin size={18} />Get the full address</span><span><Heart size={18} />Save what you like</span></div><div className="property-detail-modal-actions"><Link className="btn btn-primary" href={`/signup?returnTo=${encodeURIComponent(returnTo)}` as Route}>Create free account</Link><Link className="property-detail-login-link" href={loginHrefFor(returnTo) as Route}>I already have an account</Link></div></div></div>;

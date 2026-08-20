@@ -4,7 +4,7 @@ import Image from "next/image";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BadgeCheck,
   Bath,
@@ -23,8 +23,10 @@ import {
   X
 } from "lucide-react";
 import { MarketplaceHeader } from "@/components/marketplace/marketplace-header";
-import { marketplaceApi } from "@/lib/api/client";
-import type { MarketplacePropertyCard, MarketplaceSort } from "@/lib/contracts";
+import { AuthPrompt } from "@/components/marketplace/property-detail-screen";
+import { useAuth } from "@/context/auth-provider";
+import { customerApi, marketplaceApi } from "@/lib/api/client";
+import type { ApiSuccess, MarketplacePropertyCard, MarketplaceSearchResult, MarketplaceSort } from "@/lib/contracts";
 import {
   formatNaira,
   humanizeMarketplaceValue,
@@ -54,6 +56,8 @@ const propertyTypes = [
   ["TERRACE", "Terrace House"],
   ["BUNGALOW", "Bungalow"],
 ] as const;
+const conditionOptions = [["NEWLY_BUILT", "Newly-Built"], ["OFF_PLAN", "Off-Plan"], ["UNDER_CONSTRUCTION", "Under Construction"], ["FAIRLY_USED", "Fairly-Used"]] as const;
+const furnishingOptions = [["FULLY_FURNISHED", "Fully Furnished"], ["UNFURNISHED", "Unfurnished"], ["SEMI_FURNISHED", "Semi Furnished"]] as const;
 
 type FilterPanelProps = {
   query: MarketplaceQueryState;
@@ -67,6 +71,8 @@ function FilterPanel({ query, onApply, onReset }: FilterPanelProps) {
   const [maxPrice, setMaxPrice] = useState(query.maxPrice);
   const [propertyType, setPropertyType] = useState(query.propertyType);
   const [category] = useState(query.category);
+  const [condition, setCondition] = useState(query.condition);
+  const [furnishing, setFurnishing] = useState(query.furnishing);
   const [bedrooms, setBedrooms] = useState(query.bedrooms);
   const [rangeError, setRangeError] = useState("");
   const selectedPropertyTypes = propertyType ? propertyType.split(",").filter(Boolean) : [];
@@ -75,6 +81,10 @@ function FilterPanel({ query, onApply, onReset }: FilterPanelProps) {
       ? selectedPropertyTypes.filter((selected) => selected !== value)
       : [...selectedPropertyTypes, value];
     setPropertyType(next.join(","));
+  };
+  const toggleMulti = (current: string, value: string, setValue: (next: string) => void) => {
+    const selected = current.split(",").filter(Boolean);
+    setValue((selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]).join(","));
   };
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -90,6 +100,8 @@ function FilterPanel({ query, onApply, onReset }: FilterPanelProps) {
       maxPrice,
       propertyType,
       category,
+      condition,
+      furnishing,
       bedrooms
     });
   };
@@ -105,13 +117,15 @@ function FilterPanel({ query, onApply, onReset }: FilterPanelProps) {
       {rangeError ? <p className="marketplace-filter-error" role="alert">{rangeError}</p> : null}
     </fieldset>
     <fieldset className="marketplace-filter-group marketplace-checkbox-group"><legend>Property Type</legend>{propertyTypes.map(([value, label]) => <label key={value}><input type="checkbox" value={value} checked={selectedPropertyTypes.includes(value)} onChange={() => togglePropertyType(value)} /><span>{label}</span></label>)}</fieldset>
-    <fieldset className="marketplace-filter-group marketplace-bedroom-group"><legend>Bedrooms</legend><div>{[1, 2, 3, 4].map((number) => <button type="button" key={number} aria-pressed={bedrooms === String(number)} onClick={() => setBedrooms(bedrooms === String(number) ? "" : String(number))}>{number}</button>)}<button type="button" disabled aria-label="5 or more bedrooms is not available with the current search API" title="The current search supports exact bedroom counts only">5+</button></div></fieldset>
+    <fieldset className="marketplace-filter-group marketplace-checkbox-group"><legend>Condition</legend>{conditionOptions.map(([value, label]) => <label key={value}><input type="checkbox" checked={condition.split(",").includes(value)} onChange={() => toggleMulti(condition, value, setCondition)} /><span>{label}</span></label>)}</fieldset>
+    <fieldset className="marketplace-filter-group marketplace-checkbox-group"><legend>Furnishing</legend>{furnishingOptions.map(([value, label]) => <label key={value}><input type="checkbox" checked={furnishing.split(",").includes(value)} onChange={() => toggleMulti(furnishing, value, setFurnishing)} /><span>{label}</span></label>)}</fieldset>
+    <fieldset className="marketplace-filter-group marketplace-bedroom-group"><legend>Bedrooms</legend><div>{[1, 2, 3, 4].map((number) => <button type="button" key={number} aria-pressed={bedrooms === String(number)} onClick={() => setBedrooms(bedrooms === String(number) ? "" : String(number))}>{number}</button>)}<button type="button" aria-pressed={bedrooms === "5+"} onClick={() => setBedrooms(bedrooms === "5+" ? "" : "5+")}>5+</button></div></fieldset>
     <label className="marketplace-filter-field marketplace-state-field"><span>Explore States</span><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Search states" /></label>
     <button className="btn btn-primary marketplace-apply-button" type="submit">Apply Filters</button>
   </form>;
 }
 
-function PropertyCard({ property, view }: { property: MarketplacePropertyCard; view: "grid" | "list" }) {
+function PropertyCard({ property, view, saving, onSave }: { property: MarketplacePropertyCard; view: "grid" | "list"; saving: boolean; onSave: (trigger: HTMLButtonElement) => void }) {
   return <article className="marketplace-property-card" data-view={view}>
     <a className="marketplace-property-image-link" href={`/marketplace/${property.id}`} aria-label={`View ${property.title}`}>
       <div className="marketplace-property-image">
@@ -122,7 +136,7 @@ function PropertyCard({ property, view }: { property: MarketplacePropertyCard; v
         {property.verified ? <span className="marketplace-verified-badge"><BadgeCheck aria-hidden="true" size={15} /> Verified</span> : null}
       </div>
     </a>
-    <a className="marketplace-card-save" href={`/marketplace/${property.id}`} aria-label={`View and save ${property.title}`}><Heart aria-hidden="true" size={19} /></a>
+    <button className="marketplace-card-save" type="button" aria-label={property.saved ? `Remove ${property.title} from saved properties` : `Save ${property.title}`} aria-pressed={property.saved} disabled={saving} onClick={(event) => onSave(event.currentTarget)}><Heart aria-hidden="true" size={19} fill={property.saved ? "currentColor" : "none"} /></button>
     <div className="marketplace-property-body">
       <div className="marketplace-card-price"><strong>{formatNaira(property.askingPrice)}</strong>{property.negotiable ? <span>Negotiable</span> : null}</div>
       <a className="marketplace-card-title" href={`/marketplace/${property.id}`}>{property.title}</a>
@@ -154,17 +168,34 @@ function Pagination({ page, totalPages, onPage }: { page: number; totalPages: nu
 
 export function MarketplaceScreen({ initialSearchParams = {} }: { initialSearchParams?: MarketplacePageSearchParams }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { session, sessionLoading } = useAuth();
   const [query, setQuery] = useState(() => parseMarketplaceQuery(initialSearchParams));
   const [searchValue, setSearchValue] = useState(query.q);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [view, setView] = useState<"grid" | "list">("grid");
   const mobileFilterButtonRef = useRef<HTMLButtonElement>(null);
   const mobileFilterDrawerRef = useRef<HTMLElement>(null);
+  const authPromptTrigger = useRef<HTMLElement>(null);
+  const [authPromptOpen, setAuthPromptOpen] = useState(false);
   const params = useMemo(() => marketplaceApiParams(query), [query]);
   const result = useQuery({
     queryKey: ["marketplace-properties", params],
     queryFn: () => marketplaceApi.search(params)
   });
+  const saveMutation = useMutation({
+    mutationFn: ({ propertyId, saved }: { propertyId: string; saved: boolean }) => saved ? customerApi.unsaveProperty(propertyId) : customerApi.saveProperty(propertyId),
+    onSuccess: (_response, variables) => queryClient.setQueryData<ApiSuccess<MarketplaceSearchResult>>(["marketplace-properties", params], (current) => current ? { ...current, data: { ...current.data, properties: current.data.properties.map((property) => property.id === variables.propertyId ? { ...property, saved: !variables.saved } : property) } } : current)
+  });
+  const toggleSaved = (property: MarketplacePropertyCard, trigger: HTMLButtonElement) => {
+    if (sessionLoading) return;
+    if (!session) {
+      authPromptTrigger.current = trigger;
+      setAuthPromptOpen(true);
+      return;
+    }
+    saveMutation.mutate({ propertyId: property.id, saved: property.saved });
+  };
 
   const commit = useCallback((patch: Partial<MarketplaceQueryState>, resetPage = true) => {
     setQuery((current) => {
@@ -215,7 +246,7 @@ export function MarketplaceScreen({ initialSearchParams = {} }: { initialSearchP
     commit(filters);
     setMobileFiltersOpen(false);
   };
-  const filterKey = [query.location, query.minPrice, query.maxPrice, query.propertyType, query.category, query.bedrooms].join("|");
+  const filterKey = [query.location, query.minPrice, query.maxPrice, query.propertyType, query.category, query.condition, query.furnishing, query.bedrooms].join("|");
   const data = result.data?.data;
   const total = data?.pagination.total ?? 0;
   const firstResult = total ? (query.page - 1) * (data?.pagination.limit ?? 0) + 1 : 0;
@@ -236,7 +267,7 @@ export function MarketplaceScreen({ initialSearchParams = {} }: { initialSearchP
           {result.isLoading ? <MarketplaceSkeletons /> : null}
           {result.isError ? <div className="marketplace-state-card" role="alert"><House size={36} /><h3>We could not load properties</h3><p>Please check your connection and try again.</p><button className="btn btn-primary" type="button" onClick={() => result.refetch()}>Try again</button></div> : null}
           {!result.isLoading && !result.isError && data?.properties.length === 0 ? <div className="marketplace-state-card"><Search size={36} /><h3>No properties match your search</h3><p>Try changing your search or clearing the filters.</p><button className="btn btn-secondary" type="button" onClick={resetAll}>Clear all filters</button></div> : null}
-          {!result.isLoading && !result.isError && data?.properties.length ? <div className={`marketplace-grid marketplace-${view}`}>{data.properties.map((property) => <PropertyCard key={property.id} property={property} view={view} />)}</div> : null}
+          {!result.isLoading && !result.isError && data?.properties.length ? <div className={`marketplace-grid marketplace-${view}`}>{data.properties.map((property) => <PropertyCard key={property.id} property={property} view={view} saving={saveMutation.isPending && saveMutation.variables?.propertyId === property.id} onSave={(trigger) => toggleSaved(property, trigger)} />)}</div> : null}
           {data ? <Pagination page={data.pagination.page} totalPages={data.pagination.total_pages} onPage={(page) => commit({ page }, false)} /> : null}
         </div>
         <aside className="marketplace-filter-sidebar" aria-label="Property filters"><FilterPanel key={filterKey} query={query} onApply={applyFilters} onReset={resetAll} /></aside>
@@ -250,5 +281,6 @@ export function MarketplaceScreen({ initialSearchParams = {} }: { initialSearchP
         <FilterPanel key={`mobile-${filterKey}`} query={query} onApply={applyFilters} onReset={resetAll} />
       </section>
     </div> : null}
+    {authPromptOpen ? <AuthPrompt action="save" onClose={() => setAuthPromptOpen(false)} trigger={authPromptTrigger} returnTo={marketplaceQueryString(query)} /> : null}
   </div>;
 }

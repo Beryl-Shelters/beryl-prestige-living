@@ -1,8 +1,8 @@
 import { supabaseAdmin } from "../../config/supabase"; import { AppError } from "../../utils/AppError"; import { uploadImageWithPublicId,deleteImageFromCloudinary,uploadPropertyDocument,deletePropertyDocument } from "../../utils/cloudinary"; import { PublicMarketplaceSearchInput } from "./marketplace.validators";
-const map=(x:Record<string,unknown>)=>({title:x.title,description:x.description,category:x.propertyCategory,property_type:x.propertyType,ownership_type:x.ownershipType,public_location:x.publicLocation,full_address:x.fullAddress,price:x.askingPrice,negotiable:x.negotiable,initial_deposit_type:x.initialDepositType,initial_deposit_value:x.initialDepositValue,property_condition:x.condition,furnishing:x.furnishing,bedrooms:x.bedrooms,bathrooms:x.bathrooms,toilets:x.toilets,parking_spaces:x.parkingSpaces,number_of_floors:x.numberOfFloors,parking_capacity:x.parkingCapacity,amenities:x.amenities,marketplace_current_step:x.currentStep});
+const map=(x:Record<string,unknown>)=>Object.fromEntries(Object.entries({title:x.title,description:x.description,category:x.propertyCategory,property_type:x.propertyType,ownership_type:x.ownershipType,public_location:x.publicLocation,full_address:x.fullAddress,price:x.askingPrice,negotiable:x.negotiable,initial_deposit_type:x.initialDepositType,initial_deposit_value:x.initialDepositValue,property_condition:x.condition,furnishing:x.furnishing,bedrooms:x.bedrooms,bathrooms:x.bathrooms,toilets:x.toilets,parking_spaces:x.parkingSpaces,number_of_floors:x.numberOfFloors,parking_capacity:x.parkingCapacity,amenities:x.amenities,marketplace_current_step:x.currentStep}).filter(([,value])=>value!==undefined));
 const dto=(p:any)=>({id:p.id,referenceId:p.property_code,status:p.marketplace_status,currentStep:p.marketplace_current_step,title:p.title,description:p.description,propertyCategory:p.category,propertyType:p.property_type,ownershipType:p.ownership_type,publicLocation:p.public_location,fullAddress:p.full_address,askingPrice:p.price,negotiable:p.negotiable,initialDepositType:p.initial_deposit_type,initialDepositValue:p.initial_deposit_value,condition:p.property_condition,furnishing:p.furnishing,bedrooms:p.bedrooms,bathrooms:p.bathrooms,toilets:p.toilets,parkingSpaces:p.parking_spaces,numberOfFloors:p.number_of_floors,parkingCapacity:p.parking_capacity,amenities:p.amenities,createdAt:p.created_at,updatedAt:p.updated_at});
 export const assertSeller=async(userId:string)=>{const {data,error}=await supabaseAdmin.from("user_personas").select("persona_type,onboarding_status").eq("user_id",userId).eq("persona_type","SELLER_DEVELOPER").maybeSingle();if(error||!data||data.onboarding_status!=="COMPLETED")throw new AppError("Seller persona is required",403,"SELLER_PERSONA_REQUIRED");};
-export const createDraft=async(userId:string,payload:Record<string,unknown>)=>{await assertSeller(userId);const {data,error}=await supabaseAdmin.from("properties").insert({...map(payload),owner_id:userId,marketplace_status:"DRAFT",marketplace_current_step:"PROPERTY_INFORMATION",status:"pending",is_published:false,property_code:`BRL-${Date.now()}-${Math.floor(Math.random()*9000+1000)}`}).select("*").single();if(error)throw new AppError("Marketplace is temporarily unavailable",503,"MARKETPLACE_UNAVAILABLE");return dto(data);};
+export const createDraft=async(userId:string,payload:Record<string,unknown>)=>{await assertSeller(userId);const reference=`BRL-${Date.now()}-${Math.floor(Math.random()*9000+1000)}`;const {data,error}=await supabaseAdmin.from("properties").insert({...map(payload),owner_id:userId,marketplace_status:"DRAFT",marketplace_current_step:"PROPERTY_INFORMATION",status:"pending",is_published:false,property_code:reference,slug:`draft-${reference.toLowerCase()}`,listing_purpose:"sale"}).select("*").single();if(error)throw new AppError("Marketplace is temporarily unavailable",503,"MARKETPLACE_UNAVAILABLE");return dto(data);};
 const own=async(id:string,userId:string)=>{const {data,error}=await supabaseAdmin.from("properties").select("*").eq("id",id).eq("owner_id",userId).eq("marketplace_status","DRAFT").maybeSingle();if(error||!data)throw new AppError("Property draft not found",404,"PROPERTY_NOT_FOUND");return data;};
 const ownedProperty=async(id:string,userId:string)=>{const {data,error}=await supabaseAdmin.from("properties").select("*").eq("id",id).eq("owner_id",userId).maybeSingle();if(error||!data)throw new AppError("Property draft not found",404,"PROPERTY_NOT_FOUND");return data;};
 export const getDraft=async(id:string,userId:string)=>{await assertSeller(userId);const property=await own(id,userId);return {...dto(property),images:(await images(id)).map(imageDto),documents:await listDocumentMetadata(id,userId)};}; export const updateDraft=async(id:string,userId:string,p:Record<string,unknown>)=>{await assertSeller(userId);await own(id,userId);const {data,error}=await supabaseAdmin.from("properties").update(map(p)).eq("id",id).eq("owner_id",userId).select("*").single();if(error)throw new AppError("Marketplace is temporarily unavailable",503,"MARKETPLACE_UNAVAILABLE");return dto(data);};
@@ -62,29 +62,35 @@ export const reopenRejectedProperty=async(propertyId:string,userId:string)=>{
   return {propertyId:result.property_id,referenceId:result.reference_id,status:result.marketplace_status,currentStep:result.current_step,rejectionReason:result.rejection_reason,rejectedAt:result.rejected_at,reviewedAt:result.reviewed_at,nextAction:"EDIT_REJECTED_LISTING" as const};
 };
 
-const publicCardDto=(property:any)=>{
+const publicCardDto=(property:any,saved=false)=>{
   const propertyImages=[...(property.property_images??[])].sort((a:any,b:any)=>a.sort_order-b.sort_order);
   const cover=propertyImages.find((image:any)=>image.is_cover)??null;
-  return {id:property.id,referenceId:property.property_code,title:property.title,askingPrice:property.price,negotiable:Boolean(property.negotiable),propertyType:property.property_type,propertyCategory:property.category,publicLocation:property.public_location,bedrooms:property.bedrooms??null,bathrooms:property.bathrooms??null,toilets:property.toilets??null,parkingSpaces:property.parking_spaces??null,coverImage:cover?{id:cover.id,url:cover.image_url}:null,photoCount:propertyImages.length,verified:property.marketplace_status==="LIVE",publishedAt:property.marketplace_published_at??null};
+  return {id:property.id,referenceId:property.property_code,title:property.title,askingPrice:property.price,negotiable:Boolean(property.negotiable),propertyType:property.property_type,propertyCategory:property.category,publicLocation:property.public_location,bedrooms:property.bedrooms??null,bathrooms:property.bathrooms??null,toilets:property.toilets??null,parkingSpaces:property.parking_spaces??null,coverImage:cover?{id:cover.id,url:cover.image_url}:null,photoCount:propertyImages.length,verified:property.marketplace_status==="LIVE",publishedAt:property.marketplace_published_at??null,saved};
 };
 
-export const searchPublicMarketplace=async(query:PublicMarketplaceSearchInput)=>{
+export const searchPublicMarketplace=async(query:PublicMarketplaceSearchInput,userId?:string)=>{
   const from=(query.page-1)*query.limit;
-  let request=supabaseAdmin.from("properties").select("id,property_code,title,description,category,property_type,public_location,price,negotiable,bedrooms,bathrooms,toilets,parking_spaces,marketplace_status,marketplace_published_at,updated_at,property_images(id,image_url,sort_order,is_cover)",{count:"exact"}).eq("marketplace_status","LIVE");
+  let request=supabaseAdmin.from("properties").select("id,property_code,title,description,category,property_type,public_location,price,negotiable,property_condition,furnishing,bedrooms,bathrooms,toilets,parking_spaces,marketplace_status,marketplace_published_at,updated_at,property_images(id,image_url,sort_order,is_cover)",{count:"exact"}).eq("marketplace_status","LIVE");
   if(query.q){const term=`%${query.q}%`;request=request.or(`title.ilike.${term},description.ilike.${term},public_location.ilike.${term},property_type.ilike.${term}`)}
   if(query.location)request=request.ilike("public_location",`%${query.location}%`);
   if(query.minPrice!==undefined)request=request.gte("price",query.minPrice);
   if(query.maxPrice!==undefined)request=request.lte("price",query.maxPrice);
   if(query.propertyType?.length)request=request.in("property_type",query.propertyType);
   if(query.category)request=request.eq("category",query.category);
-  if(query.bedrooms!==undefined)request=request.eq("bedrooms",query.bedrooms);
+  if(query.condition?.length)request=request.in("property_condition",query.condition);
+  if(query.furnishing?.length)request=request.in("furnishing",query.furnishing);
+  if(query.bedrooms==="5+")request=request.gte("bedrooms",5);
+  else if(query.bedrooms!==undefined)request=request.eq("bedrooms",query.bedrooms);
   if(query.sort==="PRICE_HIGH_TO_LOW")request=request.order("price",{ascending:false});
   else if(query.sort==="PRICE_LOW_TO_HIGH")request=request.order("price",{ascending:true});
   else if(query.sort==="BEDS")request=request.order("bedrooms",{ascending:false,nullsFirst:false});
   else request=request.order("marketplace_published_at",{ascending:false,nullsFirst:false}).order("updated_at",{ascending:false});
   const {data,error,count}=await request.order("id",{ascending:false}).range(from,from+query.limit-1);
   if(error)throw new AppError("Marketplace is temporarily unavailable",503,"MARKETPLACE_UNAVAILABLE");
-  return {properties:(data??[]).map(publicCardDto),pagination:{page:query.page,limit:query.limit,total:count??0,total_pages:Math.ceil((count??0)/query.limit)}};
+  const ids=(data??[]).map((property:any)=>property.id);
+  const savedIds=new Set<string>();
+  if(userId&&ids.length){const {data:saves,error:savedError}=await supabaseAdmin.from("saved_properties").select("property_id").eq("user_id",userId).in("property_id",ids);if(savedError)throw new AppError("Saved property state is temporarily unavailable",503,"SAVED_PROPERTY_UNAVAILABLE");for(const save of saves??[])savedIds.add(save.property_id)}
+  return {properties:(data??[]).map((property:any)=>publicCardDto(property,savedIds.has(property.id))),pagination:{page:query.page,limit:query.limit,total:count??0,total_pages:Math.ceil((count??0)/query.limit)}};
 };
 
 const publicAmenities=(value:unknown)=>{

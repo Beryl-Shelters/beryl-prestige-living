@@ -37,11 +37,12 @@ export function MarketplaceHeader({ returnTo, searchValue, onSearchChange, onSea
     <div className="marketplace-header-actions">
       {sessionLoading ? <span className="marketplace-session-status" aria-live="polite">Loading account…</span> : null}
       {!sessionLoading && !authenticated ? <>
+        <Link className="marketplace-saved-button" href={loginHrefFor("/saved") as Route}><Heart size={18} aria-hidden="true" /><span>Saved</span></Link>
         <Link href={loginHrefFor(returnTo) as Route}>Log in</Link>
         <Link className="btn btn-primary" href={`/signup?returnTo=${encodeURIComponent(returnTo)}`}>Get started</Link>
       </> : null}
       {authenticated ? <>
-        <button className="marketplace-saved-button" type="button" disabled title="Saved properties list is not available yet"><Heart size={18} aria-hidden="true" /><span>Saved</span></button>
+        <Link className="marketplace-saved-button" href={"/saved" as Route}><Heart size={18} aria-hidden="true" /><span>Saved</span></Link>
         <button className="marketplace-account-button" type="button" onClick={() => setSwitcherOpen(true)} aria-haspopup="dialog">
           <span className="marketplace-account-avatar"><UserRound size={16} aria-hidden="true" /></span><span>{session?.user.fullName}</span><ChevronDown size={17} aria-hidden="true" />
         </button>

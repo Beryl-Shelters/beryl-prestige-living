@@ -13,10 +13,17 @@ const propertyTypes=z.preprocess(value=>{
   const values=(Array.isArray(value)?value:[value]).flatMap(item=>typeof item==="string"?item.split(","):[]).map(item=>item.trim().toUpperCase()).filter(Boolean);
   return values.length?Array.from(new Set(values)):undefined;
 },z.array(z.string().min(1).max(80).regex(/^[A-Z0-9_-]+$/)).min(1).max(10).optional());
+const multiEnum=<T extends readonly [string,...string[]]>(values:T)=>z.preprocess(value=>{
+  const items=(Array.isArray(value)?value:[value]).flatMap(item=>typeof item==="string"?item.split(","):[]).map(item=>item.trim().toUpperCase()).filter(Boolean);
+  return items.length?Array.from(new Set(items)):undefined;
+},z.array(z.enum(values)).min(1).max(values.length).optional());
+const conditions=multiEnum(["NEWLY_BUILT","OFF_PLAN","UNDER_CONSTRUCTION","FAIRLY_USED"] as const);
+const furnishings=multiEnum(["FULLY_FURNISHED","UNFURNISHED","SEMI_FURNISHED"] as const);
+const bedrooms=z.preprocess(value=>value===""||value===undefined?undefined:value,z.union([z.literal("5+"),z.coerce.number().int().min(1).max(4)]).optional());
 export const publicMarketplaceSearchSchema=z.object({
   q:optionalQueryText(100),location:optionalQueryText(120),minPrice:optionalNumber,maxPrice:optionalNumber,
-  propertyType:propertyTypes,category:z.enum(["RESIDENTIAL","COMMERCIAL"]).optional(),
-  bedrooms:z.preprocess(value=>value===""||value===undefined?undefined:value,z.coerce.number().int().nonnegative().max(100).optional()),
+  propertyType:propertyTypes,category:z.enum(["RESIDENTIAL","COMMERCIAL"]).optional(),condition:conditions,furnishing:furnishings,
+  bedrooms,
   sort:z.enum(["DEFAULT","PRICE_HIGH_TO_LOW","PRICE_LOW_TO_HIGH","BEDS","MOST_RECENT"]).default("DEFAULT"),
   page:z.coerce.number().int().min(1).default(1),limit:z.coerce.number().int().min(1).max(50).default(10)
 }).strict().superRefine((value,context)=>{if(value.minPrice!==undefined&&value.maxPrice!==undefined&&value.minPrice>value.maxPrice)context.addIssue({code:"custom",message:"Minimum price cannot exceed maximum price",path:["minPrice"],params:{errorCode:"INVALID_PRICE_RANGE"}})});

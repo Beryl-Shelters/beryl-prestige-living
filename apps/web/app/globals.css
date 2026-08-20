@@ -1800,3 +1800,11 @@ textarea.form-control {
 @media(min-width:1024px){.marketplace-results-shell{grid-template-columns:minmax(0,1fr) 348px;gap:48px}.marketplace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.marketplace-filter-sidebar .marketplace-filter-form{top:100px;min-height:820px}.property-detail-gallery{grid-template-columns:1.7fr 1fr}.property-detail-main-image{aspect-ratio:auto;min-height:355px}.property-detail-gallery-side{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr))}.property-detail-gallery-side button{min-height:0}.property-detail-layout{grid-template-columns:minmax(0,1fr) 420px;gap:48px}.property-detail-action-panel{top:100px}}
 @media(max-width:767px){.marketplace-brand-name,.marketplace-saved-button{display:none}.marketplace-header{padding-inline:14px}.marketplace-header-search{min-height:44px}.marketplace-results-shell{padding-top:28px}.marketplace-results-control-row{align-items:flex-start;flex-direction:column}.marketplace-results-intro h1{font-size:25px}.marketplace-card-save{width:38px;height:38px}.property-detail-main{padding-top:24px}.property-detail-topbar{padding-inline:8px}.property-detail-topbar button{padding-inline:9px}.property-detail-gallery-side{grid-template-columns:repeat(3,minmax(80px,1fr))}.property-detail-gallery-side button:nth-child(n+4){display:none}.property-detail-layout{margin-top:28px}.property-detail-action-panel{order:2}}
 @media(max-width:520px){.marketplace-header{gap:7px}.marketplace-brand .brand-logo-mark{width:26px;height:26px}.marketplace-header-actions{display:flex;gap:5px}.marketplace-header-actions>a:first-child{display:flex;font-size:11px}.marketplace-header-actions .btn{min-height:38px;padding-inline:8px;font-size:11px}.marketplace-header-search{padding-inline:10px}.marketplace-header-search input{font-size:12px}}
+.saved-properties-main {
+  width: min(100% - 40px, 1240px);
+  margin: 0 auto;
+  padding: 52px 0 80px;
+}
+.saved-properties-main > header { margin-bottom: 28px; }
+.saved-properties-main > header h1 { margin: 5px 0 8px; font-size: clamp(32px, 4vw, 48px); }
+.saved-properties-main > header p:last-child { color: var(--color-brand-muted); }

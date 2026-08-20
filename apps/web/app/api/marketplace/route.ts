@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { ApiConfigurationError, backendApiUrl } from "@/lib/server/api-url";
+import { SESSION_COOKIES } from "@/lib/server/session-cookies";
 
 const supportedParameters = new Set([
   "q",
@@ -8,6 +10,8 @@ const supportedParameters = new Set([
   "maxPrice",
   "propertyType",
   "category",
+  "condition",
+  "furnishing",
   "bedrooms",
   "sort",
   "page",
@@ -20,11 +24,14 @@ export async function GET(request: NextRequest) {
     request.nextUrl.searchParams.forEach((value, key) => {
       if (supportedParameters.has(key)) upstream.searchParams.append(key, value);
     });
-    const response = await fetch(upstream, {
+    const accessToken = (await cookies()).get(SESSION_COOKIES.access)?.value;
+    const fetchSearch = (token?: string) => fetch(upstream, {
       method: "GET",
       cache: "no-store",
-      headers: { accept: "application/json" }
+      headers: { accept: "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) }
     });
+    let response = await fetchSearch(accessToken);
+    if (response.status === 401 && accessToken) response = await fetchSearch();
     const payload = await response.json();
     return NextResponse.json(payload, { status: response.status });
   } catch (error) {

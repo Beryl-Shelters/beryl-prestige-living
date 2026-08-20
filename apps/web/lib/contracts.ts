@@ -138,6 +138,7 @@ export type MarketplacePropertyCard = {
   photoCount: number;
   verified: boolean;
   publishedAt: string | null;
+  saved: boolean;
 };
 
 export type MarketplacePagination = {
@@ -159,7 +160,9 @@ export type MarketplaceSearchParams = {
   maxPrice?: number;
   propertyType?: string;
   category?: MarketplacePropertyCategory;
-  bedrooms?: number;
+  condition?: string;
+  furnishing?: string;
+  bedrooms?: number | "5+";
   sort: MarketplaceSort;
   page: number;
   limit: number;
@@ -208,6 +211,18 @@ export type MarketplacePropertyDetailResult = { property: MarketplacePropertyDet
 
 export type MarketplaceSavedPropertyMutation = {
   saved_property: { id: string; propertyId: string; savedAt: string };
+};
+
+export type MarketplaceSavedProperty = {
+  id: string;
+  propertyId: string;
+  savedAt: string;
+  property: MarketplacePropertyCard;
+};
+
+export type MarketplaceSavedPropertyListResult = {
+  saved_properties: MarketplaceSavedProperty[];
+  pagination: MarketplacePagination;
 };
 
 export type MarketplaceInterestContactMethod = "WHATSAPP" | "CALL" | "EMAIL";
