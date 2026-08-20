@@ -229,7 +229,7 @@ export function MarketplaceScreen({ initialSearchParams = {} }: { initialSearchP
         <button ref={mobileFilterButtonRef} className="marketplace-mobile-filter-button" type="button" onClick={() => setMobileFiltersOpen(true)}><SlidersHorizontal size={18} /> Filters</button>
         <div className="marketplace-results">
           <div className="marketplace-results-toolbar">
-            <div className="marketplace-results-intro"><h1 id="marketplace-results-heading">Houses for Sale in Nigeria</h1><p>Explore properties published after review by the Beryl Shelter team.</p></div>
+            <div className="marketplace-results-intro font-bold"><h1 id="marketplace-results-heading">Houses for Sale in Nigeria</h1><p>Explore properties published after review by the Beryl Shelter team.</p></div>
             <div className="marketplace-results-control-row"><p aria-live="polite">{result.isLoading ? "Finding available properties…" : total ? `Showing ${firstResult}–${lastResult} of ${total.toLocaleString("en-NG")}` : "No properties found"}</p><div className="marketplace-result-controls"><label><span>Sort:</span><select aria-label="Sort properties" value={query.sort} onChange={(event) => commit({ sort: event.target.value as MarketplaceSort })}>{sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><div className="marketplace-view-toggle" role="group" aria-label="Property result view"><button type="button" aria-label="Grid view" aria-pressed={view === "grid"} onClick={() => setView("grid")}><LayoutGrid size={17} /></button><button type="button" aria-label="List view" aria-pressed={view === "list"} onClick={() => setView("list")}><List size={18} /></button></div></div></div>
           </div>
 
