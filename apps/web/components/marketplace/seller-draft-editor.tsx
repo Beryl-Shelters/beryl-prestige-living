@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, Check, Cloud, FileText, Images, KeyRound } from "lucide-react";
+import { Building2, Check, ChevronDown, Cloud, FileText, Images, KeyRound, Minus, Plus, Upload, X } from "lucide-react";
 import { ApiAlert, Spinner } from "@/components/ui/feedback";
 import { customerApi } from "@/lib/api/client";
 import { apiErrorOf } from "@/lib/api/errors";
@@ -222,6 +222,7 @@ export function SellerDraftEditor({
           onCustomAmenityChange={setCustom}
           onAddAmenity={addAmenity}
           onSave={() => void save()}
+          onBack={() => router.push("/seller/listings")}
           onContinue={() => void continueStepOne()}
         />
       ) : step === "PHOTOS_DOCUMENTS" ? (
@@ -244,7 +245,7 @@ function normalizeStep(step: SellerDraft["currentStep"]): EditorStep {
   return step === "PHOTOS_DOCUMENTS" || step === "SALES_MANDATE" || step === "REVIEW" ? step : "PROPERTY_INFORMATION";
 }
 
-function PropertyInformationStep({
+export function PropertyInformationStep({
   draft,
   customAmenity,
   pending,
@@ -252,6 +253,7 @@ function PropertyInformationStep({
   onCustomAmenityChange,
   onAddAmenity,
   onSave,
+  onBack,
   onContinue
 }: {
   draft: Partial<SellerDraft>;
@@ -261,51 +263,68 @@ function PropertyInformationStep({
   onCustomAmenityChange: (value: string) => void;
   onAddAmenity: () => void;
   onSave: () => void;
+  onBack: () => void;
   onContinue: () => void;
 }) {
+  const setDepositType = (value: "AMOUNT" | "PERCENTAGE" | null) => {
+    onChange("initialDepositType", value);
+    if (value === null) onChange("initialDepositValue", null);
+  };
+  const selectedAmenities = draft.amenities ?? [];
   return (
-    <section className="seller-editor-card">
-      <h2>Tell us about the property</h2>
-      <label>Property Title<input placeholder="Enter property title here" value={draft.title ?? ""} onChange={(event) => onChange("title", event.target.value)} /></label>
-      <label>Description<textarea value={draft.description ?? ""} onChange={(event) => onChange("description", event.target.value)} /></label>
-      <label>Category<select value={draft.propertyCategory ?? "RESIDENTIAL"} onChange={(event) => onChange("propertyCategory", event.target.value)}><option value="RESIDENTIAL">Residential</option><option value="COMMERCIAL">Commercial</option></select></label>
-      <label>Property type<select value={draft.propertyType ?? ""} onChange={(event) => onChange("propertyType", event.target.value || undefined)}><option value="">Select property type</option>{sellerPropertyTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-      <label>Ownership<select value={draft.ownershipType ?? ""} onChange={(event) => onChange("ownershipType", event.target.value)}><option value="">Select ownership</option><option value="PERSONAL">Personal</option><option value="THIRD_PARTY">Third party</option></select></label>
-      <h3>Tell us about the location</h3>
-      <label>Location<input placeholder="Where is the property located?" value={draft.publicLocation ?? ""} onChange={(event) => onChange("publicLocation", event.target.value)} /></label>
-      <label>Full address<input value={draft.fullAddress ?? ""} onChange={(event) => onChange("fullAddress", event.target.value)} /></label>
-      <h3>Let’s discuss pricing</h3>
-      <label>Asking price (NGN)<input type="number" min="0" placeholder="Enter amount here" value={draft.askingPrice ?? ""} onChange={(event) => onChange("askingPrice", event.target.value === "" ? undefined : Number(event.target.value))} /></label>
-      <label><input type="checkbox" checked={Boolean(draft.negotiable)} onChange={(event) => onChange("negotiable", event.target.checked)} /> Price is negotiable</label>
-      <h3>Give us more details about the property</h3>
-      {draft.propertyCategory === "RESIDENTIAL" ? (
-        <>
-          <label>Bedrooms<input type="number" min="0" step="1" value={draft.bedrooms ?? ""} onChange={(event) => onChange("bedrooms", event.target.value ? Number(event.target.value) : null)} /></label>
-          <label>Bathrooms<input type="number" min="0" step="1" value={draft.bathrooms ?? ""} onChange={(event) => onChange("bathrooms", event.target.value ? Number(event.target.value) : null)} /></label>
-        </>
-      ) : (
-        <>
-          <label>Number of floors<input type="number" min="0" step="1" value={draft.numberOfFloors ?? ""} onChange={(event) => onChange("numberOfFloors", event.target.value ? Number(event.target.value) : null)} /></label>
-          <label>Parking capacity<input type="number" min="0" step="1" value={draft.parkingCapacity ?? ""} onChange={(event) => onChange("parkingCapacity", event.target.value ? Number(event.target.value) : null)} /></label>
-        </>
-      )}
-      <label>Condition<select value={draft.condition ?? ""} onChange={(event) => onChange("condition", event.target.value || undefined)}><option value="">Select condition</option><option value="OFF_PLAN">Off plan</option><option value="UNDER_CONSTRUCTION">Under construction</option><option value="NEWLY_BUILT">Newly built</option><option value="FAIRLY_USED">Fairly used</option></select></label>
-      <label>Furnishing<select value={draft.furnishing ?? ""} onChange={(event) => onChange("furnishing", event.target.value || null)}><option value="">Not selected</option><option value="FULLY_FURNISHED">Fully furnished</option><option value="SEMI_FURNISHED">Semi furnished</option><option value="UNFURNISHED">Unfurnished</option></select></label>
-      <label>Initial deposit<select value={draft.initialDepositType ?? ""} onChange={(event) => onChange("initialDepositType", event.target.value || null)}><option value="">None</option><option value="AMOUNT">Amount</option><option value="PERCENTAGE">Percentage</option></select></label>
-      {draft.initialDepositType ? <label>Deposit value<input type="number" min="0" max={draft.initialDepositType === "PERCENTAGE" ? 100 : undefined} value={draft.initialDepositValue ?? ""} onChange={(event) => onChange("initialDepositValue", event.target.value ? Number(event.target.value) : null)} /></label> : null}
-      <div className="seller-amenities-field">
-        <strong>Amenities</strong>
-        {amenityOptions.map((amenity) => <button type="button" key={amenity} onClick={() => onChange("amenities", draft.amenities?.includes(amenity) ? draft.amenities.filter((item) => item !== amenity) : [...(draft.amenities ?? []), amenity])}>{amenity}</button>)}
-        <input value={customAmenity} onChange={(event) => onCustomAmenityChange(event.target.value)} placeholder="Add an amenity" />
-        <button type="button" onClick={onAddAmenity}>Add</button>
-        <p>{draft.amenities?.join(", ")}</p>
-      </div>
+    <section className="seller-editor-card seller-property-form">
+      <CollapsibleSection title="Tell us about the property" sectionId="property-basics">
+        <label className="seller-field">Property Title<input placeholder="Enter property title here" value={draft.title ?? ""} onChange={(event) => onChange("title", event.target.value)} /></label>
+        <label className="seller-field">Property Type<select value={draft.propertyType ?? ""} onChange={(event) => onChange("propertyType", event.target.value || undefined)}><option value="">Select property type</option>{sellerPropertyTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label className="seller-field">Description<textarea placeholder="Describe the property" value={draft.description ?? ""} onChange={(event) => onChange("description", event.target.value)} /></label>
+        <ChoiceGroup legend="Category" value={draft.propertyCategory} options={[["RESIDENTIAL", "Residential", "A home, flat or apartment"], ["COMMERCIAL", "Commercial", "An office or business property"]]} onSelect={(value) => onChange("propertyCategory", value)} />
+        <ChoiceGroup legend="Ownership" value={draft.ownershipType} stacked options={[["PERSONAL", "Personal", "I own this property."], ["THIRD_PARTY", "Third party", "I’m listing on the owner’s behalf."]]} onSelect={(value) => onChange("ownershipType", value)} />
+      </CollapsibleSection>
+      <CollapsibleSection title="Tell us about the location" sectionId="property-location">
+        <label className="seller-field">Location<input placeholder="Where is the property located?" value={draft.publicLocation ?? ""} onChange={(event) => onChange("publicLocation", event.target.value)} /></label>
+        <label className="seller-field">Full address<textarea placeholder="Enter the complete property address" value={draft.fullAddress ?? ""} onChange={(event) => onChange("fullAddress", event.target.value)} /></label>
+        <p className="seller-privacy-note"><KeyRound size={16} aria-hidden="true" />The full address stays private and is only shared when appropriate.</p>
+      </CollapsibleSection>
+      <CollapsibleSection title="Let’s discuss pricing" sectionId="property-pricing">
+        <label className="seller-field">Asking price<div className="seller-money-input"><span>₦</span><input aria-label="Asking price" type="number" min="0" placeholder="Enter amount here" value={draft.askingPrice ?? ""} onChange={(event) => onChange("askingPrice", event.target.value === "" ? undefined : Number(event.target.value))} /></div></label>
+        <ChoiceGroup legend="Is the price negotiable?" value={draft.negotiable ? "YES" : "NO"} options={[["YES", "Yes, negotiable"], ["NO", "No, fixed price"]]} onSelect={(value) => onChange("negotiable", value === "YES")} />
+        <ChoiceGroup legend="Initial deposit" value={draft.initialDepositType ?? "NONE"} options={[["NONE", "None"], ["AMOUNT", "Amount"], ["PERCENTAGE", "Percentage"]]} onSelect={(value) => setDepositType(value === "NONE" ? null : value as "AMOUNT" | "PERCENTAGE")} compact />
+        {draft.initialDepositType ? <label className="seller-field">{draft.initialDepositType === "AMOUNT" ? "Deposit amount" : "Deposit percentage"}<div className="seller-money-input"><span>{draft.initialDepositType === "AMOUNT" ? "₦" : "%"}</span><input aria-label={draft.initialDepositType === "AMOUNT" ? "Deposit amount" : "Deposit percentage"} type="number" min="0" max={draft.initialDepositType === "PERCENTAGE" ? 100 : undefined} value={draft.initialDepositValue ?? ""} onChange={(event) => onChange("initialDepositValue", event.target.value ? Number(event.target.value) : null)} /></div></label> : null}
+      </CollapsibleSection>
+      <CollapsibleSection title="Give us more details about the property" sectionId="property-details">
+        <div className="seller-counter-grid">
+          {draft.propertyCategory === "COMMERCIAL" ? <><CounterField label="Number of floors" field="numberOfFloors" value={draft.numberOfFloors} onChange={onChange} /><CounterField label="Parking capacity" field="parkingCapacity" value={draft.parkingCapacity} onChange={onChange} /></> : <><CounterField label="Bedrooms" field="bedrooms" value={draft.bedrooms} onChange={onChange} /><CounterField label="Bathrooms" field="bathrooms" value={draft.bathrooms} onChange={onChange} /><CounterField label="Toilets" field="toilets" value={draft.toilets} onChange={onChange} /><CounterField label="Parking spaces" field="parkingSpaces" value={draft.parkingSpaces} onChange={onChange} /></>}
+        </div>
+        <ChoiceGroup legend="Condition" value={draft.condition} options={[["OFF_PLAN", "Off Plan"], ["UNDER_CONSTRUCTION", "Under Construction"], ["NEWLY_BUILT", "Newly Built"], ["FAIRLY_USED", "Fairly Used"]]} onSelect={(value) => onChange("condition", value)} compact />
+        <ChoiceGroup legend="Furnishing" value={draft.furnishing ?? undefined} options={[["UNFURNISHED", "Unfurnished"], ["SEMI_FURNISHED", "Semi Furnished"], ["FULLY_FURNISHED", "Fully Furnished"]]} onSelect={(value) => onChange("furnishing", value)} compact />
+        <div className="seller-amenities-field">
+          <strong>Amenities</strong>
+          {selectedAmenities.length ? <div className="seller-selected-amenities">{selectedAmenities.map((amenity) => <span key={amenity}>{amenity}<button type="button" aria-label={`Remove ${amenity}`} onClick={() => onChange("amenities", selectedAmenities.filter((item) => item !== amenity))}><X size={14} /></button></span>)}</div> : null}
+          <span className="seller-field-hint">Select available features</span>
+          <div className="seller-amenity-suggestions">{amenityOptions.filter((amenity) => !selectedAmenities.includes(amenity)).map((amenity) => <button type="button" key={amenity} onClick={() => onChange("amenities", [...selectedAmenities, amenity])}><Plus size={14} />{amenity}</button>)}</div>
+          <div className="seller-custom-amenity"><input aria-label="Custom amenity" value={customAmenity} onChange={(event) => onCustomAmenityChange(event.target.value)} placeholder="Add another amenity" /><button className="btn btn-secondary" type="button" onClick={onAddAmenity}>Add</button></div>
+        </div>
+      </CollapsibleSection>
       <div className="seller-editor-actions seller-editor-footer-actions">
         <button className="btn btn-secondary" type="button" disabled={pending} onClick={onSave}>Save as draft</button>
-        <button className="btn btn-primary" type="button" disabled={pending} onClick={onContinue}>Continue</button>
+        <div><button className="btn btn-secondary" type="button" disabled={pending} onClick={onBack}>Back</button><button className="btn btn-primary" type="button" disabled={pending} onClick={onContinue}>Continue</button></div>
       </div>
     </section>
   );
+}
+
+function CollapsibleSection({ title, sectionId, children }: { title: string; sectionId: string; children: React.ReactNode }) {
+  const [expanded, setExpanded] = useState(true);
+  return <section className="seller-form-section"><h2><button className="seller-section-toggle" type="button" aria-expanded={expanded} aria-controls={sectionId} onClick={() => setExpanded((value) => !value)}><span>{title}</span><ChevronDown size={20} className={expanded ? "is-open" : ""} /></button></h2><div id={sectionId} hidden={!expanded} className="seller-section-content">{children}</div></section>;
+}
+
+function ChoiceGroup({ legend, value, options, onSelect, stacked = false, compact = false }: { legend: string; value?: string | boolean | null; options: ReadonlyArray<readonly [string, string, string?]>; onSelect: (value: string) => void; stacked?: boolean; compact?: boolean }) {
+  return <fieldset className={`seller-choice-group${stacked ? " is-stacked" : ""}${compact ? " is-compact" : ""}`}><legend>{legend}</legend><div>{options.map(([machineValue, label, note]) => <label key={machineValue} className={value === machineValue ? "is-selected" : ""}><input type="radio" name={legend.replace(/\s/g, "-").toLowerCase()} value={machineValue} checked={value === machineValue} onChange={() => onSelect(machineValue)} /><span><strong>{label}</strong>{note ? <small>{note}</small> : null}</span></label>)}</div></fieldset>;
+}
+
+function CounterField({ label, field, value, onChange }: { label: string; field: keyof SellerDraft; value?: number | null; onChange: (key: keyof SellerDraft, value: unknown) => void }) {
+  const count = value ?? 0;
+  return <div className="seller-counter"><span>{label}</span><div><button type="button" aria-label={`Decrease ${label.toLowerCase()}`} disabled={count <= 0} onClick={() => onChange(field, Math.max(0, count - 1))}><Minus size={16} /></button><output aria-live="polite">{count}</output><button type="button" aria-label={`Increase ${label.toLowerCase()}`} onClick={() => onChange(field, count + 1)}><Plus size={16} /></button></div></div>;
 }
 
 function MediaStep({ propertyId, draft, onBack }: { propertyId: string; draft: Partial<SellerDraft>; onBack: () => void }) {
@@ -345,19 +364,32 @@ function MediaStep({ propertyId, draft, onBack }: { propertyId: string; draft: P
     }
   };
 
+  const saveMediaDraft = async () => {
+    if (busy) return;
+    setError("");
+    setBusy(true);
+    try {
+      await customerApi.saveSellerDraft(propertyId, { currentStep: "PHOTOS_DOCUMENTS" });
+      setBusy(false);
+    } catch {
+      setError("We could not save this draft. Please try again.");
+      setBusy(false);
+    }
+  };
+
   const images = [...(draft.images ?? [])].sort((first, second) => first.order - second.order);
   return (
-    <section className="seller-editor-card">
-      <h2>Photos &amp; documents</h2>
+    <section className="seller-editor-card seller-media-step">
+      <div className="seller-editor-heading"><p className="seller-kicker">Step 2</p><h2>Add some photos of the property to show buyers</h2><p>Add at least one clear photo. You can add up to ten photos and rearrange them at any time.</p></div>
       {error ? <ApiAlert>{error}</ApiAlert> : null}
-      <label>Upload property photos<input disabled={busy || images.length >= 10} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={upload} /></label>
-      <p>{images.length}/10 photos · JPEG, PNG or WEBP · 5MB each</p>
+      <label className="seller-upload-dropzone"><Upload size={24} aria-hidden="true" /><strong>Add Photos</strong><span>JPEG, PNG or WEBP · 5MB each</span><input disabled={busy || images.length >= 10} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={upload} /></label>
+      <p className="seller-upload-count">{images.length}/10 photos</p>
       {images.length ? (
         <div className="seller-media-grid">
           {images.map((image, index) => (
             <article key={image.id}>
               <Image src={image.url} alt={`Property photo ${index + 1}`} width={640} height={420} />
-              <strong>{image.isCover ? "Cover image" : `Photo ${index + 1}`}</strong>
+              <strong>{image.isCover ? "Cover" : `Photo ${index + 1}`}</strong>
               <div>
                 <button disabled={busy || index === 0} type="button" onClick={async () => { setBusy(true); await customerApi.reorderSellerImages(propertyId, [...images.slice(0, index - 1), image, images[index - 1], ...images.slice(index + 1)].map((item) => item.id)); refresh(); }}>Move left</button>
                 {!image.isCover ? <button disabled={busy} type="button" onClick={async () => { setBusy(true); await customerApi.setSellerCover(propertyId, image.id); refresh(); }}>Set as cover</button> : null}
@@ -366,9 +398,11 @@ function MediaStep({ propertyId, draft, onBack }: { propertyId: string; draft: P
             </article>
           ))}
         </div>
-      ) : <p>No photos yet. Upload a photo to begin.</p>}
-      <label>Document type<select value={type} onChange={(event) => setType(event.target.value)}><option value="DEED">Deed</option><option value="SURVEY_PLAN">Survey plan</option><option value="OWNERSHIP_PAPERS">Ownership papers</option><option value="CERTIFICATE_OF_OCCUPANCY">Certificate of occupancy</option><option value="OTHER">Other</option></select></label>
-      <label>Upload private PDF (10MB max)<input disabled={busy} type="file" accept="application/pdf" onChange={async (event) => {
+      ) : <p className="seller-empty-media">No photos yet. Add a photo to begin.</p>}
+      <p className="seller-media-hint">Drag or use the controls to arrange your photos. Choose one cover image.</p>
+      <div className="seller-documents-heading"><h3>Add supporting documents</h3><p>Documents are optional, private, and never shown on the public listing.</p></div>
+      <label className="seller-field">Document type<select value={type} onChange={(event) => setType(event.target.value)}><option value="DEED">Deed</option><option value="SURVEY_PLAN">Survey plan</option><option value="OWNERSHIP_PAPERS">Ownership papers</option><option value="CERTIFICATE_OF_OCCUPANCY">Certificate of occupancy</option><option value="OTHER">Other</option></select></label>
+      <label className="seller-upload-dropzone"><FileText size={24} aria-hidden="true" /><strong>Upload supporting document</strong><span>PDF · 10MB maximum</span><input disabled={busy} type="file" accept="application/pdf" onChange={async (event) => {
         const file = event.target.files?.[0];
         if (!file || file.type !== "application/pdf" || file.size > 10 * 1024 * 1024) { setError("Use a PDF up to 10MB."); return; }
         setBusy(true);
@@ -378,10 +412,10 @@ function MediaStep({ propertyId, draft, onBack }: { propertyId: string; draft: P
         body.append("displayName", file.name);
         try { await customerApi.uploadSellerDocument(propertyId, body); refresh(); } catch { setError("Document upload failed. Please try again."); setBusy(false); }
       }} /></label>
-      {draft.documents?.length ? <ul>{draft.documents.map((document) => <li key={document.id}>{document.displayName} ({document.documentType}) <button disabled={busy} type="button" onClick={async () => { setBusy(true); await customerApi.deleteSellerDocument(propertyId, document.id); refresh(); }}>Delete</button></li>)}</ul> : <p>No supporting documents uploaded. Documents are optional.</p>}
+      {draft.documents?.length ? <ul className="seller-document-list">{draft.documents.map((document) => <li key={document.id}><FileText size={18} /><span><strong>{document.displayName}</strong><small>{document.documentType}</small></span><button aria-label={`Delete ${document.displayName}`} disabled={busy} type="button" onClick={async () => { setBusy(true); await customerApi.deleteSellerDocument(propertyId, document.id); refresh(); }}><X size={17} /></button></li>)}</ul> : <p className="seller-empty-media">No supporting documents uploaded.</p>}
       <div className="seller-editor-actions seller-editor-footer-actions">
-        <button className="btn btn-secondary" type="button" disabled={busy} onClick={onBack}>Back</button>
-        <button className="btn btn-primary" type="button" disabled={busy} onClick={() => void continueToSalesMandate()}>{busy ? "Saving…" : "Continue"}</button>
+        <button className="btn btn-secondary" type="button" disabled={busy} onClick={() => void saveMediaDraft()}>Save as draft</button>
+        <div><button className="btn btn-secondary" type="button" disabled={busy} onClick={onBack}>Back</button><button className="btn btn-primary" type="button" disabled={busy} onClick={() => void continueToSalesMandate()}>{busy ? "Saving…" : "Continue"}</button></div>
       </div>
     </section>
   );

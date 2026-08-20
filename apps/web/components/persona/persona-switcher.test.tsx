@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithQuery } from "@/test/render";
 import { PersonaSwitcher } from "./persona-switcher";
 
-const mocks = vi.hoisted(() => ({ push: vi.fn(), activate: vi.fn(), switchPersona: vi.fn(), close: vi.fn(), track: vi.fn(), updatePersona: vi.fn(), prepare: vi.fn() }));
+const mocks = vi.hoisted(() => ({ push: vi.fn(), activate: vi.fn(), switchPersona: vi.fn(), close: vi.fn(), track: vi.fn(), updatePersona: vi.fn(), prepare: vi.fn(), refreshSession: vi.fn() }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
 vi.mock("@/lib/api/client", () => ({ customerApi: {
@@ -21,12 +21,14 @@ vi.mock("@/lib/analytics/customer", () => ({
   updateCustomerAnalyticsPersona: mocks.updatePersona
 }));
 vi.mock("@/lib/analytics/onboarding-trigger", () => ({ prepareOnboardingAnalyticsTrigger: mocks.prepare }));
+vi.mock("@/context/auth-provider", () => ({ useAuth: () => ({ refreshSession: mocks.refreshSession }) }));
 
 describe("PersonaSwitcher", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.activate.mockResolvedValue({ success: true, data: { activePersona: "SELLER_DEVELOPER", nextAction: "COMPLETE_SELLER_ONBOARDING" } });
     mocks.switchPersona.mockResolvedValue({ success: true, data: { activePersona: "SELLER_DEVELOPER", nextAction: "OPEN_SELLER_DASHBOARD" } });
+    mocks.refreshSession.mockResolvedValue({ activePersona: "SELLER_DEVELOPER", personas: [{ type: "SELLER_DEVELOPER", onboardingStatus: "NOT_STARTED" }], nextAction: "COMPLETE_SELLER_ONBOARDING" });
   });
 
   it("activates an unactivated persona and routes to onboarding", async () => {
@@ -43,11 +45,39 @@ describe("PersonaSwitcher", () => {
       { type: "BUYER", onboardingStatus: "COMPLETED", activated: true },
       { type: "SELLER_DEVELOPER", onboardingStatus: "COMPLETED", activated: true }
     ] } });
+    mocks.refreshSession.mockResolvedValueOnce({ activePersona: "SELLER_DEVELOPER", personas: [{ type: "BUYER", onboardingStatus: "COMPLETED" }, { type: "SELLER_DEVELOPER", onboardingStatus: "COMPLETED" }], nextAction: "OPEN_SELLER_DASHBOARD" });
     renderWithQuery(<PersonaSwitcher open onClose={mocks.close} />);
     await userEvent.click(await screen.findByRole("button", { name: /^switch$/i }));
     await waitFor(() => expect(mocks.switchPersona.mock.calls[0]?.[0]).toBe("SELLER_DEVELOPER"));
     expect(mocks.push).toHaveBeenCalledWith("/seller/listings");
+    expect(mocks.refreshSession).toHaveBeenCalledOnce();
     expect(mocks.track).toHaveBeenCalledWith("Persona Switched", { from_persona: "Buyer", to_persona: "Seller-Developer" });
+  });
+
+  it("switches back to a completed Buyer and uses the refreshed canonical destination", async () => {
+    const client = await import("@/lib/api/client");
+    vi.mocked(client.customerApi.personas).mockResolvedValueOnce({ success: true, message: "ok", data: { activePersona: "SELLER_DEVELOPER", personas: [
+      { type: "BUYER", onboardingStatus: "COMPLETED", activated: true },
+      { type: "SELLER_DEVELOPER", onboardingStatus: "COMPLETED", activated: true }
+    ] } });
+    mocks.switchPersona.mockResolvedValueOnce({ success: true, data: { activePersona: "BUYER", nextAction: "OPEN_BUYER_DASHBOARD" } });
+    mocks.refreshSession.mockResolvedValueOnce({ activePersona: "BUYER", personas: [{ type: "BUYER", onboardingStatus: "COMPLETED" }, { type: "SELLER_DEVELOPER", onboardingStatus: "COMPLETED" }], nextAction: "OPEN_BUYER_DASHBOARD" });
+    renderWithQuery(<PersonaSwitcher open onClose={mocks.close} />);
+    await userEvent.click(await screen.findByRole("button", { name: /^switch$/i }));
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/marketplace"));
+  });
+
+  it("uses refreshed onboarding state rather than a stale mutation destination", async () => {
+    const client = await import("@/lib/api/client");
+    vi.mocked(client.customerApi.personas).mockResolvedValueOnce({ success: true, message: "ok", data: { activePersona: "SELLER_DEVELOPER", personas: [
+      { type: "BUYER", onboardingStatus: "NOT_STARTED", activated: true },
+      { type: "SELLER_DEVELOPER", onboardingStatus: "COMPLETED", activated: true }
+    ] } });
+    mocks.switchPersona.mockResolvedValueOnce({ success: true, data: { activePersona: "BUYER", nextAction: "OPEN_BUYER_DASHBOARD" } });
+    mocks.refreshSession.mockResolvedValueOnce({ activePersona: "BUYER", personas: [{ type: "BUYER", onboardingStatus: "NOT_STARTED" }], nextAction: "COMPLETE_BUYER_ONBOARDING" });
+    renderWithQuery(<PersonaSwitcher open onClose={mocks.close} />);
+    await userEvent.click(await screen.findByRole("button", { name: /^switch$/i }));
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/onboarding/buyer"));
   });
 
   it("closes with Escape", async () => {

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2 } from "lucide-react";
 import { ApiAlert, Spinner } from "@/components/ui/feedback";
 import { customerApi } from "@/lib/api/client";
 import { apiErrorOf } from "@/lib/api/errors";
@@ -64,11 +65,13 @@ export function SellerReviewStep({ propertyId }: { propertyId: string }) {
   if (submission) {
     return (
       <section className="seller-editor-card seller-submit-success" aria-labelledby="submission-success-title">
+        <CheckCircle2 className="seller-success-icon" size={56} aria-hidden="true" />
         <p className="seller-kicker">Listing submitted</p>
-        <h2 id="submission-success-title" ref={successHeading} tabIndex={-1}>Your property has been submitted for review</h2>
-        <p>We’ll show its latest status in My Listings.</p>
+        <h2 id="submission-success-title" ref={successHeading} tabIndex={-1}>Your listing has been submitted to our team</h2>
+        <p>We’ll review the information you provided and show its latest status in My Listings.</p>
         <dl><div><dt>Reference ID</dt><dd>{submission.referenceId}</dd></div><div><dt>Status</dt><dd>In review</dd></div></dl>
-        <Link className="btn btn-primary" href="/seller/listings">Open My Listings</Link>
+        <div className="seller-next-steps"><h3>What happens next</h3><ol><li><span>1</span>Our team reviews your listing.</li><li><span>2</span>You can follow its status in My Listings.</li><li><span>3</span>We’ll let you know if any changes are needed.</li></ol></div>
+        <Link className="btn btn-primary" href="/seller/listings">View My Listings</Link>
       </section>
     );
   }
@@ -81,7 +84,7 @@ export function SellerReviewStep({ propertyId }: { propertyId: string }) {
   const images = [...property.images].sort((first, second) => first.order - second.order);
   return (
     <section className="seller-editor-card seller-review" aria-labelledby="review-title">
-      <div className="seller-editor-heading"><p className="seller-kicker">Step 4</p><h2 id="review-title">Review your listing</h2><p>Check your property details before submitting for review.</p></div>
+      <div className="seller-editor-heading seller-review-heading"><p className="seller-kicker">Step 4</p><h2 id="review-title">Review your property listing</h2><p>This is how your property information will appear to buyers.</p></div>
       {error ? <ApiAlert>{error}</ApiAlert> : null}
       {missingSections.length ? <div className="seller-review-missing"><h3>Needs attention</h3><ul>{missingSections.map((section) => <li key={section}>{incompleteSectionCopy[section] ?? "Complete this section before submitting."} <Link href={sectionRoute(section, propertyId)}>Edit</Link></li>)}</ul></div> : null}
       <div className="seller-review-grid">

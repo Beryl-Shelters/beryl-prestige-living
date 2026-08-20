@@ -3,7 +3,7 @@
 import { Building2, Check, Plus, UserRound, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiAlert, Spinner } from "@/components/ui/feedback";
 import { customerApi } from "@/lib/api/client";
 import { apiErrorOf } from "@/lib/api/errors";
@@ -11,6 +11,7 @@ import type { PersonaState, PersonaType } from "@/lib/contracts";
 import { routeForNextAction } from "@/lib/navigation";
 import { customerPersonaForAnalytics, trackCustomerEvent, updateCustomerAnalyticsPersona } from "@/lib/analytics/customer";
 import { prepareOnboardingAnalyticsTrigger } from "@/lib/analytics/onboarding-trigger";
+import { useAuth } from "@/context/auth-provider";
 
 const labels: Record<PersonaType, { title: string; subtitle: string }> = {
   BUYER: { title: "Buyer", subtitle: "Find & save properties" },
@@ -19,6 +20,8 @@ const labels: Record<PersonaType, { title: string; subtitle: string }> = {
 
 export function PersonaSwitcher({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { refreshSession } = useAuth();
   const dialog = useRef<HTMLDivElement>(null);
   const [error, setError] = useState("");
   const query = useQuery({ queryKey: ["personas"], queryFn: () => customerApi.personas(), enabled: open });
@@ -53,11 +56,14 @@ export function PersonaSwitcher({ open, onClose }: { open: boolean; onClose: () 
       const previousPersona = activePersona === "BUYER" || activePersona === "SELLER_DEVELOPER" ? customerPersonaForAnalytics(activePersona) : null;
       if (!persona.activated) void trackCustomerEvent("Persona Activation Started", { target_persona: targetPersona });
       const result = persona.activated ? await switchPersona.mutateAsync(persona.type) : await activate.mutateAsync(persona.type);
+      const refreshedSession = await refreshSession();
+      if (refreshedSession.activePersona !== result.data.activePersona) throw new Error("The active profile could not be refreshed.");
+      await queryClient.invalidateQueries({ queryKey: ["personas"] });
       await updateCustomerAnalyticsPersona(customerPersonaForAnalytics(result.data.activePersona));
       if (persona.activated && previousPersona) void trackCustomerEvent("Persona Switched", { from_persona: previousPersona, to_persona: customerPersonaForAnalytics(result.data.activePersona) });
       if (result.data.nextAction === "COMPLETE_BUYER_ONBOARDING" || result.data.nextAction === "COMPLETE_SELLER_ONBOARDING") prepareOnboardingAnalyticsTrigger({ persona: customerPersonaForAnalytics(result.data.activePersona), source: "persona_activation" });
       onClose();
-      router.push(routeForNextAction(result.data.nextAction));
+      router.push(routeForNextAction(refreshedSession.nextAction));
     } catch (caught) { setError(apiErrorOf(caught).message); }
   };
 

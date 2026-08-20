@@ -95,7 +95,7 @@ describe("Seller draft Step 2 transition", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Continue" }));
 
     expect(await screen.findByText("We could not continue to the Sales Mandate step. Please try again.")).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Photos & documents" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Add some photos of the property to show buyers" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled();
     expect(mocks.push).not.toHaveBeenCalled();
   });
@@ -103,7 +103,7 @@ describe("Seller draft Step 2 transition", () => {
   it("recognizes the Step 3 query state without creating another draft", async () => {
     render(<SellerDraftEditor propertyId={propertyId} initialStep="SALES_MANDATE" />, { wrapper });
 
-    expect(await screen.findByRole("heading", { name: "Sales Mandate" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Will you also use other agents?" })).toBeVisible();
     expect(screen.getByText("Step 3 of 4")).toBeVisible();
     expect(mocks.createSellerDraft).not.toHaveBeenCalled();
     expect(mocks.saveSellerDraft).not.toHaveBeenCalled();

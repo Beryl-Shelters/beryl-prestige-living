@@ -137,6 +137,27 @@ describe("customer BFF cookie bridge", () => {
     expect(cookieHeader).toContain("Expires=Thu, 01 Jan 1970 00:00:00 GMT");
   });
 
+  it("refreshes the canonical HttpOnly session state after a persona switch", async () => {
+    state.cookies.set("beryl_customer_access", "dummy-access-token");
+    state.cookies.set("beryl_customer_state", JSON.stringify({
+      user: { id: "customer-id", fullName: "Test Customer", email: "customer@example.com", phone: null, accountStatus: "ACTIVE", emailVerified: true },
+      activePersona: "BUYER", personas: [{ type: "BUYER", onboardingStatus: "COMPLETED" }], nextAction: "OPEN_BUYER_DASHBOARD"
+    }));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(backendResponse({ success: true, message: "Active persona changed", data: { activePersona: "SELLER_DEVELOPER", onboardingStatus: "COMPLETED", nextAction: "OPEN_SELLER_DASHBOARD" } }))
+      .mockResolvedValueOnce(backendResponse({ success: true, message: "Status fetched", data: { activePersona: "SELLER_DEVELOPER", personas: [{ type: "BUYER", onboardingStatus: "COMPLETED" }, { type: "SELLER_DEVELOPER", onboardingStatus: "COMPLETED" }], nextAction: "OPEN_SELLER_DASHBOARD" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await callPatch(["personas", "active"], { personaType: "SELLER_DEVELOPER" });
+
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("http://localhost:5000/api/v1/onboarding/status");
+    expect(fetchMock.mock.calls[1]?.[1].headers).toMatchObject({ authorization: "Bearer dummy-access-token" });
+    const cookie = response.headers.get("set-cookie") ?? "";
+    expect(cookie).toContain("beryl_customer_state=");
+    expect(cookie).toContain("HttpOnly");
+    expect(decodeURIComponent(cookie)).toContain('"activePersona":"SELLER_DEVELOPER"');
+  });
+
   it("proxies authenticated property save and unsave requests through the secure cookie bridge", async () => {
     const id = "11111111-1111-4111-8111-111111111111";
     state.cookies.set("beryl_customer_access", "dummy-access-token");

@@ -16,6 +16,16 @@ const options = (maxAge: number) => ({
   maxAge
 });
 
+const customerSessionMaxAge = 60 * 60 * 24 * 30;
+
+export const setSessionStateCookie = (
+  response: NextResponse,
+  state: CustomerSessionState,
+  maxAge = customerSessionMaxAge
+) => {
+  response.cookies.set(SESSION_COOKIES.state, JSON.stringify(state), options(maxAge));
+};
+
 export const setSessionCookies = (
   response: NextResponse,
   input: {
@@ -29,7 +39,7 @@ export const setSessionCookies = (
   response.cookies.set(SESSION_COOKIES.access, input.accessToken, options(input.accessTokenExpiresIn));
   response.cookies.set(SESSION_COOKIES.refresh, input.refreshToken, options(input.refreshTokenExpiresIn));
   if (input.state) {
-    response.cookies.set(SESSION_COOKIES.state, JSON.stringify(input.state), options(input.refreshTokenExpiresIn));
+    setSessionStateCookie(response, input.state, input.refreshTokenExpiresIn);
   }
 };
 

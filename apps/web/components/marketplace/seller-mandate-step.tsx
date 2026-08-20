@@ -26,7 +26,20 @@ const mandateSchema = z.object({
 export function SellerMandateStep({ propertyId, onBack }: { propertyId: string; onBack: () => void }) {
   const router = useRouter();
   const [apiError, setApiError] = useState("");
-  const query = useQuery({ queryKey: ["seller-mandate", propertyId], queryFn: () => customerApi.sellerMandate(propertyId) });
+  const query = useQuery({
+    queryKey: ["seller-mandate", propertyId],
+    queryFn: async () => {
+      try {
+        return await customerApi.sellerMandate(propertyId);
+      } catch (error) {
+        if (apiErrorOf(error).code === "MANDATE_NOT_FOUND") {
+          return { success: true as const, message: "No saved Sales Mandate", data: { mandate: null } };
+        }
+        throw error;
+      }
+    },
+    retry: false
+  });
   const form = useForm<SellerSalesMandateInput>({
     resolver: zodResolver(mandateSchema),
     defaultValues: { sellerFullName: "", ownershipConfirmed: false, mandateAccepted: false }
@@ -76,13 +89,13 @@ export function SellerMandateStep({ propertyId, onBack }: { propertyId: string; 
   const pending = saveMandate.isPending || continueMutation.isPending;
   return (
     <section className="seller-editor-card seller-mandate" aria-labelledby="sales-mandate-title">
-      <div className="seller-editor-heading"><p className="seller-kicker">Step 3</p><h2 id="sales-mandate-title">Sales Mandate</h2><p>Choose how you want Beryl Shelter to market this property.</p></div>
+      <div className="seller-editor-heading"><p className="seller-kicker">Step 3</p><h2 id="sales-mandate-title">Will you also use other agents?</h2><p>Choose the sales mandate that works for you.</p></div>
       {apiError ? <ApiAlert>{apiError}</ApiAlert> : null}
       <form onSubmit={continueToReview} noValidate>
         <fieldset className="seller-mandate-options">
           <legend>Mandate type</legend>
-          <label className={form.watch("mandateType") === "EXCLUSIVE" ? "is-selected" : ""}><input type="radio" value="EXCLUSIVE" {...form.register("mandateType")} /><span><strong>Exclusive Sales Mandate</strong></span></label>
-          <label className={form.watch("mandateType") === "OPEN" ? "is-selected" : ""}><input type="radio" value="OPEN" {...form.register("mandateType")} /><span><strong>Open Sales Mandate</strong></span></label>
+          <label className={form.watch("mandateType") === "EXCLUSIVE" ? "is-selected" : ""}><input type="radio" value="EXCLUSIVE" {...form.register("mandateType")} /><span><strong>Exclusive Sales Mandate</strong><small>Beryl Shelter will be the only agent marketing this property.</small></span></label>
+          <label className={form.watch("mandateType") === "OPEN" ? "is-selected" : ""}><input type="radio" value="OPEN" {...form.register("mandateType")} /><span><strong>Open Sales Mandate</strong><small>You may also market this property through other agents.</small></span></label>
           {form.formState.errors.mandateType ? <p className="field-error" role="alert">{form.formState.errors.mandateType.message}</p> : null}
         </fieldset>
         <label className="seller-field">Seller full name<input autoComplete="name" {...form.register("sellerFullName")} />{form.formState.errors.sellerFullName ? <span className="field-error" role="alert">{form.formState.errors.sellerFullName.message}</span> : null}</label>
@@ -90,10 +103,9 @@ export function SellerMandateStep({ propertyId, onBack }: { propertyId: string; 
         {form.formState.errors.ownershipConfirmed ? <p className="field-error" role="alert">{form.formState.errors.ownershipConfirmed.message}</p> : null}
         <label className="seller-check"><input type="checkbox" {...form.register("mandateAccepted")} /><span>I acknowledge and accept this Sales Mandate.</span></label>
         {form.formState.errors.mandateAccepted ? <p className="field-error" role="alert">{form.formState.errors.mandateAccepted.message}</p> : null}
-        <div className="seller-editor-actions">
-          <button className="btn btn-secondary" type="button" disabled={pending} onClick={onBack}>Back</button>
+        <div className="seller-editor-actions seller-editor-footer-actions">
           <button className="btn btn-secondary" type="button" disabled={pending} onClick={() => void manualSave()}>{saveMandate.isPending ? "Saving…" : "Save as draft"}</button>
-          <button className="btn btn-primary" type="submit" disabled={pending}>{continueMutation.isPending ? "Saving…" : "Continue to Review"}</button>
+          <div><button className="btn btn-secondary" type="button" disabled={pending} onClick={onBack}>Back</button><button className="btn btn-primary" type="submit" disabled={pending}>{continueMutation.isPending ? "Saving…" : "Continue"}</button></div>
         </div>
       </form>
     </section>

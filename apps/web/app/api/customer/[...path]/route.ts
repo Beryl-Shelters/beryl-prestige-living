@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import type { ApiSuccess, CustomerSessionState } from "@/lib/contracts";
 import { ApiConfigurationError, backendApiUrl } from "@/lib/server/api-url";
-import { clearSessionCookies, SESSION_COOKIES, setSessionCookies } from "@/lib/server/session-cookies";
+import { clearSessionCookies, SESSION_COOKIES, setSessionCookies, setSessionStateCookie } from "@/lib/server/session-cookies";
 
 type Context = { params: Promise<{ path: string[] }> };
 type BackendLoginData = CustomerSessionState & {
@@ -119,6 +119,22 @@ const refreshSession = async (refreshToken: string) => {
   return { response, payload };
 };
 
+const sessionMutationPaths = new Set([
+  "onboarding/buyer",
+  "onboarding/seller",
+  "personas/activate",
+  "personas/active"
+]);
+
+const canonicalCustomerState = async (accessToken: string, cookieState?: string) => {
+  if (!cookieState) return null;
+  const current = JSON.parse(cookieState) as CustomerSessionState;
+  const statusResponse = await backendFetch("onboarding/status", "GET", undefined, accessToken);
+  if (!statusResponse.ok) return null;
+  const statusPayload = await statusResponse.json() as ApiSuccess<Pick<CustomerSessionState, "activePersona" | "personas" | "nextAction">>;
+  return { ...current, ...statusPayload.data } satisfies CustomerSessionState;
+};
+
 const upstreamNotFound = (method: string, path: string) => {
   console.warn(`[customer-bff] upstream 404 ${method} ${backendApiUrl(path)}`);
   return NextResponse.json({ success: false, message: "The authentication service route could not be reached.", code: "UPSTREAM_ROUTE_NOT_FOUND" }, { status: 502 });
@@ -203,6 +219,10 @@ const handleRequest = async (request: NextRequest, context: Context) => {
   }
 
   const response = NextResponse.json(payload, { status: backend.status });
+  if (backend.ok && accessToken && sessionMutationPaths.has(path)) {
+    const state = await canonicalCustomerState(accessToken, cookieStore.get(SESSION_COOKIES.state)?.value);
+    if (state) setSessionStateCookie(response, state);
+  }
   if (path === "auth/logout") clearSessionCookies(response);
   if (backend.ok && (path === "auth/reset-password" || path === "auth/change-password")) {
     if (path === "auth/reset-password") response.cookies.delete(SESSION_COOKIES.resetProof);

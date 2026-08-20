@@ -16,10 +16,10 @@ const created = { success: true, data: { property: { id: propertyId, currentStep
 function wrapper({ children }: { children: ReactNode }) { return <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{children}</QueryClientProvider>; }
 const fillRequired = () => {
   fireEvent.change(screen.getByLabelText("Property Title"), { target: { value: "Four bedroom home" } });
-  fireEvent.change(screen.getByLabelText("Property type"), { target: { value: "DUPLEX" } });
+  fireEvent.change(screen.getByLabelText("Property Type"), { target: { value: "DUPLEX" } });
   fireEvent.change(screen.getByLabelText("Location"), { target: { value: "Lekki, Lagos" } });
   fireEvent.change(screen.getByLabelText("Full address"), { target: { value: "12 Private Street" } });
-  fireEvent.change(screen.getByLabelText("Asking price (NGN)"), { target: { value: "250000000" } });
+  fireEvent.change(screen.getByLabelText("Asking price"), { target: { value: "250000000" } });
 };
 
 describe("Seller draft Step 1 persistence", () => {
@@ -38,7 +38,7 @@ describe("Seller draft Step 1 persistence", () => {
     render(<SellerDraftEditor />, { wrapper });
     fillRequired();
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    await screen.findByRole("heading", { name: "Photos & documents" });
+    await screen.findByRole("heading", { name: "Add some photos of the property to show buyers" });
     expect(mocks.create).toHaveBeenCalledTimes(1);
     expect(mocks.create.mock.calls[0][0]).toMatchObject({ title: "Four bedroom home", propertyCategory: "RESIDENTIAL", propertyType: "DUPLEX", publicLocation: "Lekki, Lagos", fullAddress: "12 Private Street", askingPrice: 250000000, currentStep: "PROPERTY_INFORMATION" });
     expect(mocks.save).toHaveBeenCalledWith(propertyId, expect.objectContaining({ currentStep: "PHOTOS_DOCUMENTS" }));
@@ -46,7 +46,7 @@ describe("Seller draft Step 1 persistence", () => {
 
   it("uses a controlled property-type choice and autosaves through the canonical ID", async () => {
     const view = render(<SellerDraftEditor />, { wrapper });
-    expect(screen.getByLabelText("Property type")).toHaveRole("combobox");
+    expect(screen.getByLabelText("Property Type")).toHaveRole("combobox");
     expect(screen.getByRole("option", { name: "Duplex" })).toHaveValue("DUPLEX");
 
     fireEvent.change(screen.getByLabelText("Property Title"), { target: { value: "3 bedroom" } });
@@ -73,7 +73,7 @@ describe("Seller draft Step 1 persistence", () => {
 
     expect(await screen.findByText("We couldn’t save this property draft right now. Please try again.")).toBeVisible();
     expect(screen.getByRole("heading", { name: "Tell us about the property" })).toBeVisible();
-    expect(screen.queryByRole("heading", { name: "Photos & documents" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Add some photos of the property to show buyers" })).not.toBeInTheDocument();
     expect(mocks.save).not.toHaveBeenCalled();
   });
 });

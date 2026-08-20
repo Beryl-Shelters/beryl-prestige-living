@@ -33,15 +33,30 @@ describe("Seller Marketplace W5 flow", () => {
   it("restores the existing mandate without exposing server-owned terms as form inputs", async () => {
     render(<SellerMandateStep propertyId={propertyId} onBack={vi.fn()} />, testWrapper());
     expect(await screen.findByDisplayValue("Existing Seller")).toBeVisible();
-    expect(screen.getByRole("radio", { name: "Exclusive Sales Mandate" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: /^Exclusive Sales Mandate/ })).toBeChecked();
     expect(mocks.sellerMandate).toHaveBeenCalledWith(propertyId);
     expect(screen.queryByLabelText(/accepted at|commission|agreement version/i)).not.toBeInTheDocument();
+  });
+
+  it("treats MANDATE_NOT_FOUND as the normal empty first-visit form", async () => {
+    mocks.sellerMandate.mockRejectedValue(Object.assign(new Error("not found"), { isAxiosError: true, response: { status: 404, data: { success: false, message: "Sales mandate not found", code: "MANDATE_NOT_FOUND" } } }));
+    render(<SellerMandateStep propertyId={propertyId} onBack={vi.fn()} />, testWrapper());
+    expect(await screen.findByRole("heading", { name: "Will you also use other agents?" })).toBeVisible();
+    expect(screen.getByLabelText("Seller full name")).toHaveValue("");
+    expect(screen.queryByText("We could not restore the Sales Mandate.")).not.toBeInTheDocument();
+    expect(mocks.sellerMandate).toHaveBeenCalledWith(propertyId);
+  });
+
+  it("shows restore failure for a genuine unexpected mandate error", async () => {
+    mocks.sellerMandate.mockRejectedValue(Object.assign(new Error("server failure"), { isAxiosError: true, response: { status: 500, data: { success: false, message: "Unavailable", code: "MANDATE_UNAVAILABLE" } } }));
+    render(<SellerMandateStep propertyId={propertyId} onBack={vi.fn()} />, testWrapper());
+    expect(await screen.findByText("We could not restore the Sales Mandate.")).toBeVisible();
   });
 
   it("requires a type, trimmed name, ownership confirmation, and explicit acceptance", async () => {
     mocks.sellerMandate.mockResolvedValue({ success: true, data: { mandate: null } });
     render(<SellerMandateStep propertyId={propertyId} onBack={vi.fn()} />, testWrapper());
-    fireEvent.click(await screen.findByRole("button", { name: "Continue to Review" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Continue" }));
     expect(await screen.findByText("Choose a mandate type.")).toBeVisible();
     expect(screen.getByText("Enter the Seller's full name.")).toBeVisible();
     expect(screen.getByText(/Confirm that you own/)).toBeVisible();
@@ -54,15 +69,30 @@ describe("Seller Marketplace W5 flow", () => {
     const save = deferred<unknown>(); const patch = deferred<unknown>();
     mocks.saveSellerMandate.mockReturnValue(save.promise); mocks.saveSellerDraft.mockReturnValue(patch.promise);
     render(<SellerMandateStep propertyId={propertyId} onBack={vi.fn()} />, testWrapper());
-    fireEvent.click(await screen.findByRole("radio", { name: "Open Sales Mandate" }));
+    fireEvent.click(await screen.findByRole("radio", { name: /^Open Sales Mandate/ }));
     fireEvent.change(screen.getByLabelText("Seller full name"), { target: { value: "  Test Seller  " } });
     fireEvent.click(screen.getByRole("checkbox", { name: /I confirm/ })); fireEvent.click(screen.getByRole("checkbox", { name: /I acknowledge/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Continue to Review" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() => expect(mocks.saveSellerMandate).toHaveBeenCalledWith(propertyId, { mandateType: "OPEN", sellerFullName: "Test Seller", ownershipConfirmed: true, mandateAccepted: true }));
     expect(mocks.saveSellerDraft).not.toHaveBeenCalled(); expect(mocks.push).not.toHaveBeenCalled();
     save.resolve({}); await waitFor(() => expect(mocks.saveSellerDraft).toHaveBeenCalledWith(propertyId, { currentStep: "REVIEW" }));
     expect(mocks.push).not.toHaveBeenCalled(); patch.resolve({});
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith(`/seller/listings/${propertyId}/edit?step=REVIEW`));
+  });
+
+  it("stays on Sales Mandate and does not PATCH REVIEW when mandate PUT fails", async () => {
+    mocks.sellerMandate.mockResolvedValue({ success: true, data: { mandate: null } });
+    mocks.saveSellerMandate.mockRejectedValue(new Error("save failed"));
+    render(<SellerMandateStep propertyId={propertyId} onBack={vi.fn()} />, testWrapper());
+    fireEvent.click(await screen.findByRole("radio", { name: /^Exclusive Sales Mandate/ }));
+    fireEvent.change(screen.getByLabelText("Seller full name"), { target: { value: "Test Seller" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: /I confirm/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /I acknowledge/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByText("We could not continue to Review. Please try again.")).toBeVisible();
+    expect(mocks.saveSellerMandate).toHaveBeenCalledWith(propertyId, { mandateType: "EXCLUSIVE", sellerFullName: "Test Seller", ownershipConfirmed: true, mandateAccepted: true });
+    expect(mocks.saveSellerDraft).not.toHaveBeenCalled();
+    expect(mocks.push).not.toHaveBeenCalled();
   });
 
   it("requests authoritative review data and renders safe information, ordered images, mandate, and canonical edit links", async () => {
@@ -84,8 +114,8 @@ describe("Seller Marketplace W5 flow", () => {
     const button = await screen.findByRole("button", { name: "Submit for Review" }); fireEvent.click(button); fireEvent.click(button);
     expect(mocks.submitSellerProperty).toHaveBeenCalledTimes(1); expect(screen.getByRole("button", { name: "Submitting…" })).toBeDisabled();
     submit.resolve({ success: true, data: { propertyId, referenceId: "BRL-1001", status: "IN_REVIEW", submittedAt: "2026-08-18T12:00:00.000Z", nextAction: "OPEN_MY_LISTINGS" } });
-    expect(await screen.findByText("Your property has been submitted for review")).toBeVisible(); expect(screen.getByText("BRL-1001")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Open My Listings" })).toHaveAttribute("href", "/seller/listings");
+    expect(await screen.findByText("Your listing has been submitted to our team")).toBeVisible(); expect(screen.getByText("BRL-1001")).toBeVisible();
+    expect(screen.getByRole("link", { name: "View My Listings" })).toHaveAttribute("href", "/seller/listings");
     expect(screen.queryByText(/24 hours|48 hours|working days/i)).not.toBeInTheDocument();
     await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["seller-marketplace-listings"] }));
   });

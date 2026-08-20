@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Building2, ChevronLeft, ChevronRight, Ellipsis, Images, Plus, RefreshCw } from "lucide-react";
 import { ApiAlert } from "@/components/ui/feedback";
@@ -70,8 +70,13 @@ export function SellerListingsScreen({ initialStatus = "ALL", initialPage = 1 }:
   const [personaSwitcherOpen, setPersonaSwitcherOpen] = useState(false);
   const status = validStatuses.includes(initialStatus) ? initialStatus : "ALL";
   const page = Math.max(1, initialPage);
-  const isSeller = session?.activePersona === "SELLER_DEVELOPER";
-  const query = useQuery({ queryKey: ["seller-marketplace-listings", status, page], queryFn: () => customerApi.sellerListings({ status, page, limit: 12 }), enabled: Boolean(isSeller) });
+  const sellerPersona = session?.personas.find((persona) => persona.type === "SELLER_DEVELOPER");
+  const isSellerActive = session?.activePersona === "SELLER_DEVELOPER";
+  const isSellerReady = isSellerActive && sellerPersona?.onboardingStatus === "COMPLETED";
+  const query = useQuery({ queryKey: ["seller-marketplace-listings", status, page], queryFn: () => customerApi.sellerListings({ status, page, limit: 12 }), enabled: Boolean(isSellerReady) });
+  useEffect(() => {
+    if (!sessionLoading && isSellerActive && sellerPersona?.onboardingStatus !== "COMPLETED") router.replace("/onboarding/seller");
+  }, [isSellerActive, router, sellerPersona?.onboardingStatus, sessionLoading]);
   const update = (nextStatus: SellerListingStatus, nextPage = 1) => {
     const params = new URLSearchParams();
     if (nextStatus !== "ALL") params.set("status", nextStatus);
@@ -79,7 +84,11 @@ export function SellerListingsScreen({ initialStatus = "ALL", initialPage = 1 }:
     router.replace(`/seller/listings${params.size ? `?${params}` : ""}` as Route);
   };
   const result = query.data?.data;
-  if (!sessionLoading && !isSeller) return <main className="seller-listings-page"><section className="seller-listing-state"><Building2 size={38} aria-hidden="true" /><h1>Seller access required</h1><p>Switch to, or activate, your Seller profile to manage Marketplace listings.</p><button className="btn btn-primary" type="button" onClick={() => setPersonaSwitcherOpen(true)}>Switch profile</button></section><PersonaSwitcher open={personaSwitcherOpen} onClose={() => setPersonaSwitcherOpen(false)} /></main>;
+  if (!sessionLoading && isSellerActive && sellerPersona?.onboardingStatus !== "COMPLETED") return <main className="seller-listings-page"><section className="seller-listing-state"><Building2 size={38} aria-hidden="true" /><h1>Complete your Seller profile</h1><p>Taking you to Seller onboarding before you manage listings.</p></section></main>;
+  if (!sessionLoading && !isSellerReady) {
+    const activated = Boolean(sellerPersona?.activated ?? sellerPersona);
+    return <main className="seller-listings-page"><section className="seller-listing-state"><Building2 size={38} aria-hidden="true" /><h1>{activated ? "Switch to your Seller profile" : "Activate your Seller profile"}</h1><p>{activated ? "Your Seller profile is available but is not the active profile." : "Activate Seller mode before managing Marketplace listings."}</p><button className="btn btn-primary" type="button" onClick={() => setPersonaSwitcherOpen(true)}>{activated ? "Switch profile" : "Activate Seller"}</button></section><PersonaSwitcher open={personaSwitcherOpen} onClose={() => setPersonaSwitcherOpen(false)} /></main>;
+  }
   const totalPages = Math.max(1, result?.pagination.total_pages ?? 1);
   const pageChoices = Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1);
   return <main className="seller-listings-page">

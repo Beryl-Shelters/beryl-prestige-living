@@ -16,6 +16,7 @@ type AuthContextValue = {
   setResetEmail: (email: string) => void;
   login: (identifier: string, password: string, analyticsDistinctId?: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
+  refreshSession: () => Promise<CustomerSessionState>;
   setSession: (state: CustomerSessionState | null) => void;
 };
 
@@ -76,7 +77,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try { await customerApi.logout(); } finally { await resetCustomerAnalytics(); setSession(null); }
   };
 
-  const value = { session: activeSession, sessionLoading: restored.isLoading, pendingSignup, resetEmail, setPendingSignup, setResetEmail, login, logout, setSession };
+  const refreshSession = async () => {
+    const refreshed = await restored.refetch();
+    if (refreshed.error) throw refreshed.error;
+    if (!refreshed.data?.data) throw new Error("Customer session could not be refreshed");
+    setSession(refreshed.data.data);
+    return refreshed.data.data;
+  };
+
+  const value = { session: activeSession, sessionLoading: restored.isLoading, pendingSignup, resetEmail, setPendingSignup, setResetEmail, login, logout, refreshSession, setSession };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
