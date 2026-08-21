@@ -109,7 +109,7 @@ export function SellerSubmissionSuccess({ submission }: { submission: SellerSubm
       <h2 id="submission-success-title" ref={successHeading} tabIndex={-1}>Your listing has been submitted to our team</h2>
       <p>We’ll review the information you provided and show its latest status in My Listings.</p>
       <dl><div><dt>Reference ID</dt><dd>{submission.referenceId}</dd></div><div><dt>Status</dt><dd>In review</dd></div></dl>
-      <div className="seller-next-steps"><h3>What happens next</h3><ol><li><span>1</span>Our team reviews your listing.</li><li><span>2</span>You can follow its status in My Listings.</li><li><span>3</span>We’ll let you know if any changes are needed.</li></ol></div>
+      <div className="seller-next-steps"><h3 className="bold">What happens next</h3><ol><li><span>1</span>Our team reviews your listing.</li><li><span>2</span>You can follow its status in My Listings.</li><li><span>3</span>We’ll let you know if any changes are needed.</li></ol></div>
       <Link className="btn btn-primary" href={sellerSubmissionRouteForAction(submission.nextAction)}>Open My Listings</Link>
     </section>
   );
