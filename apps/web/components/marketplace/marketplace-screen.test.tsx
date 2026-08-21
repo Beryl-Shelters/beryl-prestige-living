@@ -159,6 +159,7 @@ describe("public Marketplace screen", () => {
     expect(results).toHaveClass("marketplace-grid");
     await user.click(screen.getByRole("button", { name: "List view" }));
     expect(results).toHaveClass("marketplace-list");
+    expect(screen.getByText(property.title).closest("[data-view]")).toHaveAttribute("data-view", "list");
     expect(screen.getByText("Verified")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Grid view" }));
     expect(results).toHaveClass("marketplace-grid");
