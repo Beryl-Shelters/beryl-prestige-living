@@ -38,6 +38,7 @@ import {
   type MarketplaceQueryState
 } from "@/lib/marketplace";
 import { sellerPropertyTypes as propertyTypes } from "@/lib/marketplace-property-options";
+import { formatNumericInput, numericDigits } from "@/lib/numeric-input";
 
 const sortOptions: { value: MarketplaceSort; label: string }[] = [
   { value: "DEFAULT", label: "Recommended" },
@@ -102,8 +103,8 @@ function FilterPanel({ query, onApply, onReset }: FilterPanelProps) {
     <fieldset className="marketplace-filter-group">
       <legend>Price Range</legend>
       <div className="marketplace-price-row">
-        <label><span className="sr-only">Minimum</span><span className="marketplace-money-input"><b>₦</b><input aria-label="Minimum price" inputMode="numeric" min="0" type="number" value={minPrice} onChange={(event) => setMinPrice(event.target.value)} placeholder="Min. Price" /></span></label>
-        <label><span className="sr-only">Maximum</span><span className="marketplace-money-input"><b>₦</b><input aria-label="Maximum price" inputMode="numeric" min="0" type="number" value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)} placeholder="Max. Price" /></span></label>
+        <label><span className="sr-only">Minimum</span><span className="marketplace-money-input"><b>₦</b><input aria-label="Minimum price" inputMode="numeric" pattern="[0-9,]*" type="text" value={formatNumericInput(minPrice)} onChange={(event) => setMinPrice(numericDigits(event.target.value))} placeholder="Min. Price" /></span></label>
+        <label><span className="sr-only">Maximum</span><span className="marketplace-money-input"><b>₦</b><input aria-label="Maximum price" inputMode="numeric" pattern="[0-9,]*" type="text" value={formatNumericInput(maxPrice)} onChange={(event) => setMaxPrice(numericDigits(event.target.value))} placeholder="Max. Price" /></span></label>
       </div>
       {rangeError ? <p className="marketplace-filter-error" role="alert">{rangeError}</p> : null}
     </fieldset>

@@ -69,9 +69,10 @@ describe("Seller Property Information design controls", () => {
     fireEvent.click(screen.getByLabelText("Amount"));
     const amount = screen.getByLabelText("Deposit amount");
     fireEvent.change(amount, { target: { value: "500000" } });
-    expect(amount).toHaveValue(500000);
+    expect(amount).toHaveValue("500,000");
     fireEvent.click(screen.getByLabelText("Percentage"));
-    expect(screen.getByLabelText("Deposit percentage")).toHaveAttribute("max", "100");
+    expect(screen.getByLabelText("Deposit percentage")).toHaveAttribute("inputmode", "numeric");
+    expect(screen.getByLabelText("Deposit percentage")).toHaveAttribute("type", "text");
     fireEvent.click(screen.getByLabelText("None"));
     expect(screen.queryByLabelText("Deposit amount")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Deposit percentage")).not.toBeInTheDocument();

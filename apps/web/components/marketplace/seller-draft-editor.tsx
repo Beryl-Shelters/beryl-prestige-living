@@ -13,6 +13,7 @@ import { customerApi } from "@/lib/api/client";
 import { apiErrorOf } from "@/lib/api/errors";
 import type { SellerDraft, SellerSubmissionResult } from "@/lib/contracts";
 import { sellerPropertyTypes } from "@/lib/marketplace-property-options";
+import { formatNumericInput, numericInputValue } from "@/lib/numeric-input";
 import { continueSellerDraftToSalesMandate } from "@/lib/seller-draft-transition";
 import { toSellerDraftPayload } from "@/lib/seller-draft-payload";
 import { sellerListingRouteForAction } from "@/lib/seller-listings";
@@ -308,10 +309,10 @@ export function PropertyInformationStep({
         <p className="seller-privacy-note"><KeyRound size={16} aria-hidden="true" />The full address stays private and is only shared when appropriate.</p>
       </CollapsibleSection>
       <CollapsibleSection title="Let’s discuss pricing" sectionId="property-pricing">
-        <label className="seller-field">Asking price<div className="seller-money-input"><span>₦</span><input aria-label="Asking price" type="number" min="0" placeholder="Enter amount here" value={draft.askingPrice ?? ""} onChange={(event) => onChange("askingPrice", event.target.value === "" ? undefined : Number(event.target.value))} /></div></label>
+        <label className="seller-field">Asking price<div className="seller-money-input"><span>₦</span><input aria-label="Asking price" inputMode="numeric" pattern="[0-9,]*" type="text" placeholder="Enter amount here" value={formatNumericInput(draft.askingPrice)} onChange={(event) => onChange("askingPrice", numericInputValue(event.target.value) ?? undefined)} /></div></label>
         <ChoiceGroup legend="Is the price negotiable?" value={draft.negotiable ? "YES" : "NO"} options={[["YES", "Yes, negotiable"], ["NO", "No, fixed price"]]} onSelect={(value) => onChange("negotiable", value === "YES")} />
         <ChoiceGroup legend="Initial deposit" value={draft.initialDepositType ?? "NONE"} options={[["NONE", "None"], ["AMOUNT", "Amount"], ["PERCENTAGE", "Percentage"]]} onSelect={(value) => setDepositType(value === "NONE" ? null : value as "AMOUNT" | "PERCENTAGE")} compact />
-        {draft.initialDepositType ? <label className="seller-field">{draft.initialDepositType === "AMOUNT" ? "Deposit amount" : "Deposit percentage"}<div className="seller-money-input"><span>{draft.initialDepositType === "AMOUNT" ? "₦" : "%"}</span><input aria-label={draft.initialDepositType === "AMOUNT" ? "Deposit amount" : "Deposit percentage"} type="number" min="0" max={draft.initialDepositType === "PERCENTAGE" ? 100 : undefined} value={draft.initialDepositValue ?? ""} onChange={(event) => onChange("initialDepositValue", event.target.value ? Number(event.target.value) : null)} /></div></label> : null}
+        {draft.initialDepositType ? <label className="seller-field">{draft.initialDepositType === "AMOUNT" ? "Deposit amount" : "Deposit percentage"}<div className="seller-money-input"><span>{draft.initialDepositType === "AMOUNT" ? "₦" : "%"}</span><input aria-label={draft.initialDepositType === "AMOUNT" ? "Deposit amount" : "Deposit percentage"} inputMode="numeric" pattern="[0-9,]*" type="text" value={formatNumericInput(draft.initialDepositValue)} onChange={(event) => onChange("initialDepositValue", numericInputValue(event.target.value))} /></div></label> : null}
       </CollapsibleSection>
       <CollapsibleSection title="Give us more details about the property" sectionId="property-details">
         <div className="seller-counter-grid">

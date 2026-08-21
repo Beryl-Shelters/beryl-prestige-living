@@ -69,6 +69,8 @@ describe("public Marketplace screen", () => {
     await user.type(screen.getByLabelText("Explore States"), "Lagos");
     await user.type(screen.getByLabelText("Minimum price"), "50000000");
     await user.type(screen.getByLabelText("Maximum price"), "200000000");
+    expect(screen.getByLabelText("Minimum price")).toHaveValue("50,000,000");
+    expect(screen.getByLabelText("Maximum price")).toHaveValue("200,000,000");
     await user.click(screen.getByRole("checkbox", { name: "Flat / apartment" }));
     await user.click(screen.getByRole("checkbox", { name: "Duplex" }));
     await user.click(screen.getByRole("button", { name: "4" }));
