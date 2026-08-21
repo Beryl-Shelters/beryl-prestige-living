@@ -1,2 +1,2 @@
-import { DashboardPlaceholder } from "@/components/onboarding";
-export default function BuyerDashboard(){return <DashboardPlaceholder/>;}
+import { Redirect } from "expo-router";
+export default function BuyerDashboard(){return <Redirect href="/marketplace"/>;}

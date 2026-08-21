@@ -1,0 +1,66 @@
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+
+const source = (file: string) => readFileSync(path.resolve(__dirname, file), "utf8");
+const screen = source("components/marketplace/marketplace-screen.tsx");
+const ui = source("components/marketplace/marketplace-ui.tsx");
+const sheets = source("components/marketplace/marketplace-sheets.tsx");
+const detail = source("components/marketplace/property-detail-screen.tsx");
+const saved = source("components/marketplace/saved-properties-screen.tsx");
+const api = source("api/marketplace.ts");
+const session = source("store/auth-flow.tsx");
+const login = source("components/customer-auth.tsx");
+const onboarding = source("components/onboarding.tsx");
+
+describe("mobile Buyer Marketplace architecture", () => {
+  it("provides public Marketplace, detail, and Saved routes", () => {
+    expect(existsSync(path.resolve(__dirname, "../app/marketplace/index.tsx"))).toBe(true);
+    expect(existsSync(path.resolve(__dirname, "../app/marketplace/[propertyId].tsx"))).toBe(true);
+    expect(existsSync(path.resolve(__dirname, "../app/saved.tsx"))).toBe(true);
+  });
+  it("keeps Marketplace browsing public", () => expect(screen).toContain("searchMarketplace(filters,pageParam)"));
+  it("enriches Marketplace responses through the authenticated requester", () => expect(screen).toContain("session.authenticatedRequest<MarketplaceSearchResult>"));
+  it("uses infinite query pagination", () => expect(screen).toContain("useInfiniteQuery"));
+  it("prevents duplicate load-more requests", () => expect(screen).toContain("query.hasNextPage&&!query.isFetchingNextPage"));
+  it("deduplicates paginated result ids", () => expect(screen).toContain("dedupeProperties(query.data?.pages??[])"));
+  it("uses the authoritative backend result total", () => expect(screen).toContain("pagination.total??0"));
+  it("supports submitted search and clear", () => { expect(screen).toContain("submitSearch"); expect(screen).toContain("clearSearch"); });
+  it("provides quick mobile filter controls", () => { expect(screen).toContain('"Filter by"'); expect(screen).toContain('"Price"'); expect(screen).toContain('"Type"'); expect(screen).toContain('"Beds"'); });
+  it("provides grid and list views only", () => { expect(screen).toContain('useState<"grid"|"list">'); expect(screen).not.toContain('"map"'); });
+  it("provides all approved sort options", () => ["DEFAULT", "PRICE_HIGH_TO_LOW", "PRICE_LOW_TO_HIGH", "BEDS", "MOST_RECENT"].forEach(value => expect(sheets).toContain(value)));
+  it("provides price, type, bedroom, condition, and furnishing filters", () => ["Price Range", "Property Type", "Bedrooms", "Condition", "Furnishing"].forEach(label => expect(sheets).toContain(label)));
+  it("uses text price inputs with numeric keyboards", () => { expect(sheets).toContain('keyboardType="number-pad"'); expect(sheets).not.toContain('keyboardType="decimal-pad"'); });
+  it("formats price filters while typing", () => expect(sheets).toContain("formatNumericInput(text)"));
+  it("validates the price range before applying filters", () => expect(screen).toContain("validatePriceRange(draft)"));
+  it("renders real property images and a branded fallback", () => { expect(ui).toContain("property.coverImage?.url"); expect(ui).toContain("Beryl Marketplace"); });
+  it("renders verified status only from backend data", () => expect(ui).toMatch(/property\.verified\s*\?/));
+  it("does not fabricate a NEW badge", () => expect(ui).not.toMatch(/>NEW</));
+  it("renders photo count, price, title, type, location, and facts", () => ["property.photoCount", "property.askingPrice", "property.title", "property.propertyType", "property.publicLocation", "property.bedrooms", "property.bathrooms", "property.toilets"].forEach(field => expect(ui).toContain(field)));
+  it("prompts anonymous users before Save", () => expect(screen).toContain("if(!session.isAuthenticated){setAuthOpen(true);return;}"));
+  it("persists Save only after the protected backend mutation succeeds", () => { expect(screen).toContain("saveMarketplaceProperty"); expect(screen).toContain("onSuccess:"); });
+  it("uses the canonical Save and Unsave endpoints", () => { expect(api).toContain('`/properties/${propertyId}/save`, "POST"'); expect(api).toContain('`/properties/${propertyId}/save`, "DELETE"'); });
+  it("provides the protected Saved properties endpoint", () => expect(api).toContain('`/properties/saved/me?page=${page}&limit=20`'));
+  it("provides Saved loading, error, empty, and load-more states", () => ["isLoading", "isError", "No saved properties yet", "isFetchingNextPage"].forEach(value => expect(saved).toContain(value)));
+  it("opens Saved properties from the account menu", () => expect(ui).toContain('router.push("/saved")'));
+  it("provides public property detail loading, error, and not-found states", () => ["Loading property", "query.isError", "Property not found"].forEach(value => expect(detail).toContain(value)));
+  it("provides gallery navigation and a photo counter", () => ["Previous property image", "Next property image", "imageIndex+1"].forEach(value => expect(detail).toContain(value)));
+  it("keeps property detail buyer-safe", () => ["fullAddress", "sellerFullName", "marketplace_mandate", "property.documents"].forEach(value => expect(detail).not.toContain(value)));
+  it("renders verification, details, amenities, and interest architecture", () => ["Verified by Beryl", "PROPERTY DETAILS", "WHAT&apos;S INCLUDED", "I am interested in this property"].forEach(value => expect(detail).toContain(value)));
+  it("prompts anonymous users before Express Interest", () => expect(detail).toContain("if(!session.isAuthenticated){setAuthOpen(true);return;}"));
+  it("submits only approved interest properties", () => { expect(detail).toContain("preferredContactMethod:method"); expect(detail).toContain("...(trimmed?{message:trimmed}:{})"); });
+  it("does not send a blank optional message", () => expect(detail).toContain("...(trimmed?{message:trimmed}:{})"));
+  it("maps stable interest failures to user-facing messages", () => ["CONTACT_METHOD_UNAVAILABLE", "RATE_LIMIT_EXCEEDED", "PROPERTY_NOT_AVAILABLE", "INVALID_INTEREST_MESSAGE"].forEach(code => expect(detail).toContain(code)));
+  it("shows interest success only after a successful mutation", () => { expect(detail).toContain("onSuccess={result=>"); expect(detail).toContain("setSuccess(result)"); });
+  it("does not promise an unsupported one-day response SLA", () => { expect(detail.toLowerCase()).not.toContain("one day"); expect(detail.toLowerCase()).not.toContain("24 hour"); });
+  it("preserves a safe Marketplace return destination through login", () => { expect(session).toContain("AuthReturnContext"); expect(login).toContain("isSafeMarketplaceReturnPath(returnTo)"); });
+  it("preserves a property return destination through auth prompts", () => expect(detail).toContain('returnTo={`/marketplace/${property.id}`}'));
+  it("routes a completed Buyer to Marketplace", () => expect(session).toContain('OPEN_BUYER_DASHBOARD: "/marketplace"'));
+  it("returns newly onboarded Buyers to their pending Marketplace action", () => { expect(onboarding).toContain("const{returnTo,setReturnTo}=useAuthReturn()"); expect(onboarding).toContain("const destination=returnTo??routeFromNextAction"); });
+  it("keeps persona switching available from the account menu", () => { expect(screen).toContain("PersonaSwitcher"); expect(ui).toContain("Switch profile"); });
+  it("uses accessible modal dismissal and radio controls", () => { expect(sheets).toContain("onRequestClose"); expect(sheets).toContain('accessibilityRole="radio"'); expect(ui).toContain("accessibilityViewIsModal"); });
+  it("uses SafeAreaView on Marketplace screens", () => { expect(screen).toContain("SafeAreaView"); expect(detail).toContain("SafeAreaView"); expect(saved).toContain("SafeAreaView"); });
+  it("does not introduce Marketplace analytics events", () => {
+    const analytics = source("analytics/customer.ts");
+    expect(analytics).not.toMatch(/Marketplace (Viewed|Searched|Saved|Interest)/);
+  });
+});
