@@ -30,6 +30,7 @@ describe("mobile Seller runtime and fidelity repair",()=>{
  it("renders every full Furnishing label",()=>["Fully furnished","Semi furnished","Unfurnished"].forEach(label=>expect(editor).toContain(label)));
  it("renders every full Property Type label",()=>["Flat / apartment","Mini Flat","Self-Contain / Studio","Duplex","Detached House","Semi-Detached House","Terrace House","Bungalow"].forEach(label=>expect(editor).toContain(label)));
  it("wraps condition and furnishing pills",()=>expect(ui).toContain('flexWrap: "wrap"'));
+ it("lets choice pills keep their full content width before wrapping",()=>{expect(ui).toContain('maxWidth: "100%", flexShrink: 0');expect(ui).not.toContain('maxWidth: "100%", flexShrink: 1, borderWidth')});
  it("contains no blank amenity suggestions",()=>{expect(editor).toContain("normalizeAmenities([");["Swimming pool","Security","Power","Water","Air conditioning","Gym"].forEach(label=>expect(editor).toContain(label))});
  it("supports selected amenity removal",()=>expect(editor).toContain("removeAmenity"));
  it("uses safe-area-aware footer padding",()=>{expect(ui).toContain("useSafeAreaInsets");expect(ui).toContain("Math.max(insets.bottom")});
@@ -43,6 +44,9 @@ describe("mobile Seller runtime and fidelity repair",()=>{
  it("serializes Continue behind autosave and protects the latest step",()=>{expect(editor).toContain("saveQueue");expect(editor).toContain("latestSave");expect(editor).toContain("sequence===latestSave.current");expect(editor).toContain("clearTimeout(timer.current)");expect(editor).toContain('go("PHOTOS_DOCUMENTS")')});
  it("normalizes partial media DTOs at API and render boundaries",()=>{expect(source("api/seller-marketplace.ts")).toContain("normalizedDraftResponse");expect(editor).toContain("Array.isArray(draft.images)?draft.images:[]");expect(editor).toContain("Array.isArray(draft.documents)?draft.documents:[]")});
  it("keeps Saved-card type and location content-sized",()=>{expect(marketplaceUi).toContain('typePill:{alignSelf:"flex-start",maxWidth:"100%"');expect(marketplaceUi).not.toContain('<Text numberOfLines={1} style={styles.locationText}')});
+ it("uses a black filled heart only for saved properties",()=>{expect(marketplaceUi).toContain('name={property.saved ? "heart" : "heart-o"}');expect(marketplaceUi).toContain('color={colors.ink}');expect(detail).toContain('name={property.saved?"heart":"heart-o"}')});
  it("keeps Buyer detail labels and amenities complete",()=>{["Type","Category","Condition","Furnishing","Initial Deposit","Reference ID"].forEach(label=>expect(detail).toContain(label));expect(detail).toContain("width:112");expect(detail).toContain("amenities=useMemo");expect(detail).toContain('item.trim().length>0')});
+ it("aligns review metadata with the review title",()=>{expect(editor).toContain('style={s.previewMeta}');expect(editor).toContain('previewMeta:{paddingHorizontal:14')});
+ it("gives primary Marketplace and Seller actions horizontal breathing room",()=>{expect(editor).toContain('primary:{marginTop:24,minHeight:54,borderRadius:radii.pill,paddingHorizontal:24');expect(detail).toContain('primary:{minHeight:sizes.button,borderRadius:radii.pill,paddingHorizontal:24');expect(ui).toContain('primary: { flex: 1.35, minHeight: sizes.button, borderRadius: radii.pill, paddingHorizontal: 22')});
  it("submits Interest once with the canonical payload and no mutation retry",()=>{expect(detail).toContain("contactMethod:method");expect(detail).toContain("retry:false")});
 });

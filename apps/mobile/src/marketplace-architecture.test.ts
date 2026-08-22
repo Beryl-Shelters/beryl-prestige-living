@@ -38,6 +38,7 @@ describe("mobile Buyer Marketplace architecture", () => {
   it("renders photo count, price, title, type, location, and facts", () => ["property.photoCount", "property.askingPrice", "property.title", "property.propertyType", "property.publicLocation", "property.bedrooms", "property.bathrooms", "property.toilets"].forEach(field => expect(ui).toContain(field)));
   it("prompts anonymous users before Save", () => expect(screen).toContain("if(!session.isAuthenticated){setAuthOpen(true);return;}"));
   it("persists Save only after the protected backend mutation succeeds", () => { expect(screen).toContain("saveMarketplaceProperty"); expect(screen).toContain("onSuccess:"); });
+  it("renders filled black saved hearts and outlined unsaved hearts", () => { expect(ui).toContain('name={property.saved ? "heart" : "heart-o"}'); expect(detail).toContain('name={property.saved?"heart":"heart-o"}'); });
   it("uses the canonical Save and Unsave endpoints", () => { expect(api).toContain('`/properties/${propertyId}/save`, "POST"'); expect(api).toContain('`/properties/${propertyId}/save`, "DELETE"'); });
   it("provides the protected Saved properties endpoint", () => expect(api).toContain('`/properties/saved/me?page=${page}&limit=20`'));
   it("provides Saved loading, error, empty, and load-more states", () => ["isLoading", "isError", "No saved properties yet", "isFetchingNextPage"].forEach(value => expect(saved).toContain(value)));
@@ -46,6 +47,7 @@ describe("mobile Buyer Marketplace architecture", () => {
   it("provides gallery navigation and a photo counter", () => ["Previous property image", "Next property image", "imageIndex+1"].forEach(value => expect(detail).toContain(value)));
   it("keeps property detail buyer-safe", () => ["fullAddress", "sellerFullName", "marketplace_mandate", "property.documents"].forEach(value => expect(detail).not.toContain(value)));
   it("renders verification, details, amenities, and interest architecture", () => ["Verified by Beryl", "PROPERTY DETAILS", "WHAT&apos;S INCLUDED", "I am interested in this property"].forEach(value => expect(detail).toContain(value)));
+  it("renders only normalized complete amenity labels", () => { expect(detail).toContain("amenities.length"); expect(detail).toContain("amenities.map(item"); expect(detail).not.toContain("property.amenities.map(item"); });
   it("prompts anonymous users before Express Interest", () => expect(detail).toContain("if(!session.isAuthenticated){setAuthOpen(true);return;}"));
   it("submits only approved interest properties", () => { expect(detail).toContain("contactMethod:method"); expect(detail).toContain("...(trimmed?{message:trimmed}:{})"); });
   it("does not send a blank optional message", () => expect(detail).toContain("...(trimmed?{message:trimmed}:{})"));

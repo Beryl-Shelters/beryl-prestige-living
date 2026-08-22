@@ -51,4 +51,10 @@ describe("Marketplace W1 architecture boundaries", () => {
     const styles = source("app/globals.css");
     expect(styles).toContain('.marketplace-list .marketplace-verified-badge{display:inline-flex;left:62px}');
   });
+
+  it("keeps the interest confirmation above the sticky Marketplace header", () => {
+    const styles = source("app/globals.css");
+    expect(styles).toContain(".property-detail-action-panel:has(.property-detail-modal-backdrop)");
+    expect(styles).toMatch(/property-detail-action-panel:has\(\.property-detail-modal-backdrop\)[\s\S]*?z-index:\s*120/);
+  });
 });
