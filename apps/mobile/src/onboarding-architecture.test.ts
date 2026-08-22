@@ -34,11 +34,11 @@ describe("customer onboarding session architecture", () => {
     expect(onboarding).toContain("skip?{skip:true}");
   });
 
-  it("routes completed buyers to Marketplace and preserves the seller placeholder", () => {
+  it("routes completed buyers to Marketplace and sellers to My Listings", () => {
     const session = source("store/auth-flow.tsx");
     expect(session).toContain('OPEN_BUYER_DASHBOARD: "/marketplace"');
-    expect(session).toContain('OPEN_SELLER_DASHBOARD: "/seller-dashboard"');
+    expect(session).toContain('OPEN_SELLER_DASHBOARD: "/seller/listings"');
     expect(appSource("app/(app)/buyer-dashboard.tsx")).toContain('href="/marketplace"');
-    expect(appSource("app/(app)/seller-dashboard.tsx")).toContain("DashboardPlaceholder");
+    expect(appSource("app/(app)/seller-dashboard.tsx")).toContain('href="/seller/listings"');
   });
 });

@@ -11,7 +11,7 @@ import type {
 } from "@/types/marketplace";
 import type { ApiEnvelope } from "@/types/auth";
 
-export type AuthenticatedRequester = <T>(path: string, method: "GET" | "POST" | "PATCH" | "DELETE", body?: unknown) => Promise<ApiEnvelope<T>>;
+export type AuthenticatedRequester = <T>(path: string, method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", body?: unknown) => Promise<ApiEnvelope<T>>;
 
 export const marketplaceSearchPath = (filters: MarketplaceFilters, page: number) => `/marketplace/properties?${queryString(marketplaceQuery(filters, page))}`;
 export const searchMarketplace = (filters: MarketplaceFilters, page: number, accessToken?: string | null) =>

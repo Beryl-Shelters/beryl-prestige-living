@@ -1,0 +1,21 @@
+import { readFileSync } from "node:fs";import path from "node:path";
+const src=(file:string)=>readFileSync(path.resolve(__dirname,file),"utf8");const app=(file:string)=>readFileSync(path.resolve(__dirname,"..",file),"utf8");
+describe("seller marketplace architecture",()=>{
+ const api=src("api/seller-marketplace.ts"),editor=src("components/seller-marketplace/seller-editor-screen.tsx"),listings=src("components/seller-marketplace/seller-listings-screen.tsx"),management=src("components/seller-marketplace/seller-management-screen.tsx"),helpers=src("seller-marketplace/helpers.ts");
+ it.each(["images","images/order","cover","documents","mandate","review","management","submit","reopen"])("connects %s",route=>expect(api).toContain(route));
+ it("uses PUT for mandate",()=>expect(api).toContain('"PUT",body'));
+ it("uses multipart uploads",()=>expect(editor).toContain("new FormData()"));
+ it("uses official Expo pickers",()=>{expect(editor).toContain("expo-image-picker");expect(editor).toContain("expo-document-picker")});
+ it("caps photos at ten",()=>expect(editor).toContain("10-draft.images.length"));
+ it("supports cover, reorder and delete",()=>{expect(editor).toContain("setSellerCover");expect(editor).toContain("reorderSellerImages");expect(editor).toContain("deleteSellerImage")});
+ it("keeps full address in seller-private review",()=>expect(editor).toContain("review.sellerPrivate.fullAddress"));
+ it("does not promise a review SLA",()=>expect(editor+management).not.toMatch(/working days|within 48|reviewer/i));
+ it("does not invent commission values",()=>expect(editor).not.toMatch(/5%|commission/i));
+ it("has all listing tabs",()=>["All","Live","In Review","Rejected","Draft"].forEach(label=>expect(helpers).toContain(label)));
+ it("has rejected correction and confirmation",()=>{expect(management).toContain("Make Changes");expect(editor).toContain("Resubmit this listing?")});
+ it("freezes a submission success state",()=>expect(editor).toContain("Listing submitted for review"));
+ it("routes Seller dashboard to listings",()=>expect(app("app/(app)/seller-dashboard.tsx")).toContain('href="/seller/listings"'));
+ it("creates the mobile seller routes",()=>["app/seller/listings/index.tsx","app/seller/listings/new.tsx","app/seller/listings/[propertyId]/index.tsx","app/seller/listings/[propertyId]/edit.tsx"].forEach(file=>expect(app(file)).toBeTruthy()));
+ it("preserves Buyer Marketplace routes",()=>{expect(app("app/marketplace/index.tsx")).toBeTruthy();expect(app("app/marketplace/[propertyId].tsx")).toBeTruthy()});
+ it("does not add Seller analytics events",()=>expect(editor+listings+management).not.toContain("trackCustomerEvent"));
+});
