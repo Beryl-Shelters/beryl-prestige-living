@@ -29,7 +29,7 @@ export function AdminShell({ session, children }: { session: AdminSessionState; 
             Dashboard
           </Link>
           <span aria-disabled="true"><UsersRound size={17} />Users</span>
-          <span aria-disabled="true"><Building2 size={17} />Properties</span>
+          <span aria-disabled="true" data-active={pathname.startsWith("/dashboard/properties")}><Building2 size={17} />Properties</span>
           <Link href={"/dashboard/leads" as never} data-active={pathname.startsWith("/dashboard/leads")}><Waypoints size={17} />Leads</Link>
         </nav>
         <div className="sidebar-footer"><Link href="/dashboard/change-password" data-active={pathname === "/dashboard/change-password"}><Settings size={17} />Settings</Link><div className="sidebar-profile"><span className="sidebar-avatar" aria-hidden>{initials}</span><div><strong>{admin.fullName}</strong><span>{admin.department || "Beryl Shelter"}</span><small>{admin.adminRole.replaceAll("_", " ")}</small></div></div><button type="button" onClick={logout}><LogOut size={16} />Log out</button></div>

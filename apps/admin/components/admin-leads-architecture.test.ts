@@ -37,7 +37,7 @@ describe("Admin lead management interface", () => {
   it("renders customer persona badges", () => expect(detail).toContain("lead.customer.personas"));
   it("renders plain text message content", () => expect(detail).toContain('<p className="lead-message">{lead.message}</p>'));
   it("renders safe property context", () => ["Property interested in", "publicLocation", "askingPrice", "propertyCategory", "propertyType"].forEach((label) => expect(detail).toContain(label)));
-  it("does not invent a missing Admin property route", () => expect(detail).toContain("View property unavailable"));
+  it("uses the shared protected Admin property route", () => { expect(detail).toContain("adminPropertyFromLeadPath(lead.property.id, lead.id)"); expect(detail).toContain(">View property</Link>"); });
   it("supports NEW to CONTACTED", () => expect(detail).toContain('transition("CONTACTED")'));
   it("supports CONTACTED to WON", () => expect(detail).toContain('transition("WON")'));
   it("supports CONTACTED to LOST", () => expect(detail).toContain('transition("LOST")'));
