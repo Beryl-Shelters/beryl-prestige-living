@@ -25,7 +25,11 @@ describe("Admin lead management interface", () => {
   it("includes customer identity on each lead card", () => expect(board).toContain("lead.customerName"));
   it("includes property context on each lead card", () => expect(board).toContain("lead.propertyTitle"));
   it("includes received time on each lead card", () => expect(board).toContain("lead.receivedAt"));
-  it("links cards to inquiry detail", () => expect(board).toContain("/dashboard/leads/${lead.id}"));
+  it("links cards with the canonical inquiry UUID, not a display reference", () => {
+    expect(board).toContain("/dashboard/leads/${lead.id}");
+    expect(board).not.toContain("/dashboard/leads/${lead.referenceId}");
+    expect(board).not.toContain("/dashboard/leads/${lead.propertyId}");
+  });
   it("has loading skeletons", () => expect(board).toContain("skeleton-card"));
   it("has retryable API errors", () => { expect(board).toContain("Try again"); expect(detail).toContain("Try again"); });
   it("has intentional empty states", () => { expect(board).toContain("No leads in"); expect(detail).toContain("did not include a message"); });

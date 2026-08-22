@@ -4,6 +4,21 @@ import type { LeadStage } from "./admin-leads.validators";
 
 const emptyCounts: Record<LeadStage, number> = { NEW: 0, CONTACTED: 0, WON: 0, LOST: 0 };
 const leadReference = (id: string) => `ENQ-${id.replaceAll("-", "").slice(0, 8).toUpperCase()}`;
+const canonicalLeadStage = (leadStage: unknown, legacyStatus: unknown): LeadStage => {
+  if (typeof leadStage === "string" && leadStage in emptyCounts) return leadStage as LeadStage;
+  switch (String(legacyStatus ?? "").toLowerCase()) {
+    case "contacted":
+    case "in_progress":
+    case "scheduled":
+      return "CONTACTED";
+    case "resolved":
+      return "WON";
+    case "closed":
+      return "LOST";
+    default:
+      return "NEW";
+  }
+};
 const preferredContact = (inquiryType: unknown) => {
   const value = String(inquiryType ?? "").toUpperCase();
   if (value.endsWith("WHATSAPP")) return "WHATSAPP";
@@ -21,7 +36,7 @@ export const listLeads = async (input: { q?: string; limit: number }) => {
   if (error) throw new AppError("Lead management is temporarily unavailable", 503, "LEADS_UNAVAILABLE");
   const counts = { ...emptyCounts };
   const items = (data ?? []).map((row: any) => {
-    const stage = row.stage as LeadStage;
+    const stage = canonicalLeadStage(row.stage, null);
     if (stage in counts) counts[stage] = Number(row.stage_total ?? 0);
     return {
       id: row.lead_id,
@@ -47,7 +62,7 @@ export const getLeadDetail = async (leadId: string) => {
 
   const [profileResult, personasResult, propertyResult, historyResult] = await Promise.all([
     inquiry.user_id
-      ? supabaseAdmin.from("profiles").select("id,full_name,email,phone_number,email_verified,account_status").eq("id", inquiry.user_id).maybeSingle()
+      ? supabaseAdmin.from("profiles").select("id,full_name,email,phone_number,email_verified_at,account_status").eq("id", inquiry.user_id).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     inquiry.user_id
       ? supabaseAdmin.from("user_personas").select("id,persona_type,onboarding_status").eq("user_id", inquiry.user_id)
@@ -89,7 +104,7 @@ export const getLeadDetail = async (leadId: string) => {
   return {
     id: inquiry.id,
     referenceId: leadReference(inquiry.id),
-    stage: inquiry.lead_stage as LeadStage,
+    stage: canonicalLeadStage(inquiry.lead_stage, inquiry.status),
     inquiryType: inquiry.inquiry_type,
     receivedAt: inquiry.created_at,
     updatedAt: inquiry.updated_at,
@@ -98,7 +113,7 @@ export const getLeadDetail = async (leadId: string) => {
       fullName: profile?.full_name ?? inquiry.full_name,
       email: profile?.email ?? inquiry.email,
       phone: profile?.phone_number ?? inquiry.phone_number,
-      emailVerified: Boolean(profile?.email_verified),
+      emailVerified: Boolean(profile?.email_verified_at),
       accountStatus: profile?.account_status ?? null,
       preferredContactMethod: preferredContact(inquiry.inquiry_type),
       personas: (personasResult.data ?? []).map((row: any) => ({ type: row.persona_type, onboardingStatus: row.onboarding_status }))

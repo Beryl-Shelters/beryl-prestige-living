@@ -33,6 +33,15 @@ describe("Admin lead list and transitions", () => {
   });
 
   it.each([
+    ["CONTACTED", "WON"],
+    ["CONTACTED", "LOST"]
+  ] as const)("keeps the atomic %s to %s transition", async (previousStage, stage) => {
+    database.responses.push({ data: [{ outcome: "UPDATED", inquiry_id: "lead-1", previous_stage: previousStage, current_stage: stage, changed_at: "2026-08-22T12:00:00Z" }], error: null });
+    await expect(updateLeadStage("lead-1", "admin-1", previousStage, stage)).resolves.toMatchObject({ leadId: "lead-1", previousStage, stage });
+    expect(database.calls[0]).toEqual({ name: "transition_admin_inquiry_lead_stage", args: { p_inquiry_id: "lead-1", p_admin_id: "admin-1", p_expected_stage: previousStage, p_new_stage: stage } });
+  });
+
+  it.each([
     ["NOT_FOUND", "LEAD_NOT_FOUND", 404],
     ["STALE", "LEAD_STAGE_CONFLICT", 409],
     ["INVALID_TRANSITION", "INVALID_LEAD_TRANSITION", 409]

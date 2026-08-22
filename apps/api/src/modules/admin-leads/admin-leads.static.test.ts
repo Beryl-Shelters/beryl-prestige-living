@@ -18,6 +18,7 @@ describe("Admin lead management architecture", () => {
   it("exposes lead detail", () => expect(routes).toContain('router.get("/:leadId", controller.detail)'));
   it("exposes a validated stage patch", () => expect(routes).toContain('router.patch("/:leadId/stage", validate(updateAdminLeadStageSchema'));
   it("restricts operational stages", () => expect(validators).toContain('["NEW", "CONTACTED", "WON", "LOST"]'));
+  it("validates detail and transition identifiers as UUIDs", () => { expect(validators).toContain("z.string().uuid()"); expect(controller).toContain("parseLeadId(req.params.leadId)"); });
   it("rejects unknown stage fields", () => expect(validators).toContain('}).strict()'));
   it("bounds server search", () => { expect(validators).toContain(".max(120)"); expect(validators).toContain(".max(50)"); });
   it("takes Admin identity only from the session", () => { expect(controller).toContain("req.user!.id"); expect(controller).not.toContain("req.body.adminId"); });
@@ -27,6 +28,8 @@ describe("Admin lead management architecture", () => {
   it("maps persistence outages safely", () => expect(service).toContain("LEADS_UNAVAILABLE"));
   it("maps stale transitions to conflict", () => expect(service).toContain("LEAD_STAGE_CONFLICT"));
   it("does not expose placeholder interest text as a message", () => expect(service).toContain('message === "Marketplace interest submitted"'));
+  it("selects the canonical profile verification timestamp", () => { expect(service).toContain("email_verified_at"); expect(service).not.toMatch(/email_verified(?:,|\))/); });
+  it("shares a legacy-safe canonical stage mapper", () => { expect(service).toContain("canonicalLeadStage(row.stage, null)"); expect(service).toContain("canonicalLeadStage(inquiry.lead_stage, inquiry.status)"); });
   it("adds a separate lead stage without replacing legacy status", () => { expect(migration).toContain("add column if not exists lead_stage"); expect(migration).not.toMatch(/drop column\s+status/i); });
   it("backfills legacy inquiry values", () => { expect(migration).toContain("when 'in_progress' then 'CONTACTED'"); expect(migration).toContain("when 'scheduled' then 'CONTACTED'"); expect(migration).toContain("else 'NEW'"); });
   it("stores immutable Admin stage history", () => expect(migration).toContain("inquiry_lead_stage_history"));
