@@ -84,8 +84,13 @@ begin
   if p_action = 'APPROVE' then
     if nullif(btrim(v_property.title), '') is null then v_missing_fields := array_append(v_missing_fields, 'title'); end if;
     if nullif(btrim(v_property.description), '') is null then v_missing_fields := array_append(v_missing_fields, 'description'); end if;
-    if nullif(btrim(v_property.category), '') is null then v_missing_fields := array_append(v_missing_fields, 'propertyCategory'); end if;
-    if nullif(btrim(v_property.property_type), '') is null then v_missing_fields := array_append(v_missing_fields, 'propertyType'); end if;
+    if nullif(btrim(v_property.category::text), '') is null then
+  v_missing_fields := array_append(v_missing_fields, 'propertyCategory');
+end if;
+
+if nullif(btrim(v_property.property_type::text), '') is null then
+  v_missing_fields := array_append(v_missing_fields, 'propertyType');
+end if;
     if nullif(btrim(v_property.ownership_type), '') is null then v_missing_fields := array_append(v_missing_fields, 'ownershipType'); end if;
     if nullif(btrim(v_property.public_location), '') is null then v_missing_fields := array_append(v_missing_fields, 'publicLocation'); end if;
     if nullif(btrim(v_property.full_address), '') is null then v_missing_fields := array_append(v_missing_fields, 'fullAddress'); end if;

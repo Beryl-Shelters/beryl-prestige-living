@@ -228,7 +228,7 @@ export type MarketplaceSavedPropertyListResult = {
 export type MarketplaceInterestContactMethod = "WHATSAPP" | "CALL" | "EMAIL";
 
 export type MarketplaceInterestRequest = {
-  preferredContactMethod: MarketplaceInterestContactMethod;
+  contactMethod: MarketplaceInterestContactMethod;
   message?: string;
 };
 

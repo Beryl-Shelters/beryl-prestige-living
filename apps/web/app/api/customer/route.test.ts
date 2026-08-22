@@ -216,13 +216,13 @@ describe("customer BFF cookie bridge", () => {
     const fetchMock = vi.fn().mockResolvedValue(backendResponse({ success: false, message: "Property not available", code: "PROPERTY_NOT_AVAILABLE" }, 404));
     vi.stubGlobal("fetch", fetchMock);
 
-    const response = await call(["marketplace", "properties", id, "interest"], { preferredContactMethod: "EMAIL", message: "Please contact me" });
+    const response = await call(["marketplace", "properties", id, "interest"], { contactMethod: "EMAIL", message: "Please contact me" });
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(`http://localhost:5000/api/v1/marketplace/properties/${id}/interest`);
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
       method: "POST",
       headers: expect.objectContaining({ authorization: "Bearer dummy-access-token" }),
-      body: JSON.stringify({ preferredContactMethod: "EMAIL", message: "Please contact me" })
+      body: JSON.stringify({ contactMethod: "EMAIL", message: "Please contact me" })
     });
     expect(response.status).toBe(404);
     expect(await response.json()).toMatchObject({ code: "PROPERTY_NOT_AVAILABLE" });

@@ -32,5 +32,5 @@ export const publicMarketplaceSearchSchema=z.object({
 export type PublicMarketplaceSearchInput=z.infer<typeof publicMarketplaceSearchSchema>;
 export const marketplacePropertyIdSchema=z.string().uuid();
 const optionalInterestMessage=z.preprocess(value=>typeof value==="string"&&value.trim()===""?undefined:value,z.string().trim().max(1000).optional());
-export const marketplaceInterestSchema=z.object({preferredContactMethod:z.enum(["WHATSAPP","CALL","EMAIL"]),message:optionalInterestMessage}).strict();
+export const marketplaceInterestSchema=z.object({contactMethod:z.enum(["WHATSAPP","CALL","EMAIL"]),message:optionalInterestMessage}).strict();
 export type MarketplaceInterestInput=z.infer<typeof marketplaceInterestSchema>;

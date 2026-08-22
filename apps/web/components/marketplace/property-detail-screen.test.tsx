@@ -127,7 +127,7 @@ describe("Marketplace property detail", () => {
     await user.click(screen.getByRole("radio", { name: /Email/i }));
     await user.type(screen.getByRole("textbox", { name: /Anything you'd like to ask/i }), "  Please share available viewing times.  ");
     await user.click(screen.getByRole("button", { name: "Send Interest" }));
-    await waitFor(() => expect(mocks.interest).toHaveBeenCalledWith(id, { preferredContactMethod: "EMAIL", message: "Please share available viewing times." }));
+    await waitFor(() => expect(mocks.interest).toHaveBeenCalledWith(id, { contactMethod: "EMAIL", message: "Please share available viewing times." }));
     expect(await screen.findByRole("heading", { name: "Interest Sent" })).toBeInTheDocument();
     expect(screen.getByText("Preferred contact: Email")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "What happens next?" })).toBeInTheDocument();

@@ -16,8 +16,8 @@ describe("Marketplace Buyer interest Swagger",()=>{
 
   it("documents the exact safe request and success DTO",()=>{
     const request=specification.components.schemas.MarketplaceInterestRequest;
-    expect(request.required).toEqual(["preferredContactMethod"]);
-    expect(request.properties.preferredContactMethod.enum).toEqual(["WHATSAPP","CALL","EMAIL"]);
+    expect(request.required).toEqual(["contactMethod"]);
+    expect(request.properties.contactMethod.enum).toEqual(["WHATSAPP","CALL","EMAIL"]);
     expect(request.properties.message.maxLength).toBe(1000);
     const result=specification.components.schemas.MarketplaceInterestResult;
     expect(result.required).toEqual(["inquiryId","propertyId","referenceId","title","askingPrice","preferredContactMethod","submittedAt","nextAction"]);

@@ -87,6 +87,7 @@ const interestError = (code?: string) => {
     case "INVALID_INTEREST_MESSAGE":
       return "Your message must be 1,000 characters or fewer.";
     case "INTEREST_SUBMISSION_FAILED":
+    case "INQUIRY_UNAVAILABLE":
       return "We could not submit your interest right now. Please try again.";
     default:
       return "We could not submit your interest right now. Please try again.";
@@ -339,9 +340,10 @@ function InterestPanel({
   );
   const submitInterest = useMutation({
     mutationFn: (body: {
-      preferredContactMethod: MarketplaceInterestContactMethod;
+      contactMethod: MarketplaceInterestContactMethod;
       message?: string;
     }) => customerApi.expressMarketplaceInterest(property.id, body),
+    retry: false,
   });
   useDialogFocus(
     Boolean(success),
@@ -368,7 +370,7 @@ function InterestPanel({
     setError("");
     try {
       const result = await submitInterest.mutateAsync({
-        preferredContactMethod: contactMethod,
+        contactMethod,
         ...(trimmedMessage ? { message: trimmedMessage } : {}),
       });
       setSuccess(result.data);

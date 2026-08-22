@@ -189,9 +189,10 @@ export const createMarketplaceInterest=async(propertyId:string,userId:string,inp
   const phone=typeof profile.phone_number==="string"?profile.phone_number.trim():"";
   const whatsapp=typeof profile.whatsapp_number==="string"&&profile.whatsapp_number.trim()?profile.whatsapp_number.trim():(profile.is_whatsapp_number?phone:"");
   const available={WHATSAPP:Boolean(whatsapp),CALL:Boolean(phone),EMAIL:Boolean(email)} as const;
-  if(!available[input.preferredContactMethod])throw new AppError("Preferred contact method is unavailable",409,"CONTACT_METHOD_UNAVAILABLE");
+  if(!available[input.contactMethod])throw new AppError("Preferred contact method is unavailable",409,"CONTACT_METHOD_UNAVAILABLE");
   if(!fullName||!email||!phone)throw new AppError("Inquiry service is temporarily unavailable",503,"INQUIRY_UNAVAILABLE");
-  const {data,error}=await supabaseAdmin.from("inquiries").insert({user_id:userId,property_id:propertyId,inquiry_type:`MARKETPLACE_INTEREST_${input.preferredContactMethod}`,full_name:fullName,email,phone_number:input.preferredContactMethod==="WHATSAPP"?whatsapp:phone,message:input.message??"Marketplace interest submitted",status:"pending"}).select("id,property_id,inquiry_type,status,created_at").single();
+  const inquiryTypeByContactMethod={WHATSAPP:"MARKETPLACE_INTEREST_WHATSAPP",CALL:"MARKETPLACE_INTEREST_CALL",EMAIL:"MARKETPLACE_INTEREST_EMAIL"} as const;
+  const {data,error}=await supabaseAdmin.from("inquiries").insert({user_id:userId,property_id:propertyId,inquiry_type:inquiryTypeByContactMethod[input.contactMethod],full_name:fullName,email,phone_number:input.contactMethod==="WHATSAPP"?whatsapp:phone,message:input.message??"Marketplace interest submitted",status:"new"}).select("id,property_id,inquiry_type,status,created_at").single();
   if(error||!data)throw new AppError("Interest submission is temporarily unavailable",503,"INTEREST_SUBMISSION_FAILED");
-  return {inquiryId:data.id,propertyId:property.id,referenceId:property.property_code,title:property.title,askingPrice:property.price,preferredContactMethod:input.preferredContactMethod,submittedAt:data.created_at,nextAction:"KEEP_BROWSING" as const};
+  return {inquiryId:data.id,propertyId:property.id,referenceId:property.property_code,title:property.title,askingPrice:property.price,preferredContactMethod:input.contactMethod,submittedAt:data.created_at,nextAction:"KEEP_BROWSING" as const};
 };
