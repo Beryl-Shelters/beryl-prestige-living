@@ -6,7 +6,7 @@ describe("seller marketplace architecture",()=>{
  it("uses PUT for mandate",()=>expect(api).toContain('"PUT",body'));
  it("uses multipart uploads",()=>expect(editor).toContain("new FormData()"));
  it("uses official Expo pickers",()=>{expect(editor).toContain("expo-image-picker");expect(editor).toContain("expo-document-picker")});
- it("caps photos at ten",()=>expect(editor).toContain("10-draft.images.length"));
+ it("caps normalized photos at ten",()=>{expect(editor).toContain("const images=Array.isArray(draft.images)?draft.images:[]");expect(editor).toContain("10-images.length")});
  it("supports cover, reorder and delete",()=>{expect(editor).toContain("setSellerCover");expect(editor).toContain("reorderSellerImages");expect(editor).toContain("deleteSellerImage")});
  it("keeps full address in seller-private review",()=>expect(editor).toContain("review.sellerPrivate.fullAddress"));
  it("does not promise a review SLA",()=>expect(editor+management).not.toMatch(/working days|within 48|reviewer/i));

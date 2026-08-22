@@ -43,7 +43,7 @@ export type MarketplacePropertyDetailResult = { property: MarketplacePropertyDet
 export type MarketplaceSavedPropertyMutation = { saved_property: { id: string; propertyId: string; savedAt: string } };
 export type MarketplaceSavedProperty = { id: string; propertyId: string; savedAt: string; property: MarketplacePropertyCard };
 export type MarketplaceSavedPropertyListResult = { saved_properties: MarketplaceSavedProperty[]; pagination: MarketplacePagination };
-export type MarketplaceInterestRequest = { preferredContactMethod: MarketplaceContactMethod; message?: string };
+export type MarketplaceInterestRequest = { contactMethod: MarketplaceContactMethod; message?: string };
 export type MarketplaceInterestResult = {
   inquiryId: string;
   propertyId: string;

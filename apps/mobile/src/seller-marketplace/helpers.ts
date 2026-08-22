@@ -5,6 +5,7 @@ export const sellerTabs:Array<{label:string;status:SellerStatus;count:"all"|"liv
 const text=(v:unknown)=>typeof v==="string"&&v.trim()?v.trim():undefined;
 const number=(v:unknown)=>v===null?null:v===""||v===undefined?undefined:Number.isFinite(Number(v))&&Number(v)>=0?Number(v):undefined;
 export const normalizeAmenities=(items:string[])=>{const map=new Map<string,string>();items.forEach(item=>{const v=item.trim();if(v&&!map.has(v.toLowerCase()))map.set(v.toLowerCase(),v)});return [...map.values()]};
+export const normalizeSellerDraft=(draft:Partial<SellerDraft>&Pick<SellerDraft,"id">):SellerDraft=>({...draft,amenities:normalizeAmenities(Array.isArray(draft.amenities)?draft.amenities:[]),images:Array.isArray(draft.images)?draft.images:[],documents:Array.isArray(draft.documents)?draft.documents:[]});
 export const addAmenity=(items:string[],value:string)=>normalizeAmenities([...items,value]);
 export const removeAmenity=(items:string[],value:string)=>items.filter(item=>item.toLowerCase()!==value.toLowerCase());
 export const counterValue=(value:unknown,delta:number,min=0)=>Math.max(min,(Number.isInteger(value)?Number(value):min)+delta);

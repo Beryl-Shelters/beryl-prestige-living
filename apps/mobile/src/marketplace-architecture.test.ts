@@ -47,7 +47,7 @@ describe("mobile Buyer Marketplace architecture", () => {
   it("keeps property detail buyer-safe", () => ["fullAddress", "sellerFullName", "marketplace_mandate", "property.documents"].forEach(value => expect(detail).not.toContain(value)));
   it("renders verification, details, amenities, and interest architecture", () => ["Verified by Beryl", "PROPERTY DETAILS", "WHAT&apos;S INCLUDED", "I am interested in this property"].forEach(value => expect(detail).toContain(value)));
   it("prompts anonymous users before Express Interest", () => expect(detail).toContain("if(!session.isAuthenticated){setAuthOpen(true);return;}"));
-  it("submits only approved interest properties", () => { expect(detail).toContain("preferredContactMethod:method"); expect(detail).toContain("...(trimmed?{message:trimmed}:{})"); });
+  it("submits only approved interest properties", () => { expect(detail).toContain("contactMethod:method"); expect(detail).toContain("...(trimmed?{message:trimmed}:{})"); });
   it("does not send a blank optional message", () => expect(detail).toContain("...(trimmed?{message:trimmed}:{})"));
   it("maps stable interest failures to user-facing messages", () => ["CONTACT_METHOD_UNAVAILABLE", "RATE_LIMIT_EXCEEDED", "PROPERTY_NOT_AVAILABLE", "INVALID_INTEREST_MESSAGE"].forEach(code => expect(detail).toContain(code)));
   it("shows interest success only after a successful mutation", () => { expect(detail).toContain("onSuccess={result=>"); expect(detail).toContain("setSuccess(result)"); });

@@ -1,0 +1,48 @@
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import path from "node:path";
+import ts from "typescript";
+
+const source=(file:string)=>readFileSync(path.resolve(__dirname,file),"utf8");
+const listing=source("components/seller-marketplace/seller-listings-screen.tsx");
+const editor=source("components/seller-marketplace/seller-editor-screen.tsx");
+const ui=source("components/seller-marketplace/seller-ui.tsx");
+const switcher=source("components/persona-switcher.tsx");
+const marketplace=source("components/marketplace/marketplace-screen.tsx");
+const marketplaceUi=source("components/marketplace/marketplace-ui.tsx");
+const detail=source("components/marketplace/property-detail-screen.tsx");
+const analytics=source("analytics/customer.ts");
+
+const tsxFiles=(root:string):string[]=>{const absolute=path.resolve(__dirname,root);return statSync(absolute).isDirectory()?readdirSync(absolute).flatMap(name=>{const item=path.join(absolute,name);return statSync(item).isDirectory()?tsxFiles(path.relative(__dirname,item)):name.endsWith(".tsx")?[item]:[]}):[absolute]};
+const rawTextViolations=(file:string)=>{const text=readFileSync(file,"utf8"),tree=ts.createSourceFile(file,text,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX),violations:string[]=[];const raw=(node:ts.Node|undefined):boolean=>{if(!node)return false;if(ts.isStringLiteral(node)||ts.isNoSubstitutionTemplateLiteral(node))return node.text.trim().length>0;if(ts.isParenthesizedExpression(node))return raw(node.expression);if(ts.isConditionalExpression(node))return raw(node.whenTrue)||raw(node.whenFalse);if(ts.isBinaryExpression(node)&&node.operatorToken.kind===ts.SyntaxKind.AmpersandAmpersandToken)return raw(node.right);return false};const walk=(node:ts.Node)=>{if(ts.isJsxElement(node)&&node.openingElement.tagName.getText(tree)!=="Text")for(const child of node.children){if(ts.isJsxText(child)&&child.getText(tree).trim())violations.push(child.getText(tree).trim());if(ts.isJsxExpression(child)&&raw(child.expression))violations.push(child.getText(tree))}ts.forEachChild(node,walk)};walk(tree);return violations};
+
+describe("mobile Seller runtime and fidelity repair",()=>{
+ it("has no raw Seller JSX text outside Text",()=>{for(const file of tsxFiles("components/seller-marketplace"))expect(rawTextViolations(file)).toEqual([])});
+ it("has no raw shared Marketplace or persona JSX text outside Text",()=>{for(const file of [...tsxFiles("components/marketplace"),...tsxFiles("components/persona-switcher.tsx")])expect(rawTextViolations(file)).toEqual([])});
+ it("uses a self-contained listing card with image and details flow",()=>{expect(listing).toContain("cardTop");expect(listing).toContain("thumbnail");expect(listing).toContain("details")});
+ it("keeps the status tabs compact in every result state",()=>{expect(listing).toContain("style={styles.tabsScroll}");expect(listing).toContain('tabsScroll: { flexGrow: 0, flexShrink: 0, height: 58 }');expect(listing).toContain('tab: { height: 38, minHeight: 38');expect(ui).not.toContain('state: { flex: 1')});
+ it("renders the loading result below compact tabs",()=>{expect(listing.indexOf("styles.tabsScroll")).toBeLessThan(listing.indexOf("<FlatList"));expect(listing).toContain('label="Loading your listings"')});
+ it("keeps draft progress in normal flow",()=>{expect(listing).toContain("progressSection");expect(listing.slice(listing.indexOf("progressSection:")).split("}")[0]).not.toContain("position")});
+ it("shows progress only for Draft",()=>expect(listing).toContain('item.status === "DRAFT" ? <View style={styles.progressSection}'));
+ it("does not give Live a draft progress action",()=>expect(listing).toContain('status === "LIVE" ? "View listing"'));
+ it("does not give In Review a draft progress action",()=>expect(listing).toContain(': "View details"'));
+ it("gives Rejected a Make Changes action",()=>expect(listing).toContain('status === "REJECTED" ? "Make Changes"'));
+ it("renders every full Condition label",()=>["Off-plan","Under construction","Newly built","Fairly used"].forEach(label=>expect(editor).toContain(label)));
+ it("renders every full Furnishing label",()=>["Fully furnished","Semi furnished","Unfurnished"].forEach(label=>expect(editor).toContain(label)));
+ it("renders every full Property Type label",()=>["Flat / apartment","Mini Flat","Self-Contain / Studio","Duplex","Detached House","Semi-Detached House","Terrace House","Bungalow"].forEach(label=>expect(editor).toContain(label)));
+ it("wraps condition and furnishing pills",()=>expect(ui).toContain('flexWrap: "wrap"'));
+ it("contains no blank amenity suggestions",()=>{expect(editor).toContain("normalizeAmenities([");["Swimming pool","Security","Power","Water","Air conditioning","Gym"].forEach(label=>expect(editor).toContain(label))});
+ it("supports selected amenity removal",()=>expect(editor).toContain("removeAmenity"));
+ it("uses safe-area-aware footer padding",()=>{expect(ui).toContain("useSafeAreaInsets");expect(ui).toContain("Math.max(insets.bottom")});
+ it("exposes profile switching from Seller My Listings",()=>{expect(listing).toContain("MarketplaceAccountMenu");expect(listing).toContain("PersonaSwitcher")});
+ it("preserves profile switching from Buyer Marketplace",()=>{expect(marketplace).toContain("MarketplaceAccountMenu");expect(marketplace).toContain("PersonaSwitcher")});
+ it("refreshes canonical session state before persona navigation",()=>{expect(switcher).toContain("await refreshOnboardingStatus()");expect(switcher.indexOf("await refreshOnboardingStatus()")).toBeLessThan(switcher.indexOf("onNavigate(nextAction)"))});
+ it("routes completed Buyer and Seller from the shared session map",()=>{const session=source("store/auth-flow.tsx");expect(session).toContain('OPEN_BUYER_DASHBOARD: "/marketplace"');expect(session).toContain('OPEN_SELLER_DASHBOARD: "/seller/listings"')});
+ it("keeps Buyer filters, sort, cards, detail and saved routes",()=>{expect(marketplace).toContain("FilterSheet");expect(marketplace).toContain("SortSheet");expect(source("components/marketplace/marketplace-ui.tsx")).toContain("PropertyCard");expect(source("../app/marketplace/[propertyId].tsx")).toContain("PropertyDetailScreen");expect(source("../app/saved.tsx")).toContain("SavedPropertiesScreen")});
+ it("provides Mixpanel JavaScript persistence in Expo Go",()=>{expect(analytics).toContain("@react-native-async-storage/async-storage");expect(analytics).toContain('Constants.appOwnership === "expo"');expect(analytics).toContain("new Mixpanel(token, false, false, AsyncStorage)")});
+ it("guards iOS-only Mixpanel background flushing",()=>expect(analytics).toContain('if (Platform.OS === "ios") next.setFlushOnBackground(true)'));
+ it("serializes Continue behind autosave and protects the latest step",()=>{expect(editor).toContain("saveQueue");expect(editor).toContain("latestSave");expect(editor).toContain("sequence===latestSave.current");expect(editor).toContain("clearTimeout(timer.current)");expect(editor).toContain('go("PHOTOS_DOCUMENTS")')});
+ it("normalizes partial media DTOs at API and render boundaries",()=>{expect(source("api/seller-marketplace.ts")).toContain("normalizedDraftResponse");expect(editor).toContain("Array.isArray(draft.images)?draft.images:[]");expect(editor).toContain("Array.isArray(draft.documents)?draft.documents:[]")});
+ it("keeps Saved-card type and location content-sized",()=>{expect(marketplaceUi).toContain('typePill:{alignSelf:"flex-start",maxWidth:"100%"');expect(marketplaceUi).not.toContain('<Text numberOfLines={1} style={styles.locationText}')});
+ it("keeps Buyer detail labels and amenities complete",()=>{["Type","Category","Condition","Furnishing","Initial Deposit","Reference ID"].forEach(label=>expect(detail).toContain(label));expect(detail).toContain("width:112");expect(detail).toContain("amenities=useMemo");expect(detail).toContain('item.trim().length>0')});
+ it("submits Interest once with the canonical payload and no mutation retry",()=>{expect(detail).toContain("contactMethod:method");expect(detail).toContain("retry:false")});
+});

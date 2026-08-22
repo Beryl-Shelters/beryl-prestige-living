@@ -1,9 +1,12 @@
 import type { AuthenticatedRequester } from "@/api/marketplace";
+import { normalizeSellerDraft } from "@/seller-marketplace/helpers";
+import type { ApiEnvelope } from "@/types/auth";
 import type { SellerDocument, SellerDraft, SellerImage, SellerListingResult, SellerManagement, SellerMandate, SellerMandateInput, SellerReview, SellerStatus, SellerSubmission } from "@/types/seller-marketplace";
 const root="/marketplace/seller/properties";
 export const createSellerDraft=(r:AuthenticatedRequester,body:unknown={})=>r<{property:SellerDraft}>(root,"POST",body);
-export const getSellerDraft=(r:AuthenticatedRequester,id:string)=>r<{property:SellerDraft}>(`${root}/${id}`,"GET");
-export const saveSellerDraft=(r:AuthenticatedRequester,id:string,body:unknown)=>r<{property:SellerDraft}>(`${root}/${id}`,"PATCH",body);
+const normalizedDraftResponse=async(response:Promise<ApiEnvelope<{property:SellerDraft}>>)=>{const result=await response;if(result.data?.property)result.data.property=normalizeSellerDraft(result.data.property);return result};
+export const getSellerDraft=(r:AuthenticatedRequester,id:string)=>normalizedDraftResponse(r<{property:SellerDraft}>(`${root}/${id}`,"GET"));
+export const saveSellerDraft=(r:AuthenticatedRequester,id:string,body:unknown)=>normalizedDraftResponse(r<{property:SellerDraft}>(`${root}/${id}`,"PATCH",body));
 export const listSellerProperties=(r:AuthenticatedRequester,status:SellerStatus,page=1)=>r<SellerListingResult>(`${root}?status=${status}&page=${page}&limit=10`,"GET");
 export const sellerManagement=(r:AuthenticatedRequester,id:string)=>r<{management:SellerManagement}>(`${root}/${id}/management`,"GET");
 export const uploadSellerImages=(r:AuthenticatedRequester,id:string,body:FormData)=>r<{images:SellerImage[]}>(`${root}/${id}/images`,"POST",body);

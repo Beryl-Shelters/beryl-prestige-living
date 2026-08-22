@@ -1,4 +1,5 @@
 import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import { Mixpanel } from "mixpanel-react-native";
 import type { Persona } from "@/types/auth";
@@ -45,9 +46,9 @@ const analytics = async () => {
   if (instance !== undefined) return instance;
   if (!token || !platform) { instance = null; return instance; }
   try {
-    const next = new Mixpanel(token, false, true);
+    const next = Constants.appOwnership === "expo" ? new Mixpanel(token, false, false, AsyncStorage) : new Mixpanel(token, false, true);
     await next.init(false, { platform, environment, ...(appVersion ? { app_version: appVersion } : {}) }, "https://api-eu.mixpanel.com");
-    next.setFlushOnBackground(true);
+    if (Platform.OS === "ios") next.setFlushOnBackground(true);
     const id = await next.getDistinctId();
     const safe = /^\$device:[A-Za-z0-9_-]{1,120}$/.test(id) ? id : /^[-A-Za-z0-9_]{1,112}$/.test(id) ? `$device:${id}` : undefined;
     if (safe) { await next.identify(safe); anonymousId = safe; }
