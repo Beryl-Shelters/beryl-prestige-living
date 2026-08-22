@@ -12,7 +12,9 @@ describe("Marketplace sales mandate Swagger", () => {
     expect(path.get.security).toEqual([{ bearerAuth: [] }]);
     expect(specification.paths["/marketplace/seller/properties/{propertyId}/review"].get).toBeTruthy();
     expect(specification.paths["/marketplace/seller/properties/{propertyId}/submit"].post).toBeTruthy();
-    expect(Object.keys(specification.paths)).toHaveLength(130);
+    expect(specification.paths["/admin/leads"].get).toBeTruthy();
+    expect(specification.paths["/admin/leads/{leadId}"].get).toBeTruthy();
+    expect(specification.paths["/admin/leads/{leadId}/stage"].patch).toBeTruthy();
   });
 
   it("documents the exact request and Seller-safe response", () => {

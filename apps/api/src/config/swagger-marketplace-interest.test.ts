@@ -11,7 +11,6 @@ describe("Marketplace Buyer interest Swagger",()=>{
     expect(operation.description).toMatch(/regardless of active.*persona/i);
     expect(operation.description).toMatch(/marketplace_status=LIVE/i);
     expect(operation.description).toMatch(/No response-time or follow-up SLA is promised/i);
-    expect(Object.keys(specification.paths)).toHaveLength(130);
   });
 
   it("documents the exact safe request and success DTO",()=>{

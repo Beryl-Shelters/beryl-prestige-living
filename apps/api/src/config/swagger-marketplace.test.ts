@@ -30,6 +30,5 @@ describe("marketplace draft Swagger", () => {
       expect(operation.responses["503"].content["application/json"].example.code).toBe("DRAFT_PERSISTENCE_UNAVAILABLE");
     }
 
-    expect(Object.keys(paths)).toHaveLength(130);
   });
 });

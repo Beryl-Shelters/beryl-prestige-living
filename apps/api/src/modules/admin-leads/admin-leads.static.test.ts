@@ -1,0 +1,43 @@
+import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const root = process.cwd().endsWith("apps\\api") || process.cwd().endsWith("apps/api") ? process.cwd() : join(process.cwd(), "apps", "api");
+const source = (path: string) => readFileSync(join(root, path), "utf8");
+const routes = source("src/modules/admin-leads/admin-leads.routes.ts");
+const controller = source("src/modules/admin-leads/admin-leads.controller.ts");
+const service = source("src/modules/admin-leads/admin-leads.service.ts");
+const validators = source("src/modules/admin-leads/admin-leads.validators.ts");
+const migration = source("supabase/migrations/202608220001_admin_lead_management.sql");
+const swagger = source("src/config/swagger.ts");
+
+describe("Admin lead management architecture", () => {
+  it("uses isolated Admin sessions", () => expect(routes).toContain('adminSessionMiddleware, requireAdminRole("ADMIN", "SUPER_ADMIN")'));
+  it("does not accept customer authentication", () => expect(routes).not.toMatch(/customerSessionMiddleware|authMiddleware|requireVerifiedCustomer/));
+  it("exposes the lead board query", () => expect(routes).toContain('router.get("/", controller.list)'));
+  it("exposes lead detail", () => expect(routes).toContain('router.get("/:leadId", controller.detail)'));
+  it("exposes a validated stage patch", () => expect(routes).toContain('router.patch("/:leadId/stage", validate(updateAdminLeadStageSchema'));
+  it("restricts operational stages", () => expect(validators).toContain('["NEW", "CONTACTED", "WON", "LOST"]'));
+  it("rejects unknown stage fields", () => expect(validators).toContain('}).strict()'));
+  it("bounds server search", () => { expect(validators).toContain(".max(120)"); expect(validators).toContain(".max(50)"); });
+  it("takes Admin identity only from the session", () => { expect(controller).toContain("req.user!.id"); expect(controller).not.toContain("req.body.adminId"); });
+  it("returns stable invalid-filter errors", () => expect(controller).toContain("INVALID_LEAD_FILTER"));
+  it("uses a parameterized database search RPC", () => expect(service).toContain('rpc("list_admin_inquiry_leads"'));
+  it("uses an atomic transition RPC", () => expect(service).toContain('rpc("transition_admin_inquiry_lead_stage"'));
+  it("maps persistence outages safely", () => expect(service).toContain("LEADS_UNAVAILABLE"));
+  it("maps stale transitions to conflict", () => expect(service).toContain("LEAD_STAGE_CONFLICT"));
+  it("does not expose placeholder interest text as a message", () => expect(service).toContain('message === "Marketplace interest submitted"'));
+  it("adds a separate lead stage without replacing legacy status", () => { expect(migration).toContain("add column if not exists lead_stage"); expect(migration).not.toMatch(/drop column\s+status/i); });
+  it("backfills legacy inquiry values", () => { expect(migration).toContain("when 'in_progress' then 'CONTACTED'"); expect(migration).toContain("when 'scheduled' then 'CONTACTED'"); expect(migration).toContain("else 'NEW'"); });
+  it("stores immutable Admin stage history", () => expect(migration).toContain("inquiry_lead_stage_history"));
+  it("enables RLS on lead history", () => expect(migration).toContain("alter table public.inquiry_lead_stage_history enable row level security"));
+  it("locks the inquiry row before transition", () => expect(migration).toMatch(/from public\.inquiries i[\s\S]*for update/));
+  it("allows NEW to CONTACTED", () => expect(migration).toContain("v_inquiry.lead_stage = 'NEW' and p_new_stage = 'CONTACTED'"));
+  it("allows CONTACTED to WON or LOST", () => expect(migration).toContain("v_inquiry.lead_stage = 'CONTACTED' and p_new_stage in ('WON', 'LOST')"));
+  it("rejects public RPC execution", () => expect(migration).toMatch(/revoke all on function public\.transition_admin_inquiry_lead_stage[\s\S]*from public, anon, authenticated/));
+  it("grants RPC execution only to service role", () => expect(migration).toContain("to service_role"));
+  it("uses database-authoritative per-stage counts", () => expect(migration).toContain("count(*) over (partition by i.lead_stage)"));
+  it("bounds each stage independently", () => expect(migration).toContain("row_number() over (partition by i.lead_stage"));
+  it("searches without interpolated SQL", () => expect(migration).toContain("btrim(p_query)"));
+  it("documents all three Admin operations", () => { expect(swagger).toContain('path: "/admin/leads"'); expect(swagger).toContain('path: "/admin/leads/{leadId}"'); expect(swagger).toContain('path: "/admin/leads/{leadId}/stage"'); });
+});

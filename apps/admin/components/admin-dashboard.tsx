@@ -1,13 +1,14 @@
 "use client";
-import { LogOut, LayoutDashboard, UsersRound } from "lucide-react";
+import { Bell, Building2, LayoutDashboard, LogOut, Settings, UsersRound, Waypoints } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import type { AdminSessionState } from "@/lib/contracts";
 import { identifyAdminAnalytics, resetAdminAnalytics, trackAdminEvent } from "@/lib/analytics/admin";
 import { BrandLogo } from "./brand-logo";
 export function AdminShell({ session, children }: { session: AdminSessionState; children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   useEffect(() => { void identifyAdminAnalytics(session.admin); }, [session.admin]);
   const logout = async () => {
     void trackAdminEvent("Logout", {});
@@ -17,32 +18,33 @@ export function AdminShell({ session, children }: { session: AdminSessionState; 
     router.refresh();
   };
   const { admin } = session;
+  const initials = admin.fullName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
   return (
     <main className="dashboard">
       <aside className="sidebar">
         <BrandLogo href="/dashboard" dark />
         <nav className="sidebar-nav" aria-label="Admin navigation">
-          <Link href="/dashboard">
+          <Link href="/dashboard" data-active={pathname === "/dashboard"}>
             <LayoutDashboard size={17} />
             Dashboard
           </Link>
-          {admin.adminRole === "SUPER_ADMIN" ? <Link href={"/dashboard/admins" as never}><UsersRound size={17} />Admins</Link> : null}
-          {['Customers', 'Properties', 'Listings', 'Reports', 'Transactions', 'Analytics'].map((item) => <span key={item}>{item}</span>)}
-          <Link href={"/dashboard/change-password" as never}>Settings</Link>
+          <span aria-disabled="true"><UsersRound size={17} />Users</span>
+          <span aria-disabled="true"><Building2 size={17} />Properties</span>
+          <Link href={"/dashboard/leads" as never} data-active={pathname.startsWith("/dashboard/leads")}><Waypoints size={17} />Leads</Link>
         </nav>
+        <div className="sidebar-footer"><Link href="/dashboard/change-password" data-active={pathname === "/dashboard/change-password"}><Settings size={17} />Settings</Link><div className="sidebar-profile"><span className="sidebar-avatar" aria-hidden>{initials}</span><div><strong>{admin.fullName}</strong><span>{admin.department || "Beryl Shelter"}</span><small>{admin.adminRole.replaceAll("_", " ")}</small></div></div><button type="button" onClick={logout}><LogOut size={16} />Log out</button></div>
       </aside>
       <div className="dashboard-main">
         <header className="topbar">
           <span style={{ fontWeight: 800 }}>Admin Portal</span>
           <div className="admin-meta">
-            <strong>{admin.fullName}</strong>
-            <span>{admin.department || "Beryl Shelter"}</span>
+            <Bell size={18} aria-label="Notifications" />
             <span className="role-badge">
               {admin.adminRole.replaceAll("_", " ")}
             </span>
           </div>
         </header>
-        <section className="dashboard-content">{children}<button className="button button-secondary logout-button" type="button" onClick={logout}><LogOut size={16} /> Log out</button></section>
+        <section className="dashboard-content">{children}</section>
       </div>
     </main>
   );
