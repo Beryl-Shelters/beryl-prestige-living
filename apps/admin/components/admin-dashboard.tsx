@@ -28,7 +28,7 @@ export function AdminShell({ session, children }: { session: AdminSessionState; 
             <LayoutDashboard size={17} />
             Dashboard
           </Link>
-          <span aria-disabled="true"><UsersRound size={17} />Users</span>
+          <Link href={"/dashboard/users" as never} data-active={pathname.startsWith("/dashboard/users")}><UsersRound size={17} />Users</Link>
           <span aria-disabled="true" data-active={pathname.startsWith("/dashboard/properties")}><Building2 size={17} />Properties</span>
           <Link href={"/dashboard/leads" as never} data-active={pathname.startsWith("/dashboard/leads")}><Waypoints size={17} />Leads</Link>
         </nav>

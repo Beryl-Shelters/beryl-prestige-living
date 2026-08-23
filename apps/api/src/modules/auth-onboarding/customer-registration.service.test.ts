@@ -533,9 +533,9 @@ describe("customer registration vertical slice", () => {
 
   it("preserves the existing Admin Portal customer-users route", () => {
     const source = readFileSync(
-      join(process.cwd(), "src/modules/admin/admin.routes.ts"),
+      join(process.cwd(), "src/routes/index.ts"),
       "utf8"
     );
-    expect(source).toContain('router.get("/users", getAdminUsersController)');
+    expect(source).toContain('router.use("/admin/users", adminUserRoutes)');
   });
 });

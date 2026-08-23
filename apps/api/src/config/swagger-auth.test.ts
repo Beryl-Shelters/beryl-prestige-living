@@ -69,9 +69,11 @@ describe("customer registration Swagger contracts", () => {
   });
 
   it("preserves /admin/users as the Admin Portal customer-user listing", () => {
-    expect(specification.paths["/admin/users"].get.summary).toBe("List users");
+    expect(specification.paths["/admin/users"].get.summary).toBe(
+      "List the read-only customer directory"
+    );
     expect(specification.paths["/admin/users"].get.description).toContain(
-      "Admin or Super Admin"
+      "canonical customer profiles"
     );
   });
 

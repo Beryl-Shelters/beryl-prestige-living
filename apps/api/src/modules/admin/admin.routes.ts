@@ -5,20 +5,14 @@ import { validate } from "../../middlewares/validate.middleware";
 import {
   approveAdminPropertyController,
   getAdminDashboardController,
-  getAdminUserByIdController,
-  getAdminUsersController,
   getPendingListingsController,
   getPendingMandatesController,
   getPendingPropertiesController,
   getPendingReportsController,
-  rejectAdminPropertyController,
-  updateAdminUserStatusController,
-  verifyAdminUserController
+  rejectAdminPropertyController
 } from "./admin.controller";
 import {
-  rejectPropertySchema,
-  updateUserStatusSchema,
-  verifyUserSchema
+  rejectPropertySchema
 } from "./admin.validators";
 import {
   createSuperAdminUserController,
@@ -41,22 +35,6 @@ router.use(authMiddleware);
 router.use(requireRoles(["admin", "super_admin"]));
 
 router.get("/dashboard", getAdminDashboardController);
-
-router.get("/users", getAdminUsersController);
-
-router.get("/users/:id", getAdminUserByIdController);
-
-router.patch(
-  "/users/:id/status",
-  validate(updateUserStatusSchema),
-  updateAdminUserStatusController
-);
-
-router.patch(
-  "/users/:id/verify",
-  validate(verifyUserSchema),
-  verifyAdminUserController
-);
 
 router.get("/properties/pending", getPendingPropertiesController);
 
