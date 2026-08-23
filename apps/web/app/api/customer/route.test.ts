@@ -200,6 +200,18 @@ describe("customer BFF cookie bridge", () => {
     expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: "PATCH", body: JSON.stringify({ ...body, currentStep: "PHOTOS_DOCUMENTS" }), headers: expect.objectContaining({ authorization: "Bearer seller-access-token", "content-type": "application/json" }) });
   });
 
+  it("forwards Seller draft DELETE without a request body through the HttpOnly session", async () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    state.cookies.set("beryl_customer_access", "seller-access-token");
+    const fetchMock = vi.fn().mockResolvedValue(backendResponse({ success: true, message: "Deleted", data: { propertyId: id, deleted: true } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await callDelete(["marketplace", "seller", "properties", id]);
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledWith(`http://localhost:5000/api/v1/marketplace/seller/properties/${id}`, expect.objectContaining({ method: "DELETE", body: undefined, headers: expect.objectContaining({ authorization: "Bearer seller-access-token" }) }));
+  });
+
   it("preserves safe Seller draft validation errors through the BFF", async () => {
     state.cookies.set("beryl_customer_access", "seller-access-token");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(backendResponse({ success: false, message: "Validation failed", code: "INVALID_DRAFT_PAYLOAD", errors: { fieldErrors: { propertyType: ["Invalid enum value"] } } }, 400)));

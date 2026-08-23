@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, Check, ChevronDown, Cloud, FileText, Images, KeyRound, Minus, Plus, Upload, X } from "lucide-react";
 import { BerylShelterLogo } from "@/components/brand/beryl-shelter-logo";
 import { ApiAlert } from "@/components/ui/feedback";
@@ -20,6 +20,7 @@ import { sellerListingRouteForAction } from "@/lib/seller-listings";
 import { SellerMandateStep } from "./seller-mandate-step";
 import { SellerReviewStep, SellerSubmissionSuccess } from "./seller-review-step";
 import { SellerShell } from "./seller-shell";
+import { SellerDeleteDraftDialog } from "./seller-delete-draft-dialog";
 
 type EditorStep = "PROPERTY_INFORMATION" | "PHOTOS_DOCUMENTS" | "SALES_MANDATE" | "REVIEW";
 
@@ -54,6 +55,7 @@ export function SellerDraftEditor({
   initialStep?: EditorStep;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [id, setId] = useState(initialId);
   const [step, setStep] = useState<EditorStep>(initialStep ?? "PROPERTY_INFORMATION");
   const [draft, setDraft] = useState<Partial<SellerDraft>>(empty);
@@ -67,6 +69,8 @@ export function SellerDraftEditor({
   const pendingWrites = useRef(0);
   const [pending, setPending] = useState(false);
   const [submission, setSubmission] = useState<SellerSubmissionResult | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const restored = useQuery({
     queryKey: ["seller-draft", id],
@@ -77,6 +81,22 @@ export function SellerDraftEditor({
     queryKey: ["seller-marketplace-management", id],
     queryFn: () => customerApi.sellerListingManagement(id!),
     enabled: Boolean(id) && !submission
+  });
+  const deleteMutation = useMutation({
+    mutationFn: async (propertyId: string) => {
+      await writeQueue.current.catch(() => undefined);
+      return customerApi.deleteSellerDraft(propertyId);
+    },
+    onSuccess: async () => {
+      setDeleteOpen(false);
+      setDeleteError("");
+      await queryClient.invalidateQueries({ queryKey: ["seller-marketplace-listings"] });
+      queryClient.removeQueries({ queryKey: ["seller-draft", id] });
+      queryClient.removeQueries({ queryKey: ["seller-marketplace-management", id] });
+      queryClient.removeQueries({ queryKey: ["seller-review", id] });
+      router.replace("/seller/listings");
+    },
+    onError: () => setDeleteError("We could not delete this draft. Please try again.")
   });
 
   const correctionSummary = correction.data?.data.management.summary;
@@ -230,6 +250,7 @@ export function SellerDraftEditor({
           <span className={step === "REVIEW" ? "active" : ""}><i>4</i>Review</span>
         </div>
       </header>}
+      {id && restored.data?.data.property ? <div className="seller-editor-delete-row"><button type="button" className="seller-editor-delete-action" disabled={pending || deleteMutation.isPending} onClick={() => { setDeleteError(""); setDeleteOpen(true); }}>Delete draft</button></div> : null}
       {correction.data?.data.management.summary.rejectionFeedback || correction.data?.data.management.summary.rejectionReason ? <section className="seller-correction-context" aria-labelledby="correction-context-title"><p className="seller-kicker">Correction context</p><h2 id="correction-context-title">Changes needed</h2><p>{correction.data.data.management.summary.rejectionFeedback || correction.data.data.management.summary.rejectionReason}</p></section> : null}
       <div className={`seller-editor-workspace${step === "REVIEW" ? " is-review" : ""}`}>
       {step === "PROPERTY_INFORMATION" ? (
@@ -251,6 +272,7 @@ export function SellerDraftEditor({
       ) : <SellerReviewStep propertyId={id!} onSubmitted={setSubmission} />}
       {step !== "REVIEW" && !usesSellerShell ? <ListingHelper /> : null}
       </div>
+      <SellerDeleteDraftDialog open={deleteOpen} pending={deleteMutation.isPending} error={deleteError} onCancel={() => { if (!deleteMutation.isPending) { setDeleteOpen(false); setDeleteError(""); } }} onConfirm={() => { if (id && !deleteMutation.isPending) deleteMutation.mutate(id); }} />
     </main>
   );
   return usesSellerShell ? <SellerShell>{editor}</SellerShell> : editor;

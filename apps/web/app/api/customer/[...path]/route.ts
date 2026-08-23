@@ -43,7 +43,7 @@ const dynamicCustomerPath = (method: string, browserPath: string) => {
   if (management && method === "GET") return `marketplace/seller/properties/${management[1]}/management`;
   if (method === "POST" && browserPath === "marketplace/seller/properties") return browserPath;
   const draft = new RegExp(`^marketplace/seller/properties/(${propertyId})$`).exec(browserPath);
-  if (draft && (method === "GET" || method === "PATCH")) return `marketplace/seller/properties/${draft[1]}`;
+  if (draft && (method === "GET" || method === "PATCH" || method === "DELETE")) return `marketplace/seller/properties/${draft[1]}`;
   const reopen = new RegExp(`^marketplace/seller/properties/(${propertyId})/reopen$`).exec(browserPath);
   if (reopen && method === "POST") return `marketplace/seller/properties/${reopen[1]}/reopen`;
   const mandate = new RegExp(`^marketplace/seller/properties/(${propertyId})/mandate$`).exec(browserPath);

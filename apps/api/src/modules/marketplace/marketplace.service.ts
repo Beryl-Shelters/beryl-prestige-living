@@ -5,6 +5,35 @@ export const assertSeller=async(userId:string)=>{const {data,error}=await supaba
 export const createDraft=async(userId:string,payload:Record<string,unknown>)=>{await assertSeller(userId);const reference=`BRL-${Date.now()}-${Math.floor(Math.random()*9000+1000)}`;const {data,error}=await supabaseAdmin.from("properties").insert({...map(payload),owner_id:userId,marketplace_status:"DRAFT",marketplace_current_step:"PROPERTY_INFORMATION",status:"pending",is_published:false,property_code:reference,slug:`draft-${reference.toLowerCase()}`,listing_purpose:"sale"}).select("*").single();if(error)throw new AppError("Property draft could not be saved",503,"DRAFT_PERSISTENCE_UNAVAILABLE");return dto(data);};
 const own=async(id:string,userId:string)=>{const {data,error}=await supabaseAdmin.from("properties").select("*").eq("id",id).eq("owner_id",userId).eq("marketplace_status","DRAFT").maybeSingle();if(error||!data)throw new AppError("Property draft not found",404,"PROPERTY_NOT_FOUND");return data;};
 const ownedProperty=async(id:string,userId:string)=>{const {data,error}=await supabaseAdmin.from("properties").select("*").eq("id",id).eq("owner_id",userId).maybeSingle();if(error||!data)throw new AppError("Property draft not found",404,"PROPERTY_NOT_FOUND");return data;};
+export const deleteDraftProperty=async(propertyId:string,userId:string)=>{
+  await assertSeller(userId);
+  const {data:property,error:propertyError}=await supabaseAdmin.from("properties").select("id,marketplace_status").eq("id",propertyId).eq("owner_id",userId).maybeSingle();
+  if(propertyError)throw new AppError("Property draft could not be deleted",503,"DRAFT_DELETE_FAILED");
+  if(!property)throw new AppError("Property draft not found",404,"PROPERTY_NOT_FOUND");
+  if(property.marketplace_status!=="DRAFT")throw new AppError("Property is not editable",409,"PROPERTY_NOT_EDITABLE");
+
+  const [imageResult,documentResult]=await Promise.all([
+    supabaseAdmin.from("property_images").select("cloudinary_public_id").eq("property_id",propertyId),
+    supabaseAdmin.from("property_documents").select("cloudinary_public_id").eq("property_id",propertyId)
+  ]);
+  if(imageResult.error||documentResult.error)throw new AppError("Property draft could not be deleted",503,"DRAFT_DELETE_FAILED");
+
+  const {data,error}=await supabaseAdmin.rpc("delete_marketplace_draft_property",{p_property_id:propertyId,p_owner_id:userId});
+  if(error)throw new AppError("Property draft could not be deleted",503,"DRAFT_DELETE_FAILED");
+  const result=Array.isArray(data)?data[0]:data;
+  if(!result||result.outcome==="NOT_FOUND")throw new AppError("Property draft not found",404,"PROPERTY_NOT_FOUND");
+  if(result.outcome==="NOT_EDITABLE")throw new AppError("Property is not editable",409,"PROPERTY_NOT_EDITABLE");
+  if(result.outcome!=="DELETED")throw new AppError("Property draft could not be deleted",503,"DRAFT_DELETE_FAILED");
+
+  const cleanups=[
+    ...(imageResult.data??[]).filter((row:any)=>row.cloudinary_public_id).map((row:any)=>deleteImageFromCloudinary(row.cloudinary_public_id)),
+    ...(documentResult.data??[]).filter((row:any)=>row.cloudinary_public_id).map((row:any)=>deletePropertyDocument(row.cloudinary_public_id))
+  ];
+  const cleanupResults=await Promise.allSettled(cleanups);
+  const failedCleanupCount=cleanupResults.filter((cleanup)=>cleanup.status==="rejected").length;
+  if(failedCleanupCount)console.error("Marketplace draft provider cleanup incomplete",{propertyId,failedCleanupCount});
+  return {propertyId:result.property_id,deleted:true as const};
+};
 export const getDraft=async(id:string,userId:string)=>{await assertSeller(userId);const property=await own(id,userId);return {...dto(property),images:(await images(id)).map(imageDto),documents:await listDocumentMetadata(id,userId)};}; export const updateDraft=async(id:string,userId:string,p:Record<string,unknown>)=>{await assertSeller(userId);await own(id,userId);const {data,error}=await supabaseAdmin.from("properties").update(map(p)).eq("id",id).eq("owner_id",userId).select("*").single();if(error)throw new AppError("Property draft could not be saved",503,"DRAFT_PERSISTENCE_UNAVAILABLE");return dto(data);};
 export const marketplaceStatuses=["DRAFT","IN_REVIEW","LIVE","REJECTED"] as const; export type MarketplaceStatus=typeof marketplaceStatuses[number]; export type MarketplaceStatusFilter=MarketplaceStatus|"ALL";
 export const sellerNextAction=(status:MarketplaceStatus,currentStep:string|null|undefined,rejectedAt?:string|null)=>{if(status==="IN_REVIEW")return "VIEW_REVIEW_STATUS" as const;if(status==="LIVE")return "VIEW_LIVE_LISTING" as const;if(status==="REJECTED")return "VIEW_REJECTION" as const;if(status==="DRAFT"&&rejectedAt)return "EDIT_REJECTED_LISTING" as const;const steps:Record<string,string>={PROPERTY_INFORMATION:"CONTINUE_PROPERTY_INFORMATION",PHOTOS_DOCUMENTS:"CONTINUE_PHOTOS_DOCUMENTS",SALES_MANDATE:"CONTINUE_SALES_MANDATE",REVIEW:"CONTINUE_REVIEW"};return steps[currentStep??""]??"CONTINUE_PROPERTY_INFORMATION"};

@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, ChevronLeft, ChevronRight, Ellipsis, Images, Plus, RefreshCw } from "lucide-react";
 import { ApiAlert } from "@/components/ui/feedback";
 import { PersonaSwitcher } from "@/components/persona/persona-switcher";
@@ -14,6 +14,7 @@ import { customerApi } from "@/lib/api/client";
 import type { SellerListingStatus, SellerListingStep, SellerListingSummary } from "@/lib/contracts";
 import { formatNaira, humanizeMarketplaceValue } from "@/lib/marketplace";
 import { sellerListingActionLabel, sellerListingRouteForAction, sellerListingTabs } from "@/lib/seller-listings";
+import { SellerDeleteDraftDialog } from "./seller-delete-draft-dialog";
 
 const validStatuses: SellerListingStatus[] = ["ALL", "LIVE", "IN_REVIEW", "REJECTED", "DRAFT"];
 const date = (value: string | null) => value ? new Intl.DateTimeFormat("en-NG", { day: "numeric", month: "short" }).format(new Date(value)) : null;
@@ -39,24 +40,24 @@ function activityCopy(item: SellerListingSummary) {
   return date(item.updatedAt) ? `Edited ${date(item.updatedAt)}` : "Draft saved";
 }
 
-function ListingActions({ item }: { item: SellerListingSummary }) {
+function ListingActions({ item, onDelete }: { item: SellerListingSummary; onDelete: () => void }) {
   const route = sellerListingRouteForAction(item.nextAction, item.id);
   return <details className="seller-row-menu"><summary aria-label={`Open actions for ${item.title || "Untitled Listing"}`}><Ellipsis size={23} /></summary><div>
     {item.status === "LIVE" ? <Link href={route}>See buyer view</Link> : null}
     {item.status === "IN_REVIEW" ? <Link href={route}>View details</Link> : null}
     {item.status === "REJECTED" ? <><Link href={route}>Fix &amp; Resend</Link><Link href={`/seller/listings/${item.id}` as Route}>View details</Link></> : null}
-    {item.status === "DRAFT" ? <Link href={route}>Continue editing</Link> : null}
+    {item.status === "DRAFT" ? <><Link href={route}>Continue editing</Link><button type="button" className="seller-menu-delete" onClick={onDelete}>Delete draft</button></> : null}
   </div></details>;
 }
 
-function ListingRow({ item }: { item: SellerListingSummary }) {
+function ListingRow({ item, onDelete }: { item: SellerListingSummary; onDelete: () => void }) {
   const step = item.currentStep ? stepDetails[item.currentStep] : null;
   const route = sellerListingRouteForAction(item.nextAction, item.id);
   return <article className="seller-listing-row">
     <div className="seller-row-main">
       <div className="seller-row-image">{item.coverImage ? <Image src={item.coverImage.url} alt={item.title ? `${item.title} cover image` : "Property cover image"} fill sizes="120px" /> : <Building2 size={30} aria-label="Property image unavailable" />} {item.photoCount > 0 ? <span><Images size={13} />{item.photoCount}</span> : null}</div>
       <div className="seller-row-copy"><span className={`seller-status seller-status-${item.status.toLowerCase().replace("_", "-")}`}><i aria-hidden="true" />{statusLabel(item.status)}</span><h2>{item.title || "Untitled Listing"}</h2>{item.askingPrice !== null ? <p className="seller-listing-price">{formatNaira(item.askingPrice)}</p> : null}<p className="seller-row-meta">{activityCopy(item)}</p></div>
-      <ListingActions item={item} />
+      <ListingActions item={item} onDelete={onDelete} />
     </div>
     {item.status === "DRAFT" && step ? <div className="seller-draft-progress"><div><strong>Step {step.number} of 4: {step.label}</strong><span className="seller-draft-track" aria-label={`${step.number} of 4 steps complete`}>{Array.from({ length: 4 }, (_, index) => <i key={index} className={index < step.number ? "is-complete" : ""} />)}</span></div><Link className="btn btn-secondary" href={route}>{sellerListingActionLabel(item.nextAction)}</Link></div> : null}
   </article>;
@@ -66,14 +67,26 @@ function ListingsSkeleton() { return <div className="seller-listing-skeletons" a
 
 export function SellerListingsScreen({ initialStatus = "ALL", initialPage = 1 }: { initialStatus?: SellerListingStatus; initialPage?: number }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { session, sessionLoading } = useAuth();
   const [personaSwitcherOpen, setPersonaSwitcherOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<SellerListingSummary | null>(null);
+  const [deleteError, setDeleteError] = useState("");
   const status = validStatuses.includes(initialStatus) ? initialStatus : "ALL";
   const page = Math.max(1, initialPage);
   const sellerPersona = session?.personas.find((persona) => persona.type === "SELLER_DEVELOPER");
   const isSellerActive = session?.activePersona === "SELLER_DEVELOPER";
   const isSellerReady = isSellerActive && sellerPersona?.onboardingStatus === "COMPLETED";
   const query = useQuery({ queryKey: ["seller-marketplace-listings", status, page], queryFn: () => customerApi.sellerListings({ status, page, limit: 12 }), enabled: Boolean(isSellerReady) });
+  const deleteMutation = useMutation({
+    mutationFn: (propertyId: string) => customerApi.deleteSellerDraft(propertyId),
+    onSuccess: async () => {
+      setDeleteTarget(null);
+      setDeleteError("");
+      await queryClient.invalidateQueries({ queryKey: ["seller-marketplace-listings"] });
+    },
+    onError: () => setDeleteError("We could not delete this draft. Please try again.")
+  });
   useEffect(() => {
     if (!sessionLoading && isSellerActive && sellerPersona?.onboardingStatus !== "COMPLETED") router.replace("/onboarding/seller");
   }, [isSellerActive, router, sellerPersona?.onboardingStatus, sessionLoading]);
@@ -97,7 +110,8 @@ export function SellerListingsScreen({ initialStatus = "ALL", initialPage = 1 }:
     {query.isLoading ? <ListingsSkeleton /> : null}
     {query.isError ? <section className="seller-listing-state" role="alert"><ApiAlert>We could not load your listings. Please try again.</ApiAlert><button className="btn btn-secondary" type="button" onClick={() => query.refetch()}><RefreshCw size={17} />Try again</button></section> : null}
     {result && !result.items.length ? <section className="seller-listing-state seller-listing-empty"><Building2 size={34} aria-hidden="true" /><h2>{emptyCopy[status].title}</h2><p>{emptyCopy[status].text}</p><Link className="btn btn-primary" href="/seller/listings/new"><Plus size={17} />List property</Link></section> : null}
-    {result?.items.length ? <section className="seller-listing-rows" aria-live="polite">{result.items.map((item) => <ListingRow key={item.id} item={item} />)}</section> : null}
+    {result?.items.length ? <section className="seller-listing-rows" aria-live="polite">{result.items.map((item) => <ListingRow key={item.id} item={item} onDelete={() => { setDeleteError(""); setDeleteTarget(item); }} />)}</section> : null}
     {result ? <nav className="seller-pagination" aria-label="Listings pages"><strong>Page {page} of {totalPages}</strong><div><button type="button" aria-label="Previous page" disabled={page === 1} onClick={() => update(status, page - 1)}><ChevronLeft size={18} /></button>{pageChoices.map((choice) => <button key={choice} type="button" aria-current={choice === page ? "page" : undefined} onClick={() => update(status, choice)}>{choice}</button>)}<button type="button" aria-label="Next page" disabled={page >= totalPages} onClick={() => update(status, page + 1)}><ChevronRight size={18} /></button></div></nav> : null}
+    <SellerDeleteDraftDialog open={Boolean(deleteTarget)} pending={deleteMutation.isPending} error={deleteError} onCancel={() => { if (!deleteMutation.isPending) { setDeleteTarget(null); setDeleteError(""); } }} onConfirm={() => { if (deleteTarget && !deleteMutation.isPending) deleteMutation.mutate(deleteTarget.id); }} />
   </main>;
 }

@@ -59,6 +59,7 @@ export const customerApi = {
   createSellerDraft: (body: Partial<SellerDraft>) => client.post<ApiSuccess<SellerDraftResult>>("/marketplace/seller/properties", body).then(dataOf),
   sellerDraft: (propertyId: string) => client.get<ApiSuccess<SellerDraftResult>>(`/marketplace/seller/properties/${propertyId}`).then(dataOf),
   saveSellerDraft: (propertyId: string, body: Partial<SellerDraft>) => client.patch<ApiSuccess<SellerDraftResult>>(`/marketplace/seller/properties/${propertyId}`, body).then(dataOf),
+  deleteSellerDraft: (propertyId: string) => client.delete<ApiSuccess<{ propertyId: string; deleted: true }>>(`/marketplace/seller/properties/${propertyId}`).then(dataOf),
   reopenSellerProperty: (propertyId: string) => client.post<ApiSuccess<SellerReopenResult>>(`/marketplace/seller/properties/${propertyId}/reopen`, {}).then(dataOf),
   uploadSellerImages: (propertyId: string, body: FormData) => client.post(`/marketplace/seller/properties/${propertyId}/images`, body, { headers: { "content-type": "multipart/form-data" } }).then(dataOf),
   deleteSellerImage: (propertyId: string, imageId: string) => client.delete(`/marketplace/seller/properties/${propertyId}/images/${imageId}`).then(dataOf),

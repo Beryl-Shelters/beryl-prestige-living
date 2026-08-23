@@ -48,6 +48,7 @@ describe("mobile Buyer Marketplace architecture", () => {
   it("keeps property detail buyer-safe", () => ["fullAddress", "sellerFullName", "marketplace_mandate", "property.documents"].forEach(value => expect(detail).not.toContain(value)));
   it("renders verification, details, amenities, and interest architecture", () => ["Verified by Beryl", "PROPERTY DETAILS", "WHAT&apos;S INCLUDED", "I am interested in this property"].forEach(value => expect(detail).toContain(value)));
   it("renders only normalized complete amenity labels", () => { expect(detail).toContain("amenities.length"); expect(detail).toContain("amenities.map(item"); expect(detail).not.toContain("property.amenities.map(item"); });
+  it("renders included amenities in multiline two-column cells", () => { expect(detail).toContain('amenity:{width:"48%",minHeight:38,flexShrink:0'); expect(detail).toContain('amenityText:{width:"100%",textAlign:"center"'); });
   it("prompts anonymous users before Express Interest", () => expect(detail).toContain("if(!session.isAuthenticated){setAuthOpen(true);return;}"));
   it("submits only approved interest properties", () => { expect(detail).toContain("contactMethod:method"); expect(detail).toContain("...(trimmed?{message:trimmed}:{})"); });
   it("does not send a blank optional message", () => expect(detail).toContain("...(trimmed?{message:trimmed}:{})"));

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";import path from "node:path";
 const src=(file:string)=>readFileSync(path.resolve(__dirname,file),"utf8");const app=(file:string)=>readFileSync(path.resolve(__dirname,"..",file),"utf8");
 describe("seller marketplace architecture",()=>{
  const api=src("api/seller-marketplace.ts"),editor=src("components/seller-marketplace/seller-editor-screen.tsx"),listings=src("components/seller-marketplace/seller-listings-screen.tsx"),management=src("components/seller-marketplace/seller-management-screen.tsx"),helpers=src("seller-marketplace/helpers.ts");
- it.each(["images","images/order","cover","documents","mandate","review","management","submit","reopen"])("connects %s",route=>expect(api).toContain(route));
+ it.each(["images","images/order","cover","documents","mandate","review","management","submit","reopen","DELETE"])("connects %s",route=>expect(api).toContain(route));
  it("uses PUT for mandate",()=>expect(api).toContain('"PUT",body'));
  it("uses multipart uploads",()=>expect(editor).toContain("new FormData()"));
  it("uses official Expo pickers",()=>{expect(editor).toContain("expo-image-picker");expect(editor).toContain("expo-document-picker")});

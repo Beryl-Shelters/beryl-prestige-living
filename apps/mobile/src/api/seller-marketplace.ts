@@ -7,6 +7,7 @@ export const createSellerDraft=(r:AuthenticatedRequester,body:unknown={})=>r<{pr
 const normalizedDraftResponse=async(response:Promise<ApiEnvelope<{property:SellerDraft}>>)=>{const result=await response;if(result.data?.property)result.data.property=normalizeSellerDraft(result.data.property);return result};
 export const getSellerDraft=(r:AuthenticatedRequester,id:string)=>normalizedDraftResponse(r<{property:SellerDraft}>(`${root}/${id}`,"GET"));
 export const saveSellerDraft=(r:AuthenticatedRequester,id:string,body:unknown)=>normalizedDraftResponse(r<{property:SellerDraft}>(`${root}/${id}`,"PATCH",body));
+export const deleteSellerDraft=(r:AuthenticatedRequester,id:string)=>r<{propertyId:string;deleted:true}>(`${root}/${id}`,"DELETE");
 export const listSellerProperties=(r:AuthenticatedRequester,status:SellerStatus,page=1)=>r<SellerListingResult>(`${root}?status=${status}&page=${page}&limit=10`,"GET");
 export const sellerManagement=(r:AuthenticatedRequester,id:string)=>r<{management:SellerManagement}>(`${root}/${id}/management`,"GET");
 export const uploadSellerImages=(r:AuthenticatedRequester,id:string,body:FormData)=>r<{images:SellerImage[]}>(`${root}/${id}/images`,"POST",body);
