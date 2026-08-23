@@ -1,0 +1,53 @@
+import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const root = process.cwd().endsWith("apps\\admin") || process.cwd().endsWith("apps/admin") ? process.cwd() : join(process.cwd(), "apps", "admin");
+const source = (path: string) => readFileSync(join(root, path), "utf8");
+const directory = source("components/admin-properties-directory.tsx");
+const detail = source("components/admin-property-detail.tsx");
+const shell = source("components/admin-dashboard.tsx");
+const css = source("app/globals.css");
+const contracts = source("lib/contracts.ts");
+const display = source("lib/admin-property-display.ts");
+const listPage = source("app/dashboard/properties/page.tsx");
+const detailPage = source("app/dashboard/properties/[propertyId]/page.tsx");
+const listBff = source("app/api/admin/marketplace/properties/route.ts");
+const detailBff = source("app/api/admin/marketplace/properties/[propertyId]/route.ts");
+const approveBff = source("app/api/admin/marketplace/properties/[propertyId]/approve/route.ts");
+const rejectBff = source("app/api/admin/marketplace/properties/[propertyId]/reject/route.ts");
+
+describe("Admin Properties approved interface architecture", () => {
+  it("protects directory and detail with the existing Admin guard", () => { expect(listPage).toContain("requireAdminSession()"); expect(detailPage).toContain("requireAdminSession()"); });
+  it("keeps the exact sidebar and enables Properties", () => { ["Dashboard", "Users", "Properties", "Leads", "Settings", "Log out"].forEach((label) => expect(shell).toContain(label)); ["My Listings", "Payments", "Subaccounts", "Save-as-you-earn", "Invest", "Refer & Earn", "Support"].forEach((label) => expect(shell).not.toContain(label)); expect(shell).toContain('href={"/dashboard/properties" as never}'); });
+  it("renders the approved heading and supporting copy", () => { expect(directory).toContain('id="properties-title">Properties'); expect(directory).toContain("Review submissions and control what goes live on the marketplace."); });
+  it("uses trimmed server search", () => { expect(directory).toContain("Search by title, id, seller or location"); expect(directory).toContain("search.trim()"); expect(directory).toContain('params.set("q", query)'); });
+  it("renders only approved category and mandate filters", () => { ["Filter by", "Residential", "Commercial", "Exclusive", "Open"].forEach((label) => expect(directory).toContain(label)); });
+  it("renders centralized server sort options", () => { ["OPERATIONAL", "MOST_RECENT", "OLDEST", "PRICE_HIGH", "PRICE_LOW"].forEach((value) => expect(display).toContain(value)); expect(directory).toContain("propertySortOptions"); });
+  it("renders four authoritative status tabs", () => { ["All", "Pending Review", "Approved", "Rejected"].forEach((label) => expect(display).toContain(label)); expect(directory).toContain("data?.counts[countKey]"); });
+  it("centralizes lifecycle display without APPROVED backend state", () => { expect(display).toContain('IN_REVIEW: { label: "Pending Review"'); expect(display).toContain('LIVE: { label: "Approved"'); expect(display).not.toMatch(/APPROVED:/); });
+  it("renders six approved table columns", () => { ["Property", "Category", "Mandate", "Location", "Status", "Actions"].forEach((label) => expect(directory).toContain(`<th>${label}</th>`)); });
+  it("renders canonical property row data and UUID detail navigation", () => { ["coverImage.url", "property.title", "relevantDate", "propertyCategory", "mandateType", "publicLocation", "/dashboard/properties/${property.id}"].forEach((value) => expect(directory).toContain(value)); });
+  it("provides server pagination and Showing range", () => { ["total_pages", "Showing {first}–{last} of {total}", "Previous", "Next"].forEach((value) => expect(directory).toContain(value)); });
+  it("supports skeleton, empty, filtered-empty, and retryable error", () => { ["property-row-skeleton", "No properties yet", "No properties match these filters", "Try again"].forEach((value) => expect(directory).toContain(value)); });
+  it("forwards directory and detail through the protected BFF", () => { [listBff, detailBff].forEach((file) => expect(file).toContain("protectedAdminRequest")); });
+  it("renders contextual Back to properties and Lead return", () => { expect(detail).toContain('"Back to properties"'); expect(detail).toContain('"Back to lead"'); });
+  it("renders mapped status, reference, Seller and authoritative dates", () => { ["propertyStatus[summary.status]", "summary.referenceId", "seller?.companyName", "summary.submittedAt", "summary.publishedAt", "summary.rejectedAt"].forEach((value) => expect(detail).toContain(value)); });
+  it("renders single-load section anchors", () => { ["All Info", "Basic Info", "Pricing", "Amenities", "Photos", "Documents", "Sales Mandate"].forEach((label) => expect(detail).toContain(label)); expect(detail).toContain("SectionNavigation"); });
+  it("renders an ordered no-dependency gallery", () => { ["Open Gallery", "property.images.map", "Gallery", "isCover", "Escape"].forEach((value) => expect(detail).toContain(value)); });
+  it("requests signed document access only for View or Download", () => { expect(detail).toContain('item.displayName, "view"'); expect(detail).toContain('item.displayName, "download"'); expect(detail).toContain("payload.data.access.url"); expect(contracts).not.toMatch(/cloudinary_public_id|publicId/); });
+  it("renders authoritative pricing, facts, locations and amenities", () => { ["Asking Price", "Initial deposit", "Negotiable?", "Property Details", "Public Location", "Full Address", "Utilities &amp; Amenities"].forEach((label) => expect(detail).toContain(label)); });
+  it("omits meaningless zero facts for category-specific layouts", () => { expect(detail).toContain("value != null && value > 0"); expect(detail).toContain('=== "COMMERCIAL" ? commercialFacts : residentialFacts'); });
+  it("renders mandate terms only when authoritative", () => { ["commissionPercentage != null", "commissionAmount != null", "agreementVersion", "ownershipConfirmed", "mandateAccepted"].forEach((value) => expect(detail).toContain(value)); expect(detail).not.toMatch(/5%|4,250,000/); });
+  it("routes View Customer to canonical Users detail", () => expect(detail).toContain("/dashboard/users/${seller.id}"));
+  it("shows review controls only for IN_REVIEW", () => { expect(detail).toContain('summary.status === "IN_REVIEW"'); expect(detail).toContain("Approve Property"); expect(detail).toContain("Reject with reason"); });
+  it("requires approval confirmation and server success before refetch", () => { ["Approve this property?", "Confirm Approval", "decisionPending", "await load()", "router.refresh()"].forEach((value) => expect(detail).toContain(value)); expect(approveBff).toContain("protectedAdminRequest"); });
+  it("implements Seller-safe rejection presets and explanation", () => { rejectionReasonPresets.forEach((value) => expect(display).toContain(value)); expect(detail).toContain("explanation.trim()"); expect(detail).toContain("maxLength={1000}"); });
+  it("locks resubmission on because permanent rejection is unsupported", () => { expect(detail).toContain("checked disabled readOnly"); expect(detail).toContain("cannot be disabled"); });
+  it("sends only rejection reason through existing API", () => { expect(detail).toContain("{ reason }"); expect(rejectBff).toContain("bodyOf(request)"); expect(rejectBff).toContain("protectedAdminRequest"); });
+  it("renders immutable review history", () => { expect(detail).toContain("review.history.map"); expect(detail).toContain("item.previousStatus"); expect(detail).toContain("item.newStatus"); });
+  it("supports desktop overflow, sticky review and responsive stacking", () => { expect(css).toContain(".properties-table-scroll { overflow-x: auto"); expect(css).toContain(".property-detail-side { position: sticky"); expect(css).toMatch(/@media \(max-width: 900px\)[\s\S]*\.property-detail-layout \{ grid-template-columns: 1fr/); });
+  it("adds no analytics or destructive property controls", () => { expect(directory).not.toMatch(/trackAdminEvent|Delete property|Unpublish/); expect(detail).not.toMatch(/trackAdminEvent|Delete property|Unpublish/); });
+});
+
+const rejectionReasonPresets = ["Poor photo quality", "More photos needed", "Missing Documents", "Unrealistic Pricing", "Incomplete Details", "Other"];

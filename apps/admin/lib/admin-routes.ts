@@ -7,5 +7,5 @@ export const adminPropertyFromLeadPath = (propertyId: string, leadId: string) =>
 
 export const safeAdminPropertyReturnPath = (value: string | string[] | undefined) => {
   const candidate = Array.isArray(value) ? value[0] : value;
-  return candidate && leadPathPattern.test(candidate) ? candidate : "/dashboard/leads";
+  return candidate && leadPathPattern.test(candidate) ? candidate : "/dashboard/properties";
 };

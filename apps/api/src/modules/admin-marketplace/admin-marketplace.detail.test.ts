@@ -38,7 +38,9 @@ const arrange = (status: "LIVE" | "IN_REVIEW" | "REJECTED", propertyResult: Resu
     properties: [propertyResult],
     property_documents: [{ data: [{ id: "document-1", document_type: "DEED", display_name: "Deed.pdf", mime_type: "application/pdf", size_bytes: 1200, created_at: "2026-08-20T11:00:00.000Z", cloudinary_public_id: "must-not-leak" }], error: null }],
     mandates: [{ data: { marketplace_mandate_type: "EXCLUSIVE", full_name: "Victor Beryl", ownership_confirmed: true, mandate_accepted: true, accepted_at: "2026-08-20T12:00:00.000Z", agreement_version: "v1", commission_percentage: 5, commission_amount: null }, error: null }],
-    marketplace_property_review_history: [{ data: [], error: null }]
+    marketplace_property_review_history: [{ data: [], error: null }],
+    user_personas: [{ data: { id: "seller-persona-1" }, error: null }],
+    seller_profiles: [{ data: { company_name: "Victor Beryl Homes" }, error: null }]
   };
 };
 
@@ -53,7 +55,7 @@ describe("Admin Marketplace operational property detail", () => {
 
   it("returns operational fields while keeping provider identifiers private", async () => {
     const result = await getReviewDetail(propertyId);
-    expect(result).toMatchObject({ property: { fullAddress: "12 Private Street, Ikoyi", images: [{ id: "image-1", url: "https://example.com/cover.jpg" }] }, documents: [{ id: "document-1", displayName: "Deed.pdf" }], mandate: { mandateType: "EXCLUSIVE" }, history: [] });
+    expect(result).toMatchObject({ property: { fullAddress: "12 Private Street, Ikoyi", initialDepositType: null, initialDepositValue: null, images: [{ id: "image-1", url: "https://example.com/cover.jpg" }] }, seller: { companyName: "Victor Beryl Homes" }, documents: [{ id: "document-1", displayName: "Deed.pdf" }], mandate: { mandateType: "EXCLUSIVE" }, history: [] });
     expect(JSON.stringify(result)).not.toMatch(/cloudinary_public_id|must-not-leak|internal_secret/);
     const documentSelect = database.calls.find((call) => call.table === "property_documents" && call.method === "select");
     expect(documentSelect?.args[0]).not.toMatch(/cloudinary|url|signature/);
