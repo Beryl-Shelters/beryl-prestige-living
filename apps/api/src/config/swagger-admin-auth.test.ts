@@ -16,4 +16,25 @@ describe("Admin authentication Swagger coverage", () => {
     expect((paths["/admin/auth/logout"] as { post: { security: unknown } }).post.security).toEqual([{ bearerAuth: [] }]);
     expect((paths["/admin/auth/change-password"] as { patch: { security: unknown } }).patch.security).toEqual([{ bearerAuth: [] }]);
   });
+
+  it("documents Super-Admin management authorization, safe DTOs, and stable invitation errors", () => {
+    const specification = swaggerSpec as { paths?: Record<string, Record<string, Record<string, unknown>>>; components?: { schemas?: Record<string, Record<string, unknown>> } };
+    const paths = specification.paths ?? {};
+    const invite = paths["/admin/staff/invite"].post;
+    const list = paths["/admin/staff"].get;
+    const activate = paths["/admin/auth/activate"].post;
+    expect(invite.security).toEqual([{ bearerAuth: [] }]);
+    expect(invite.description).toContain("Required role(s): SUPER_ADMIN");
+    expect(list.security).toEqual([{ bearerAuth: [] }]);
+    expect(list.description).toContain("Required role(s): SUPER_ADMIN");
+    expect(activate.security).toEqual([]);
+    for (const status of ["403", "409", "503"]) expect((invite.responses as Record<string, unknown>)[status]).toBeDefined();
+    for (const status of ["400", "401", "409", "503"]) expect((activate.responses as Record<string, unknown>)[status]).toBeDefined();
+    const schemas = specification.components?.schemas ?? {};
+    expect(schemas.AdminStaffList).toMatchObject({ type: "array" });
+    expect((schemas.AdminStaff.properties as Record<string, unknown>).adminRole).toBeDefined();
+    expect((schemas.AdminStaff.properties as Record<string, unknown>)).not.toHaveProperty("passwordHash");
+    expect((schemas.AdminActivationRequest.properties as Record<string, { writeOnly?: boolean }>).invitationToken.writeOnly).toBe(true);
+    expect((schemas.AdminActivationRequest.properties as Record<string, { writeOnly?: boolean }>).temporaryPassword.writeOnly).toBe(true);
+  });
 });

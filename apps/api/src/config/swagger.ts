@@ -374,7 +374,10 @@ const components = {
       additionalProperties: true
     },
     Admin: { allOf: [ref("UserProfile")], description: "Profile with an admin or support role." },
-    AdminStaff: objectSchema({ id: uuid, fullName: { type: "string" }, email: { type: "string", format: "email" }, phone: nullableString, department: { type: "string", enum: ["TECH", "MANAGEMENT"] }, role: { type: "string", enum: ["ADMIN", "SUPER_ADMIN"] }, status: { type: "string", enum: ["PENDING", "ACTIVE", "SUSPENDED", "LOCKED"] }, requiresPasswordChange: { type: "boolean" } }, ["id", "fullName", "email", "department", "role", "status"]),
+    AdminStaff: objectSchema({ id: uuid, fullName: { type: "string" }, email: { type: "string", format: "email" }, phone: nullableString, department: { type: "string", enum: ["TECH", "MANAGEMENT"] }, adminRole: { type: "string", enum: ["ADMIN", "SUPER_ADMIN"] }, status: { type: "string", enum: ["PENDING", "ACTIVE", "SUSPENDED", "LOCKED"] }, requiresPasswordChange: { type: "boolean" }, createdAt: dateTime, updatedAt: dateTime }, ["id", "fullName", "email", "department", "adminRole", "status", "requiresPasswordChange", "createdAt", "updatedAt"]),
+    AdminStaffList: { type: "array", items: ref("AdminStaff") },
+    AdminInvitationResult: objectSchema({ adminId: uuid, email: { type: "string", description: "Masked invited email." }, status: { type: "string", enum: ["PENDING"] }, invitationExpiresIn: { type: "integer", minimum: 1 } }, ["adminId", "email", "status", "invitationExpiresIn"]),
+    AdminActivationChallenge: objectSchema({ challengeId: uuid, maskedEmail: { type: "string" }, otpLength: { type: "integer", enum: [6] }, resendAvailableIn: { type: "integer", minimum: 1 }, nextAction: { type: "string", enum: ["VERIFY_ADMIN_ACTIVATION_OTP"] } }, ["challengeId", "maskedEmail", "otpLength", "resendAvailableIn", "nextAction"]),
     AdminInvitationRequest: objectSchema({ fullName: { type: "string", minLength: 2 }, email: { type: "string", format: "email" }, phone: { type: "string", example: "+2348012345678" }, department: { type: "string", enum: ["TECH", "MANAGEMENT"] }, adminRole: { type: "string", enum: ["ADMIN", "SUPER_ADMIN"] } }, ["fullName", "email", "department", "adminRole"]),
     AdminActivationRequest: objectSchema({ invitationToken: { type: "string", writeOnly: true, description: "Token from the invitation link; never log it." }, temporaryPassword: { type: "string", format: "password", writeOnly: true } }, ["invitationToken", "temporaryPassword"]),
     AdminOtpVerificationRequest: objectSchema({ challengeId: uuid, otp: { type: "string", pattern: "^[0-9]{6}$", writeOnly: true, example: "123456" } }, ["challengeId", "otp"]),
@@ -859,10 +862,48 @@ const endpoints: Endpoint[] = [
   { method: "get", path: "/dashboard/recent-messages", tag: "Dashboard", summary: "Get recent messages", description: "Returns the authenticated user's recent support and inquiry messages.", successMessage: "Recent messages fetched successfully", responseSchema: "DashboardSummary", security: "required" },
   { method: "get", path: "/dashboard/recent-properties", tag: "Dashboard", summary: "Get recent properties", description: "Returns recently relevant properties for the authenticated user.", successMessage: "Recent properties fetched successfully", responseSchema: "Property", security: "required" },
   { method: "get", path: "/dashboard/admin-summary", tag: "Dashboard", summary: "Get admin dashboard summary", description: "Returns platform dashboard totals. Admin or Super Admin only.", successMessage: "Admin dashboard summary fetched successfully", responseSchema: "DashboardSummary", security: "required", roles: ["admin", "super_admin"] }
-  ,{ method: "post", path: "/admin/staff/invite", tag: "Admin Staff Management", summary: "Invite an Admin staff member", description: "Active Super Admin only. Creates a pending Admin and sends a branded, one-time activation invitation. Tokens and temporary passwords are never returned.", successStatus: 201, successMessage: "Admin invitation sent successfully", security: "required", roles: ["SUPER_ADMIN"], bodySchema: "AdminInvitationRequest" }
-  ,{ method: "get", path: "/admin/staff", tag: "Admin Staff Management", summary: "List Admin staff", description: "Active Super Admin only. Returns safe Admin identity and invitation status fields without secrets or session data.", successMessage: "Admin staff fetched successfully", security: "required", roles: ["SUPER_ADMIN"] }
-  ,{ method: "post", path: "/admin/staff/{adminId}/resend-invitation", tag: "Admin Staff Management", summary: "Resend an Admin invitation", description: "Active Super Admin only. Invalidates the previous pending invitation after the cooldown.", successStatus: 202, successMessage: "Admin invitation resent successfully", security: "required", roles: ["SUPER_ADMIN"], pathParams: [{ name: "adminId", description: "Admin UUID." }] }
-  ,{ method: "post", path: "/admin/auth/activate", tag: "Admin Authentication", summary: "Start invited Admin activation", description: "Accepts the invitation token and temporary password, then sends the activation OTP. It never creates an Admin session.", successStatus: 202, successMessage: "Activation code sent successfully", bodySchema: "AdminActivationRequest" }
+  ,{
+    method: "post", path: "/admin/staff/invite", tag: "Admin Staff Management", summary: "Invite an Admin staff member",
+    description: "Active Super Admin only. Creates a pending isolated Admin record, stores only hashed credentials and invitation token, and sends a branded, expiring, one-time activation invitation. Tokens and temporary passwords are never returned.",
+    successStatus: 201, successMessage: "Admin invitation sent successfully", responseSchema: "AdminInvitationResult", security: "required", roles: ["SUPER_ADMIN"], bodySchema: "AdminInvitationRequest",
+    errorResponses: {
+      "403": { description: "Authenticated ADMIN is not permitted to manage Admin staff", message: "Super Admin access is required", code: "SUPER_ADMIN_ACCESS_REQUIRED" },
+      "409": { description: "The normalized email or phone already belongs to an Admin", message: "An Admin with this email already exists", code: "ADMIN_EMAIL_ALREADY_EXISTS", examples: { phone: { summary: "Phone already exists", message: "An Admin with this phone already exists", code: "ADMIN_PHONE_ALREADY_EXISTS" } } },
+      "503": { description: "Invitation persistence, configuration, or email delivery failed", message: "Unable to create Admin invitation", code: "ADMIN_INVITATION_FAILED", examples: { mail: { summary: "Invitation email delivery failed", message: "Unable to deliver Admin invitation", code: "MAIL_DELIVERY_FAILED" } } }
+    }
+  }
+  ,{
+    method: "get", path: "/admin/staff", tag: "Admin Staff Management", summary: "List Admin staff",
+    description: "Active Super Admin only. Returns safe Admin identity and real account status fields without password hashes, invitation tokens, OTPs, or session data.",
+    successMessage: "Admin staff fetched successfully", responseSchema: "AdminStaffList", security: "required", roles: ["SUPER_ADMIN"],
+    errorResponses: {
+      "403": { description: "Authenticated ADMIN is not permitted to list Admin staff", message: "Super Admin access is required", code: "SUPER_ADMIN_ACCESS_REQUIRED" },
+      "503": { description: "Admin staff persistence unavailable", message: "Admin authentication storage failed", code: "ADMIN_MANAGEMENT_UNAVAILABLE" }
+    }
+  }
+  ,{
+    method: "post", path: "/admin/staff/{adminId}/resend-invitation", tag: "Admin Staff Management", summary: "Resend an Admin invitation",
+    description: "Active Super Admin only. Enforces a cooldown, invalidates the previous pending invitation, replaces its temporary password and token hashes, and sends a new expiring activation email.",
+    successStatus: 202, successMessage: "Admin invitation resent successfully", responseSchema: "AdminInvitationResult", security: "required", roles: ["SUPER_ADMIN"], pathParams: [{ name: "adminId", description: "Admin UUID." }],
+    errorResponses: {
+      "403": { description: "Authenticated ADMIN is not permitted to manage invitations", message: "Super Admin access is required", code: "SUPER_ADMIN_ACCESS_REQUIRED" },
+      "404": { description: "Admin record does not exist", message: "Admin staff member not found", code: "ADMIN_NOT_FOUND" },
+      "409": { description: "Admin is already active or cannot be reinvited", message: "Admin invitation cannot be resent", code: "ADMIN_INVITATION_FAILED", examples: { active: { summary: "Already active", message: "Admin is already active", code: "ADMIN_ALREADY_ACTIVE" } } },
+      "429": { description: "Invitation resend cooldown or endpoint rate limit", message: "Please wait before resending this invitation", code: "ADMIN_INVITATION_RESEND_COOLDOWN" },
+      "503": { description: "Invitation replacement or email delivery failed", message: "Unable to deliver Admin invitation", code: "MAIL_DELIVERY_FAILED" }
+    }
+  }
+  ,{
+    method: "post", path: "/admin/auth/activate", tag: "Admin Authentication", summary: "Start invited Admin activation",
+    description: "Public but invitation-token protected. Validates the HMAC-hashed, intended-Admin, pending, unused, unexpired invitation and its temporary password, then sends an activation OTP. It never creates a customer or Admin session.",
+    successStatus: 202, successMessage: "Activation code sent successfully", responseSchema: "AdminActivationChallenge", bodySchema: "AdminActivationRequest",
+    errorResponses: {
+      "400": { description: "Invitation token is invalid, revoked, or expired", message: "Invitation token is invalid", code: "INVALID_INVITATION_TOKEN", examples: { expired: { summary: "Expired invitation", message: "Invitation has expired", code: "INVITATION_EXPIRED" } } },
+      "401": { description: "Temporary password or pending Admin state is invalid", message: "Admin activation is invalid", code: "ADMIN_ACTIVATION_UNAVAILABLE" },
+      "409": { description: "Invitation is already used or the Admin is already active", message: "Invitation has already been used", code: "INVITATION_ALREADY_USED", examples: { active: { summary: "Already active", message: "Admin is already active", code: "ADMIN_ALREADY_ACTIVE" } } },
+      "503": { description: "Activation configuration, OTP persistence, or email delivery failed", message: "Admin activation is temporarily unavailable", code: "ADMIN_ACTIVATION_UNAVAILABLE", examples: { mail: { summary: "Activation OTP delivery failed", message: "Unable to deliver Admin activation email", code: "MAIL_DELIVERY_FAILED" } } }
+    }
+  }
   ,{ method: "post", path: "/admin/auth/resend-activation-otp", tag: "Admin Authentication", summary: "Resend activation OTP", description: "Replaces the pending activation OTP after its cooldown; no session is created.", successStatus: 202, successMessage: "Activation code resent successfully", bodySchema: "AdminResendOtpRequest" }
   ,{ method: "post", path: "/admin/auth/verify-activation-otp", tag: "Admin Authentication", summary: "Verify Admin activation OTP", description: "Returns a short-lived, single-use setup token. It does not activate the account or create a session.", successMessage: "Activation code verified successfully", bodySchema: "AdminOtpVerificationRequest" }
   ,{ method: "post", path: "/admin/auth/set-password", tag: "Admin Authentication", summary: "Complete Admin activation", description: "Consumes the setup token, sets the permanent password, marks the invitation used, and activates the Admin. Normal Admin login is not part of this slice.", successMessage: "Admin account activated successfully", bodySchema: "AdminSetPasswordRequest" }

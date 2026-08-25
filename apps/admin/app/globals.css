@@ -441,7 +441,7 @@ input {
 .management-header p:not(.eyebrow) { margin: 0; color: var(--color-admin-muted); }
 .management-header .button { display: inline-flex; align-items: center; gap: 8px; }
 .staff-table-wrap { overflow-x: auto; border: 1px solid var(--color-admin-line); border-radius: var(--radius-card); background: #fff; }
-.staff-table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 13px; }
+.staff-table { width: 100%; min-width: 880px; border-collapse: collapse; font-size: 13px; }
 .staff-table th, .staff-table td { padding: 16px; border-bottom: 1px solid var(--color-admin-line); text-align: left; }
 .staff-table th { color: var(--color-admin-muted); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; }
 .status-badge { display: inline-flex; border-radius: 999px; padding: 5px 8px; font-size: 11px; font-weight: 800; }

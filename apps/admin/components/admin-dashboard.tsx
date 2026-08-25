@@ -1,5 +1,5 @@
 "use client";
-import { Bell, Building2, LayoutDashboard, LogOut, Settings, UsersRound, Waypoints } from "lucide-react";
+import { Bell, Building2, LayoutDashboard, LogOut, Settings, ShieldCheck, UsersRound, Waypoints } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -31,6 +31,7 @@ export function AdminShell({ session, children }: { session: AdminSessionState; 
           <Link href={"/dashboard/users" as never} data-active={pathname.startsWith("/dashboard/users")}><UsersRound size={17} />Users</Link>
           <Link href={"/dashboard/properties" as never} data-active={pathname.startsWith("/dashboard/properties")}><Building2 size={17} />Properties</Link>
           <Link href={"/dashboard/leads" as never} data-active={pathname.startsWith("/dashboard/leads")}><Waypoints size={17} />Leads</Link>
+          {admin.adminRole === "SUPER_ADMIN" ? <Link href={"/dashboard/admins" as never} data-active={pathname.startsWith("/dashboard/admins")}><ShieldCheck size={17} />Admin Management</Link> : null}
         </nav>
         <div className="sidebar-footer"><Link href="/dashboard/change-password" data-active={pathname === "/dashboard/change-password"}><Settings size={17} />Settings</Link><div className="sidebar-profile"><span className="sidebar-avatar" aria-hidden>{initials}</span><div><strong>{admin.fullName}</strong><span>{admin.department || "Beryl Shelter"}</span><small>{admin.adminRole.replaceAll("_", " ")}</small></div></div><button type="button" onClick={logout}><LogOut size={16} />Log out</button></div>
       </aside>
