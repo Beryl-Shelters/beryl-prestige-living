@@ -88,5 +88,8 @@ export const env = {
   resendFromName: process.env.RESEND_FROM_NAME || "",
   mixpanelCustomerToken: process.env.MIXPANEL_CUSTOMER_TOKEN || "",
   mixpanelAdminToken: process.env.MIXPANEL_ADMIN_TOKEN || "",
-  mixpanelEnvironment: process.env.MIXPANEL_ENVIRONMENT || "test"
+  mixpanelEnvironment: process.env.MIXPANEL_ENVIRONMENT || "test",
+  referralOtpProvider: process.env.REFERRAL_OTP_PROVIDER || "disabled",
+  referralPayoutEncryptionKey:
+    process.env.REFERRAL_PAYOUT_ENCRYPTION_KEY || ""
 };

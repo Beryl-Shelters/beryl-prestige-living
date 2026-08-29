@@ -8,6 +8,8 @@ export const SESSION_COOKIES = {
   resetProof: "beryl_reset_proof"
 } as const;
 
+export const REFERRAL_TRACKING_COOKIE = "beryl_referral_tracking";
+
 const options = (maxAge: number) => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",

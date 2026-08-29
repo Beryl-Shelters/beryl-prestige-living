@@ -46,6 +46,9 @@ export const marketplaceInterestRateLimiter = rateLimit({
   keyGenerator: (req) => `${req.user?.id ?? ipKeyGenerator(req.ip || "unknown")}:${req.params.propertyId ?? "unknown"}`,
   message: { success: false, message: "Please wait before submitting interest in this property again", code: "RATE_LIMIT_EXCEEDED" }
 });
+export const referralSubmissionRateLimiter = authLimiter(10, "REFERRAL_SUBMISSION_RATE_LIMITED");
+export const referralOtpRequestRateLimiter = authLimiter(5, "REFERRAL_OTP_RATE_LIMITED");
+export const referralOtpVerifyRateLimiter = authLimiter(10, "REFERRAL_OTP_RATE_LIMITED");
 export const adminLoginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,

@@ -28,6 +28,7 @@ import type {
   ResetOtpResult,
   SessionsInvalidatedResult,
   VerifyEmailResult
+  , ReferralContext, DirectReferralRequest, DirectReferralResult, ReferralDashboard, ReferralBankDirectory, ReferralPayoutDetails
 } from "../contracts";
 
 const client = axios.create({ baseURL: "/api/customer", headers: { "content-type": "application/json" } });
@@ -81,4 +82,17 @@ export const marketplaceApi = {
   detail: (propertyId: string) => axios
     .get<ApiSuccess<MarketplacePropertyDetailResult>>(`/api/marketplace/${propertyId}`)
     .then(dataOf)
+};
+
+const referralClient = axios.create({ baseURL: "/api/referrals", headers: { "content-type": "application/json" } });
+export const referralApi = {
+  context: () => referralClient.get<ApiSuccess<ReferralContext>>("/context").then(dataOf),
+  resolveCode: (code: string) => referralClient.get<ApiSuccess<{ valid: true; referralCode: string }>>(`/links/${encodeURIComponent(code)}`).then(dataOf),
+  submit: (body: DirectReferralRequest) => referralClient.post<ApiSuccess<DirectReferralResult>>("/submit", body).then(dataOf),
+  requestTracking: (body: { fullName: string; phone: string }) => referralClient.post<ApiSuccess<{ accepted: true; resendAvailableIn: number }>>("/tracking/request", body).then(dataOf),
+  verifyTracking: (body: { phone: string; otp: string }) => referralClient.post<ApiSuccess<{ expiresIn: number }>>("/tracking/verify", body).then(dataOf),
+  dashboard: (page = 1, limit = 10) => referralClient.get<ApiSuccess<ReferralDashboard>>("/dashboard", { params: { page, limit } }).then(dataOf),
+  banks: () => referralClient.get<ApiSuccess<ReferralBankDirectory>>("/banks").then(dataOf),
+  payout: () => referralClient.get<ApiSuccess<ReferralPayoutDetails>>("/payout-details").then(dataOf),
+  savePayout: (body: { bankCode: string; accountNumber: string; accountName: string }) => referralClient.put<ApiSuccess<ReferralPayoutDetails>>("/payout-details", body).then(dataOf)
 };
