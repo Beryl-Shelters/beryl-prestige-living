@@ -69,6 +69,7 @@ const property = {
 const arrange = (overrides?: {
   inquiry?: Result;
   profile?: Result;
+  referrer?: Result;
   personas?: Result;
   property?: Result;
   history?: Result;
@@ -76,7 +77,10 @@ const arrange = (overrides?: {
 }) => {
   database.queues = {
     inquiries: [overrides?.inquiry ?? { data: inquiry, error: null }],
-    profiles: [overrides?.profile ?? { data: { id: customerId, full_name: "Victor Beryl", email: "victor@example.com", phone_number: "+2348111111111", email_verified_at: "2026-08-01T00:00:00.000Z", account_status: "ACTIVE" }, error: null }],
+    profiles: [
+      overrides?.profile ?? { data: { id: customerId, full_name: "Victor Beryl", email: "victor@example.com", phone_number: "+2348111111111", email_verified_at: "2026-08-01T00:00:00.000Z", account_status: "ACTIVE", referred_by: null }, error: null },
+      ...(overrides?.referrer ? [overrides.referrer] : [])
+    ],
     user_personas: [overrides?.personas ?? { data: [{ id: "persona-1", persona_type: "BUYER", onboarding_status: "COMPLETED" }], error: null }],
     properties: [overrides?.property ?? { data: property, error: null }],
     inquiry_lead_stage_history: [overrides?.history ?? { data: [], error: null }],
@@ -112,11 +116,25 @@ describe("Admin lead detail retrieval", () => {
         coverImage: { id: "image-1", url: "https://example.com/cover.jpg", order: 0, isCover: true },
         seller: null
       },
+      referredBy: null,
       history: []
     });
     const profileSelect = database.calls.find((call) => call.table === "profiles" && call.method === "select");
     expect(profileSelect?.args[0]).toContain("email_verified_at");
+    expect(profileSelect?.args[0]).toContain("referred_by");
     expect(profileSelect?.args[0]).not.toMatch(/email_verified(?:,|$)/);
+  });
+
+  it("returns only the bounded referrer identity when the customer profile has one", async () => {
+    arrange({
+      profile: { data: { id: customerId, full_name: "Victor Beryl", email: "victor@example.com", phone_number: "+2348111111111", email_verified_at: "2026-08-01T00:00:00.000Z", account_status: "ACTIVE", referred_by: "referrer-1" }, error: null },
+      referrer: { data: { id: "referrer-1", full_name: "Emeka Chukwu", email: "must-not-leak@example.com" }, error: null }
+    });
+    const result = await getLeadDetail(leadId);
+    expect(result.referredBy).toEqual({ id: "referrer-1", fullName: "Emeka Chukwu" });
+    expect(JSON.stringify(result.referredBy)).not.toContain("must-not-leak");
+    const referrerSelect = database.calls.filter((call) => call.table === "profiles" && call.method === "select").at(-1);
+    expect(referrerSelect?.args[0]).toBe("id,full_name");
   });
 
   it.each([

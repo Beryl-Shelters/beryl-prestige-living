@@ -62,7 +62,7 @@ export const getLeadDetail = async (leadId: string) => {
 
   const [profileResult, personasResult, propertyResult, historyResult] = await Promise.all([
     inquiry.user_id
-      ? supabaseAdmin.from("profiles").select("id,full_name,email,phone_number,email_verified_at,account_status").eq("id", inquiry.user_id).maybeSingle()
+      ? supabaseAdmin.from("profiles").select("id,full_name,email,phone_number,email_verified_at,account_status,referred_by").eq("id", inquiry.user_id).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     inquiry.user_id
       ? supabaseAdmin.from("user_personas").select("id,persona_type,onboarding_status").eq("user_id", inquiry.user_id)
@@ -75,6 +75,12 @@ export const getLeadDetail = async (leadId: string) => {
   if (profileResult.error || personasResult.error || propertyResult.error || historyResult.error) {
     throw new AppError("Lead management is temporarily unavailable", 503, "LEADS_UNAVAILABLE");
   }
+
+  const profile: any = profileResult.data;
+  const referrerResult = profile?.referred_by
+    ? await supabaseAdmin.from("profiles").select("id,full_name").eq("id", profile.referred_by).maybeSingle()
+    : { data: null, error: null };
+  if (referrerResult.error) throw new AppError("Lead management is temporarily unavailable", 503, "LEADS_UNAVAILABLE");
 
   const property: any = propertyResult.data;
   const mandateResult = property
@@ -97,7 +103,6 @@ export const getLeadDetail = async (leadId: string) => {
     seller = { fullName: sellerProfile.data?.full_name ?? null, companyName };
   }
 
-  const profile: any = profileResult.data;
   const images = [...(property?.property_images ?? [])].sort((a: any, b: any) => a.sort_order - b.sort_order);
   const cover = images.find((item: any) => item.is_cover) ?? images[0] ?? null;
   const message = String(inquiry.message ?? "").trim();
@@ -118,6 +123,7 @@ export const getLeadDetail = async (leadId: string) => {
       preferredContactMethod: preferredContact(inquiry.inquiry_type),
       personas: (personasResult.data ?? []).map((row: any) => ({ type: row.persona_type, onboardingStatus: row.onboarding_status }))
     },
+    referredBy: referrerResult.data ? { id: referrerResult.data.id, fullName: referrerResult.data.full_name } : null,
     message: !message || message === "Marketplace interest submitted" ? null : message,
     property: property ? {
       id: property.id,

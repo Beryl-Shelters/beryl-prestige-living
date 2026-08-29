@@ -14,7 +14,7 @@ const stageRoute = source("app/api/admin/leads/[leadId]/stage/route.ts");
 
 describe("Admin lead management interface", () => {
   it("places Leads in the canonical Admin sidebar", () => expect(shell).toContain(">Leads</Link>"));
-  it("uses the approved four primary navigation items", () => ["Dashboard", "Users", "Properties", "Leads"].forEach((label) => expect(shell).toContain(label)));
+  it("uses the approved primary navigation and gates Admin Management", () => { ["Dashboard", "Users", "Properties", "Leads", "Referrers", "Admin Management"].forEach((label) => expect(shell).toContain(label)); expect(shell).toContain('admin.adminRole === "SUPER_ADMIN"'); });
   it("removes unrelated marketplace-customer sidebar items", () => ["My Listings", "Payments", "Subaccounts", "Save-as-you-earn", "Invest", "Refer & Earn", "Support"].forEach((label) => expect(shell).not.toContain(label)));
   it("keeps Settings, profile, and logout at the sidebar bottom", () => { expect(shell).toContain("sidebar-footer"); expect(shell).toContain("sidebar-profile"); expect(shell).toContain("Log out"); });
   it("renders four explicit pipeline stages", () => ["NEW", "CONTACTED", "WON", "LOST"].forEach((stage) => expect(board).toContain(stage)));
@@ -32,14 +32,18 @@ describe("Admin lead management interface", () => {
   });
   it("has loading skeletons", () => expect(board).toContain("skeleton-card"));
   it("has retryable API errors", () => { expect(board).toContain("Try again"); expect(detail).toContain("Try again"); });
-  it("has intentional empty states", () => { expect(board).toContain("No leads in"); expect(detail).toContain("did not include a message"); });
+  it("has the approved global, filtered, column, and message empty states", () => { ["No Enquiries Yet", "Buyer enquiries will land here as they come in.", "No enquiries match this search", "No leads in"].forEach((copy) => expect(board).toContain(copy)); expect(detail).toContain("did not include a message"); });
   it("renders operational customer contact details", () => ["Email", "Phone", "Preferred contact"].forEach((label) => expect(detail).toContain(label)));
   it("renders customer persona badges", () => expect(detail).toContain("lead.customer.personas"));
   it("renders plain text message content", () => expect(detail).toContain('<p className="lead-message">{lead.message}</p>'));
   it("renders safe property context", () => ["Property interested in", "publicLocation", "askingPrice", "propertyCategory", "propertyType"].forEach((label) => expect(detail).toContain(label)));
+  it("shows bounded referred-by context only when supplied", () => { expect(detail).toContain("lead.referredBy"); expect(detail).toContain("Referred by"); });
   it("uses the shared protected Admin property route", () => { expect(detail).toContain("adminPropertyFromLeadPath(lead.property.id, lead.id)"); expect(detail).toContain(">View property</Link>"); });
   it("supports NEW to CONTACTED", () => expect(detail).toContain('transition("CONTACTED")'));
-  it("supports CONTACTED to WON", () => expect(detail).toContain('transition("WON")'));
+  it("requires an explicit Won confirmation before CONTACTED to WON", () => {
+    ["Move this enquiry to a Won Lead?", '"Confirm"', "Cancel", 'role="dialog"', 'await transition("WON")'].forEach((value) => expect(detail).toContain(value));
+    expect(detail).not.toContain('onClick={() => void transition("WON")}');
+  });
   it("supports CONTACTED to LOST", () => expect(detail).toContain('transition("LOST")'));
   it("sends expected stage for concurrency protection", () => expect(detail).toContain("expectedStage: lead.stage"));
   it("disables controls during updates", () => expect(detail).toContain("disabled={Boolean(updating)}"));

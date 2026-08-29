@@ -16,7 +16,8 @@ const detailPage = source("app/dashboard/users/[userId]/page.tsx");
 
 describe("Admin Users interface architecture", () => {
   it("uses the exact approved primary sidebar", () => {
-    ["Dashboard", "Users", "Properties", "Leads"].forEach((label) => expect(shell).toContain(label));
+    ["Dashboard", "Users", "Properties", "Leads", "Referrers", "Admin Management"].forEach((label) => expect(shell).toContain(label));
+    expect(shell).toContain('admin.adminRole === "SUPER_ADMIN"');
     ["My Listings", "Payments", "Subaccounts", "Save-as-you-earn", "Invest", "Refer & Earn", "Support"].forEach((label) => expect(shell).not.toContain(label));
     ["Settings", "sidebar-profile", "Log out"].forEach((label) => expect(shell).toContain(label));
   });
@@ -36,6 +37,11 @@ describe("Admin Users interface architecture", () => {
     ["Total Users", "Buyer Profiles", "Seller Profiles", "Referrer Profiles"].forEach((label) => expect(directory).toContain(label));
     expect(directory).toContain("data?.counts[key]");
   });
+  it("renders authoritative persona tabs with server counts", () => {
+    ["All", "Buyers", "Sellers", "Referrers"].forEach((label) => expect(directory).toContain(label));
+    expect(directory).toContain('role="tablist"');
+    expect(directory).toContain("data?.counts[countKey]");
+  });
   it("uses server-driven trimmed search, role, verification, sort, and pagination", () => {
     expect(directory).toContain("Search name, email or phone");
     expect(directory).toContain("search.trim()");
@@ -54,7 +60,7 @@ describe("Admin Users interface architecture", () => {
     expect(directory).not.toContain("/dashboard/users/${user.referralCode}");
   });
   it("provides loading, empty, filtered-empty, and retryable error states", () => {
-    ["users-row-skeleton", "No customers yet", "No users match these filters", "Try again"].forEach((value) => expect(directory).toContain(value));
+    ["users-row-skeleton", "No customers yet", "Registered customers will appear here.", "No users match these filters", "Try again"].forEach((value) => expect(directory).toContain(value));
     expect(detail).toContain("skeleton-card"); expect(detail).toContain("Try again");
   });
   it("uses Back to users rather than the erroneous PDF label", () => {

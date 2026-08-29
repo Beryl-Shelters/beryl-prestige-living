@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Home, Search } from "lucide-react";
+import { CalendarDays, Home, Inbox, Search } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { AdminLeadCard, AdminLeadList, ApiEnvelope, LeadStage } from "@/lib/contracts";
@@ -55,7 +55,12 @@ export function AdminLeadsBoard() {
     </div>
     {error ? <div className="lead-state alert alert-error" role="alert"><span>{error}</span><button type="button" onClick={() => void load()}>Try again</button></div> : null}
     {loading ? <div className="lead-board" aria-label="Loading leads">{stages.map(({ value }) => <div className="lead-column" key={value}><div className="lead-column-heading skeleton" /><div className="lead-card skeleton-card" /><div className="lead-card skeleton-card" /></div>)}</div> : null}
-    {!loading && !error && data ? <div className="lead-board" aria-label="Lead pipeline">
+    {!loading && !error && data && total === 0 ? <div className="lead-board-empty">
+      <Inbox size={30} aria-hidden />
+      <strong>{query ? "No enquiries match this search" : "No Enquiries Yet"}</strong>
+      <p>{query ? "Try changing your search." : "Buyer enquiries will land here as they come in."}</p>
+    </div> : null}
+    {!loading && !error && data && total > 0 ? <div className="lead-board" aria-label="Lead pipeline">
       {stages.map(({ value, label }) => <section className="lead-column" key={value} aria-labelledby={`stage-${value}`}>
         <header className={`lead-column-heading stage-${value.toLowerCase()}`}><h2 id={`stage-${value}`}>{label}</h2><span>{data.counts[value]}</span></header>
         <div className="lead-column-cards">{grouped[value].map((lead) => <LeadCard lead={lead} key={lead.id} />)}{grouped[value].length === 0 ? <p className="lead-empty">{query ? `No ${label.toLowerCase()} leads match this search.` : `No leads in ${label.toLowerCase()} yet.`}</p> : null}</div>

@@ -33,12 +33,13 @@ const property = (status: "LIVE" | "IN_REVIEW" | "REJECTED") => ({
   cloudinary_public_id: "must-not-leak", internal_secret: "must-not-leak"
 });
 
-const arrange = (status: "LIVE" | "IN_REVIEW" | "REJECTED", propertyResult: Result = { data: property(status), error: null }) => {
+const arrange = (status: "LIVE" | "IN_REVIEW" | "REJECTED", propertyResult: Result = { data: property(status), error: null }, options?: { history?: Result; reviewers?: Result }) => {
   database.queues = {
     properties: [propertyResult],
     property_documents: [{ data: [{ id: "document-1", document_type: "DEED", display_name: "Deed.pdf", mime_type: "application/pdf", size_bytes: 1200, created_at: "2026-08-20T11:00:00.000Z", cloudinary_public_id: "must-not-leak" }], error: null }],
     mandates: [{ data: { marketplace_mandate_type: "EXCLUSIVE", full_name: "Victor Beryl", ownership_confirmed: true, mandate_accepted: true, accepted_at: "2026-08-20T12:00:00.000Z", agreement_version: "v1", commission_percentage: 5, commission_amount: null }, error: null }],
-    marketplace_property_review_history: [{ data: [], error: null }],
+    marketplace_property_review_history: [options?.history ?? { data: [], error: null }],
+    admins: options?.reviewers ? [options.reviewers] : [],
     user_personas: [{ data: { id: "seller-persona-1" }, error: null }],
     seller_profiles: [{ data: { company_name: "Victor Beryl Homes" }, error: null }]
   };
@@ -59,6 +60,17 @@ describe("Admin Marketplace operational property detail", () => {
     expect(JSON.stringify(result)).not.toMatch(/cloudinary_public_id|must-not-leak|internal_secret/);
     const documentSelect = database.calls.find((call) => call.table === "property_documents" && call.method === "select");
     expect(documentSelect?.args[0]).not.toMatch(/cloudinary|url|signature/);
+  });
+
+  it("adds bounded reviewer display names to immutable review history", async () => {
+    arrange("REJECTED", { data: property("REJECTED"), error: null }, {
+      history: { data: [{ id: "history-1", previous_status: "IN_REVIEW", new_status: "REJECTED", action: "REJECTED", reason: "Clearer documents required", reviewed_by_admin_id: "admin-1", created_at: "2026-08-21T10:00:00.000Z" }], error: null },
+      reviewers: { data: [{ id: "admin-1", full_name: "Ada Admin", email: "must-not-leak@example.com" }], error: null }
+    });
+    const result = await getReviewDetail(propertyId);
+    expect(result.history).toEqual([expect.objectContaining({ reviewedByAdminId: "admin-1", reviewedByAdminName: "Ada Admin" })]);
+    expect(JSON.stringify(result.history)).not.toContain("must-not-leak");
+    expect(database.calls).toContainEqual({ table: "admins", method: "in", args: ["id", ["admin-1"]] });
   });
 
   it("returns the stable not-found error", async () => {
