@@ -57,7 +57,7 @@ function PayoutDialog({ onClose }: { onClose: () => void }) {
           <label>Bank<select name="bankCode" required defaultValue=""><option value="" disabled>Select your bank</option>{directory.data?.data.banks.map((bank) => <option key={bank.code} value={bank.code}>{bank.name}</option>)}</select></label>
           <label>Account Number<input name="accountNumber" required inputMode="numeric" pattern="\d{10}" maxLength={10} placeholder="10 digits" /></label>
           <label>Account Name<input name="accountName" required minLength={2} maxLength={100} /><small>Enter the name exactly as it appears on the account.</small></label>
-          <div className="referral-info-note">Account-name confirmation is manual because no approved bank-resolution provider is configured.</div>
+          <div className="referral-info-note">Account-name confirmation is manual.</div>
           {error ? <div className="referral-error" role="alert">{error}</div> : null}
           <button className="referral-primary-action" type="submit" disabled={saving}>{saving ? "Saving…" : "Save bank details"}</button>
         </form>

@@ -24,7 +24,7 @@ export function ReferralLanding({ referralCode }: { referralCode?: string }) {
       <div className="referral-hero">
         <div className="referral-hero-copy">
           <p className="referral-kicker">BERYL REFERRALS</p>
-          <h1>Refer someone and earn up to ₦2,500,000.</h1>
+          <h1>Refer someone and earn up to <span className="text-[#70521b]">₦2,500,000.</span></h1>
           <p>Know anyone buying or selling property in Nigeria? Introduce them to Beryl and earn up to 25% when the deal closes.</p>
           <p className="referral-plain-note">No account needed. Takes a minute. Refer as many as you like.</p>
           <div className="referral-link-block">
