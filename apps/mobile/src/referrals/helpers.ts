@@ -32,6 +32,7 @@ export const referralErrorMessage = (code?: string) => ({
   REFERRAL_SUBMISSION_INVALID: "Check the referral details and try again.",
   REFERRAL_SUBMISSION_FAILED: "We could not submit this referral. Your details are still here so you can retry.",
   REFERRAL_TRACKING_UNAVAILABLE: "Referral tracking codes are temporarily unavailable. Keep your referral reference safe and try again later.",
+  REFERRAL_OTP_DELIVERY_FAILED: "We could not send the WhatsApp code. Please try again.",
   REFERRAL_OTP_INVALID: "That code is not correct. Check it and try again.",
   REFERRAL_OTP_EXPIRED: "That code has expired. Request a new code.",
   REFERRAL_OTP_RATE_LIMITED: "Please wait before requesting or trying another code.",

@@ -30,7 +30,7 @@ export function ReferralTrackingScreen() {
   const resend = () => { if (!countdown && !requestCode.isPending) requestCode.mutate(); };
 
   return <ReferralPage keyboard background={colors.white}><ReferralBack/>{stage === "identity" ? <>
-    <Text accessibilityRole="header" style={styles.title}>Track your referrals</Text><Text style={styles.copy}>Enter the name and phone number you used when making your referral. We&apos;ll send a code on WhatsApp or SMS when delivery is available.</Text>
+    <Text accessibilityRole="header" style={styles.title}>Track your referrals</Text><Text style={styles.copy}>Enter the name and phone number you used when making your referral. We&apos;ll send a code on WhatsApp.</Text>
     <Field label="Your full name" value={fullName} onChange={setFullName}/><Field label="Your phone number" value={phone} onChange={setPhone} keyboard="phone-pad" placeholder="0801 234 5678"/>
     <ReferralAlert message={error} tone={error.includes("temporarily") ? "info" : "error"}/><ReferralButton label="Send tracking code" loading={requestCode.isPending} onPress={start}/>
   </> : <>

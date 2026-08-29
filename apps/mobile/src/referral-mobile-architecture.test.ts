@@ -33,6 +33,7 @@ describe("approved Mobile Referral architecture", () => {
   it("branches authenticated success to the dashboard", () => { expect(form).toContain('"OPEN_REFERRAL_DASHBOARD"'); expect(form).toContain("Go to dashboard"); });
   it("branches guest success to real tracking delivery", () => { expect(form).toContain("requestReferralTracking"); expect(form).toContain("Send code on WhatsApp"); });
   it("shows provider-unavailable state truthfully", () => { expect(src("referrals/helpers.ts")).toContain("REFERRAL_TRACKING_UNAVAILABLE"); expect(form).toContain("referralErrorMessage"); });
+  it("describes the configured WhatsApp-only delivery path without client Termii credentials", () => { expect(tracking).toContain("send a code on WhatsApp"); expect(tracking).not.toMatch(/TERMII_|api\/sms\/send|developers\.termii/i); });
   it("supports tracking identity and phone validation", () => expect(tracking).toContain("referralTrackingIdentitySchema.safeParse"));
   it("renders six accessible OTP inputs", () => { expect(tracking).toContain("Digit ${index + 1}"); expect(tracking).toContain("digits.map"); });
   it("automatically verifies a complete six-digit OTP", () => expect(tracking).toContain("if (next.every(Boolean)) submitOtp"));

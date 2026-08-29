@@ -4,7 +4,7 @@ import { supabaseAdmin } from "../../config/supabase";
 import { AppError } from "../../utils/AppError";
 import { isE164Phone, normalizePhone } from "../auth-onboarding/normalization";
 import { REFERRAL_BANK_DIRECTORY, referralBankByCode } from "./referral.banks";
-import { ReferralOtpDelivery, unavailableReferralOtpDelivery } from "./referral.provider";
+import { ReferralOtpDelivery, referralOtpDelivery } from "./referral.provider";
 import { createReferralTrackingToken, encryptAccountNumber, hashReferralSecret } from "./referral.security";
 import { ReferralIdentity, ReferralLifecycle, referralStatusLabel } from "./referral.types";
 import type { PayoutDetailsInput, SubmitReferralInput } from "./referral.validators";
@@ -195,20 +195,24 @@ export const submitReferral = async (payload: SubmitReferralInput, customerUserI
     },
     referrer: { referralCode: identity.referralCode, referralLink: referralLink(identity.referralCode) },
     nextAction: customerUserId ? "OPEN_REFERRAL_DASHBOARD" : "REQUEST_TRACKING_CODE",
-    trackingAvailable: unavailableReferralOtpDelivery.available
+    trackingAvailable: referralOtpDelivery.available
   };
 };
 
 export const requestReferralTrackingOtp = async (
   fullName: string,
   phone: string,
-  delivery: ReferralOtpDelivery = unavailableReferralOtpDelivery
+  delivery: ReferralOtpDelivery = referralOtpDelivery
 ) => {
   if (!delivery.available || env.otpSecret.length < 32) {
     throw safeFailure("Referral tracking by phone is temporarily unavailable", "REFERRAL_TRACKING_UNAVAILABLE");
   }
+  const normalizedPhone = normalizePhone(phone);
+  if (!isE164Phone(normalizedPhone)) {
+    throw new AppError("Enter a valid phone number", 400, "VALIDATION_ERROR");
+  }
   const identityResult = await supabaseAdmin.from("referrers")
-    .select("id").eq("phone_e164", phone).maybeSingle();
+    .select("id").eq("phone_e164", normalizedPhone).maybeSingle();
   // Keep the public response generic: unknown numbers are never identified.
   if (identityResult.error || !identityResult.data) return { accepted: true, resendAvailableIn: OTP_RESEND_SECONDS };
   const latest = await supabaseAdmin.from("referral_tracking_challenges")
@@ -226,9 +230,29 @@ export const requestReferralTrackingOtp = async (
     code_hash: hashReferralSecret(`${code}:${env.otpSecret}`),
     expires_at: new Date(now + OTP_TTL_SECONDS * 1000).toISOString(),
     resend_available_at: new Date(now + OTP_RESEND_SECONDS * 1000).toISOString()
-  });
-  if (challenge.error) throw safeFailure("Referral tracking is temporarily unavailable", "REFERRAL_TRACKING_UNAVAILABLE");
-  await delivery.send({ phone, code });
+  }).select("id").single();
+  if (challenge.error || !challenge.data) throw safeFailure("Referral tracking is temporarily unavailable", "REFERRAL_TRACKING_UNAVAILABLE");
+  try {
+    await delivery.send({ phone: normalizedPhone, code, expiresInMinutes: OTP_TTL_SECONDS / 60 });
+  } catch {
+    let removed = false;
+    try {
+      const result = await supabaseAdmin.from("referral_tracking_challenges")
+        .delete().eq("id", challenge.data.id);
+      removed = !result.error;
+    } catch {
+      removed = false;
+    }
+    if (!removed) {
+      try {
+        await supabaseAdmin.from("referral_tracking_challenges")
+          .update({ consumed_at: new Date().toISOString() }).eq("id", challenge.data.id);
+      } catch {
+        // Preserve the safe public provider error even if storage cleanup is unavailable.
+      }
+    }
+    throw safeFailure("We could not deliver the referral tracking code", "REFERRAL_OTP_DELIVERY_FAILED", 502);
+  }
   return { accepted: true, resendAvailableIn: OTP_RESEND_SECONDS };
 };
 

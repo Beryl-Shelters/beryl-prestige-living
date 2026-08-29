@@ -6,19 +6,23 @@ import type { CustomerSessionState, ReferralDashboard } from "@/lib/contracts";
 
 const mocks = vi.hoisted(() => ({
   session: null as CustomerSessionState | null,
-  context: vi.fn(), submit: vi.fn(), dashboard: vi.fn(), payout: vi.fn(), banks: vi.fn(), savePayout: vi.fn()
+  context: vi.fn(), submit: vi.fn(), dashboard: vi.fn(), payout: vi.fn(), banks: vi.fn(), savePayout: vi.fn(),
+  requestTracking: vi.fn(), verifyTracking: vi.fn(), push: vi.fn()
 }));
 vi.mock("@/context/auth-provider", () => ({ useAuth: () => ({ session: mocks.session }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
 vi.mock("@/components/marketplace/marketplace-header", () => ({ MarketplaceHeader: () => <header>Referral header</header> }));
 vi.mock("@/lib/api/client", () => ({ referralApi: {
   context: mocks.context, submit: mocks.submit, dashboard: mocks.dashboard,
-  payout: mocks.payout, banks: mocks.banks, savePayout: mocks.savePayout
+  payout: mocks.payout, banks: mocks.banks, savePayout: mocks.savePayout,
+  requestTracking: mocks.requestTracking, verifyTracking: mocks.verifyTracking
 } }));
 
 import { CopyReferralLink } from "./copy-referral-link";
 import { DirectReferralScreen } from "./direct-referral-screen";
 import { ReferralDashboardScreen } from "./referral-dashboard-screen";
 import { ReferralLanding } from "./referral-landing";
+import { ReferralTrackingScreen } from "./referral-tracking-screen";
 
 const dashboard: ReferralDashboard = {
   referrer: { fullName: "Ada Okafor", referralCode: "BSR-ADA", referralLink: "https://dev.berylshelter.com/r/BSR-ADA" },
@@ -35,6 +39,7 @@ describe("desktop referral Web experience", () => {
     mocks.session = null;
     mocks.context.mockResolvedValue({ data: { authenticated: false, referrer: null } });
     mocks.submit.mockReset(); mocks.dashboard.mockReset(); mocks.payout.mockReset(); mocks.banks.mockReset();
+    mocks.requestTracking.mockReset(); mocks.verifyTracking.mockReset(); mocks.push.mockReset();
   });
 
   it("renders the public approved landing copy, supplied hero asset and direct CTA", async () => {
@@ -99,6 +104,47 @@ describe("desktop referral Web experience", () => {
     mocks.dashboard.mockResolvedValue({ data: { ...dashboard, summary: { referralCount: 0, completedCount: 0, earnedAmount: 0, outstandingAmount: 0 }, referrals: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 0 } } });
     renderWithQuery(<ReferralDashboardScreen />);
     expect(await screen.findByRole("heading", { name: "No referrals yet" })).toBeInTheDocument();
+  });
+
+  it("advances to OTP entry after the server accepts WhatsApp delivery", async () => {
+    mocks.requestTracking.mockResolvedValue({ data: { accepted: true, resendAvailableIn: 60 } });
+    renderWithQuery(<ReferralTrackingScreen />);
+    fireEvent.change(screen.getByLabelText("Full Name"), { target: { value: "Ada Okafor" } });
+    fireEvent.change(screen.getByLabelText("Phone Number"), { target: { value: "08012345678" } });
+    await userEvent.click(screen.getByRole("button", { name: "Send tracking code" }));
+    await waitFor(() => expect(mocks.requestTracking).toHaveBeenCalledWith({
+      fullName: "Ada Okafor",
+      phone: "+2348012345678"
+    }));
+    expect(await screen.findByRole("heading", { name: "Enter your tracking code" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Six-digit code")).toBeInTheDocument();
+  });
+
+  it("shows a safe retry message when configured-provider delivery fails", async () => {
+    mocks.requestTracking.mockRejectedValue({ response: { data: {
+      code: "REFERRAL_OTP_DELIVERY_FAILED",
+      message: "We could not deliver the referral tracking code"
+    } } });
+    renderWithQuery(<ReferralTrackingScreen />);
+    fireEvent.change(screen.getByLabelText("Full Name"), { target: { value: "Ada Okafor" } });
+    fireEvent.change(screen.getByLabelText("Phone Number"), { target: { value: "08012345678" } });
+    await userEvent.click(screen.getByRole("button", { name: "Send tracking code" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("We could not deliver the referral tracking code");
+    expect(screen.getByRole("button", { name: "Send tracking code" })).toBeEnabled();
+    expect(screen.queryByLabelText("Six-digit code")).not.toBeInTheDocument();
+  });
+
+  it("keeps the provider-unconfigured response safe and retryable", async () => {
+    mocks.requestTracking.mockRejectedValue({ response: { data: {
+      code: "REFERRAL_TRACKING_UNAVAILABLE",
+      message: "internal configuration detail"
+    } } });
+    renderWithQuery(<ReferralTrackingScreen />);
+    fireEvent.change(screen.getByLabelText("Full Name"), { target: { value: "Ada Okafor" } });
+    fireEvent.change(screen.getByLabelText("Phone Number"), { target: { value: "08012345678" } });
+    await userEvent.click(screen.getByRole("button", { name: "Send tracking code" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("WhatsApp tracking codes are not configured yet");
+    expect(screen.queryByText("internal configuration detail")).not.toBeInTheDocument();
   });
 });
 

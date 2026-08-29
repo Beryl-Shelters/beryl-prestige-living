@@ -90,6 +90,10 @@ export const env = {
   mixpanelAdminToken: process.env.MIXPANEL_ADMIN_TOKEN || "",
   mixpanelEnvironment: process.env.MIXPANEL_ENVIRONMENT || "test",
   referralOtpProvider: process.env.REFERRAL_OTP_PROVIDER || "disabled",
+  termiiApiKey: process.env.TERMII_API_KEY || "",
+  termiiBaseUrl: process.env.TERMII_BASE_URL || "",
+  termiiSenderId: process.env.TERMII_SENDER_ID || "",
+  termiiChannel: process.env.TERMII_CHANNEL || "",
   referralPayoutEncryptionKey:
     process.env.REFERRAL_PAYOUT_ENCRYPTION_KEY || ""
 };

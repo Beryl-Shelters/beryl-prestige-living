@@ -1,4 +1,4 @@
-import { formatReferralMoney, paymentLabel, purposeLabel, referralInitials, referralRoutes, referralStatus } from "./helpers";
+import { formatReferralMoney, paymentLabel, purposeLabel, referralErrorMessage, referralInitials, referralRoutes, referralStatus } from "./helpers";
 import { guestReferrerSchema, referredPersonSchema, referralOtpSchema, referralPayoutSchema, referralTrackingIdentitySchema } from "./schemas";
 
 describe("mobile referral helpers and validation", () => {
@@ -14,5 +14,6 @@ describe("mobile referral helpers and validation", () => {
   it("maps purpose and payment labels", () => { expect(purposeLabel("BUYING")).toBe("Buying"); expect(purposeLabel("SELLING")).toBe("Selling"); expect(paymentLabel("OUTSTANDING")).toBe("Not paid yet"); expect(paymentLabel("PAID")).toBe("Paid"); });
   it("formats authoritative reward values without calculating them", () => expect(formatReferralMoney(2500000)).toBe("₦2,500,000"));
   it("creates safe two-letter initials", () => expect(referralInitials("Ada Ifeoma Okeke")).toBe("AI"));
+  it("maps configured-provider delivery failure to a safe WhatsApp retry message", () => expect(referralErrorMessage("REFERRAL_OTP_DELIVERY_FAILED")).toBe("We could not send the WhatsApp code. Please try again."));
   it("centralizes canonical referral routes", () => expect(referralRoutes).toEqual({ landing: "/refer", dashboard: "/referrals", newReferral: "/referrals/new", tracking: "/referrals/track", bankDetails: "/referrals/bank-details" }));
 });
