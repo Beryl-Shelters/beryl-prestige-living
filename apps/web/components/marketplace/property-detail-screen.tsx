@@ -12,6 +12,7 @@ import {
   BedDouble,
   CarFront,
   Check,
+  Gift,
   Heart,
   House,
   Images,
@@ -690,13 +691,18 @@ export function MarketplacePropertyDetailScreen({
           <div>
             <button
               type="button"
+              aria-label="Share property"
               onClick={() => {
                 void shareProperty();
               }}
             >
               <Share2 size={18} aria-hidden="true" />
-              Share
+              <span className="property-detail-action-label">Share</span>
             </button>
+            <Link className="property-detail-refer-action" href={"/refer" as Route} aria-label="Refer someone to Beryl Shelter">
+              <Gift size={18} aria-hidden="true" />
+              <span className="property-detail-action-label">Refer</span>
+            </Link>
             <button
               type="button"
               aria-label={
@@ -712,7 +718,7 @@ export function MarketplacePropertyDetailScreen({
                 size={19}
                 fill={property.saved ? "currentColor" : "none"}
               />
-              {savePending ? "Saving…" : property.saved ? "Saved" : "Save"}
+              <span className="property-detail-action-label">{savePending ? "Saving…" : property.saved ? "Saved" : "Save"}</span>
             </button>
           </div>
         </div>

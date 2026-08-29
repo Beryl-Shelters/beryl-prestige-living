@@ -77,7 +77,19 @@ describe("Marketplace property detail", () => {
     expect(screen.getByText(/125,000,000/)).toBeInTheDocument();
     expect(screen.getByText("Verified by Beryl")).toBeInTheDocument();
     expect(screen.getByText("Security")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Refer someone to Beryl Shelter" })).toHaveAttribute("href", "/refer");
     expect(screen.queryByText(/full address/i)).not.toBeInTheDocument();
+  });
+
+  it("keeps Share available while letting an anonymous visitor enter the public referral flow", async () => {
+    const user = userEvent.setup();
+    const share = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "share", { configurable: true, value: share });
+    renderWithQuery(<MarketplacePropertyDetailScreen propertyId={id} />);
+    await screen.findByRole("heading", { name: property.title });
+    await user.click(screen.getByRole("button", { name: "Share property" }));
+    await waitFor(() => expect(share).toHaveBeenCalledWith(expect.objectContaining({ title: property.title })));
+    expect(screen.getByRole("link", { name: "Refer someone to Beryl Shelter" })).toHaveAttribute("href", "/refer");
   });
 
   it("uses cover-first ordered gallery controls and an intentional empty gallery", async () => {

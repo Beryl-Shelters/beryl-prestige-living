@@ -14,6 +14,7 @@ describe("Marketplace header session states", () => {
 
   it("keeps public Marketplace entry controls available anonymously", () => {
     renderWithQuery(<MarketplaceHeader returnTo="/marketplace" />);
+    expect(screen.getByRole("link", { name: "Refer & Earn" })).toHaveAttribute("href", "/refer");
     expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login?returnTo=%2Fmarketplace");
     expect(screen.getByRole("link", { name: "Get started" })).toBeInTheDocument();
   });
@@ -22,6 +23,7 @@ describe("Marketplace header session states", () => {
     mocks.auth.session = { user: { id: "customer", fullName: "Test Customer", email: "test@example.com", phone: null, accountStatus: "ACTIVE", emailVerified: true }, activePersona: "BUYER", personas: [], nextAction: "OPEN_BUYER_DASHBOARD" };
     renderWithQuery(<MarketplaceHeader returnTo="/marketplace" />);
     expect(screen.getByRole("button", { name: /test customer/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Refer & Earn" })).toHaveAttribute("href", "/refer");
     expect(screen.getByRole("link", { name: "Saved" })).toHaveAttribute("href", "/saved");
     expect(screen.queryByRole("link", { name: "Log in" })).not.toBeInTheDocument();
   });

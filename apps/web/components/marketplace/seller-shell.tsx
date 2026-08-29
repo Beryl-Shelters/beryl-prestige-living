@@ -31,7 +31,7 @@ const primaryNavigation: Array<{ label: string; icon: typeof LayoutDashboard; hr
   { label: "Subaccounts", icon: Building2 },
   { label: "Save-as-you-earn", icon: HandCoins },
   { label: "Invest", icon: CircleDollarSign },
-  { label: "Refer & earn", icon: Gift },
+  { label: "Refer & earn", icon: Gift, href: "/refer" },
 ];
 
 export function SellerShell({ children }: { children: React.ReactNode }) {

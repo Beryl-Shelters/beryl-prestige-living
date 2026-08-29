@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { ChangeEvent, FormEvent, useState } from "react";
-import { ChevronDown, Heart, Search, UserRound } from "lucide-react";
+import { ChevronDown, Gift, Heart, Search, UserRound } from "lucide-react";
 import { BerylShelterLogo } from "@/components/brand/beryl-shelter-logo";
 import { PersonaSwitcher } from "@/components/persona/persona-switcher";
 import { useAuth } from "@/context/auth-provider";
@@ -36,6 +36,9 @@ export function MarketplaceHeader({ returnTo, searchValue, onSearchChange, onSea
     </form>
     <div className="marketplace-header-actions">
       {sessionLoading ? <span className="marketplace-session-status" aria-live="polite">Loading account…</span> : null}
+      <Link className="marketplace-refer-button" href={"/refer" as Route} aria-label="Refer & Earn">
+        <Gift size={17} aria-hidden="true" /><span>Refer &amp; Earn</span>
+      </Link>
       {!sessionLoading && !authenticated ? <>
         <Link className="marketplace-saved-button" href={loginHrefFor("/saved") as Route}><Heart size={18} aria-hidden="true" /><span>Saved</span></Link>
         <Link href={loginHrefFor(returnTo) as Route}>Log in</Link>
