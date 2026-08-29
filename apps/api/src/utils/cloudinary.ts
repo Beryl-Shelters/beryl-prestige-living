@@ -106,3 +106,14 @@ export const createPropertyDocumentAccessUrl = (publicId: string, expiresAt: num
     expires_at: expiresAt,
     attachment: false
   });
+
+export const uploadReferralPaymentReceipt = (buffer: Buffer) =>
+  uploadPropertyDocument(buffer, "beryl-shelter/referral-payment-receipts");
+
+export const deleteReferralPaymentReceipt = (publicId: string) =>
+  deletePropertyDocument(publicId);
+
+export const createReferralPaymentReceiptAccessUrl = (
+  publicId: string,
+  expiresAt: number
+) => createPropertyDocumentAccessUrl(publicId, expiresAt);

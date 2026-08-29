@@ -60,3 +60,33 @@ export const uploadPropertyDocument = (
     next(error);
   });
 };
+
+const referralPaymentReceiptUpload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    if (!["application/pdf", "image/png", "image/jpeg"].includes(file.mimetype)) {
+      cb(new AppError("Upload a PDF, PNG, or JPG receipt", 400, "PAYMENT_RECEIPT_INVALID"));
+      return;
+    }
+    cb(null, true);
+  }
+});
+
+export const uploadReferralPaymentReceipt = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  referralPaymentReceiptUpload.single("receipt")(req, res, (error: unknown) => {
+    if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
+      next(new AppError("Payment receipt must not exceed 10MB", 400, "PAYMENT_RECEIPT_INVALID"));
+      return;
+    }
+    if (error instanceof multer.MulterError) {
+      next(new AppError("A single payment receipt is required", 400, "PAYMENT_RECEIPT_REQUIRED"));
+      return;
+    }
+    next(error);
+  });
+};

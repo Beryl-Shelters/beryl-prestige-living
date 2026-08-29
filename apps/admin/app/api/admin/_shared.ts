@@ -41,6 +41,37 @@ export async function protectedAdminRequest(path: string, method: "GET" | "POST"
   }
   return response;
 }
+
+async function multipartUpstream(path: string, body: FormData, accessToken?: string) {
+  const response = await fetch(backendApiUrl(path), { method: "POST", cache: "no-store", headers: { accept: "application/json", ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}) }, body });
+  const payload = await response.json().catch(() => ({ success: false, message: "The Admin service returned an invalid response.", code: "UPSTREAM_INVALID_RESPONSE" }));
+  return { response, payload: payload as ApiEnvelope<Record<string, unknown>> };
+}
+
+export async function protectedAdminMultipartRequest(path: string, request: Request) {
+  const jar = await cookies();
+  let access = jar.get(ADMIN_COOKIES.access)?.value;
+  const refresh = jar.get(ADMIN_COOKIES.refresh)?.value;
+  const source = await request.formData();
+  let result = await multipartUpstream(path, source, access);
+  type Rotation = { accessToken: string; refreshToken: string; accessTokenExpiresIn: number; refreshTokenExpiresIn: number };
+  let refreshed: Rotation | null = null;
+  if (result.response.status === 401 && refresh) {
+    const rotation = await upstream("admin/auth/refresh", { refreshToken: refresh });
+    if (!rotation.response.ok || !rotation.payload.data) {
+      const expired = NextResponse.json(rotation.payload, { status: rotation.response.status }); clearAdminCookies(expired); return expired;
+    }
+    refreshed = rotation.payload.data as unknown as Rotation;
+    access = refreshed.accessToken;
+    result = await multipartUpstream(path, source, access);
+  }
+  const response = NextResponse.json(result.payload, { status: result.response.status });
+  if (refreshed) {
+    const state = stateFromCookie(jar.get(ADMIN_COOKIES.state)?.value);
+    if (state) setAdminSession(response, { accessToken: refreshed.accessToken, refreshToken: refreshed.refreshToken, state: { ...state, accessTokenExpiresIn: refreshed.accessTokenExpiresIn, refreshTokenExpiresIn: refreshed.refreshTokenExpiresIn } });
+  }
+  return response;
+}
 export function errorResponse(error: unknown) {
   if (error instanceof ApiConfigurationError) return NextResponse.json({ success: false, message: error.message, code: "API_CONFIGURATION_ERROR" }, { status: 500 });
   return NextResponse.json({ success: false, message: "We could not connect to the Admin authentication service. Please try again.", code: "UPSTREAM_UNAVAILABLE" }, { status: 503 });

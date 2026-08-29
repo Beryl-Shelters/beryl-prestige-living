@@ -28,3 +28,17 @@ export type AdminPropertyReviewDetail = {
   rejectionFeedback: string | null;
   history: Array<{ id: string; previousStatus: string; newStatus: string; action: string; reason: string | null; reviewedByAdminId: string; createdAt: string }>;
 };
+export type AdminReferrerDirectory = {
+  summary: { totalReferrers: number; totalReferrals: number; completedReferrals: number; earnedAmount: number; outstandingAmount: number };
+  filterCounts: { all: number; owed: number; fullyPaid: number };
+  items: Array<{ id: string; customerId: string | null; fullName: string; phone: string | null; email: string | null; referralCode: string; joinedAt: string; referralCount: number; completedCount: number; earnedAmount: number; outstandingAmount: number; payoutStatus: "ON_FILE" | "MISSING" | "NOT_NEEDED" }>;
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+export type AdminReferrerDetail = {
+  identity: { id: string; customerId: string | null; fullName: string; phone: string | null; email: string | null; referralCode: string; joinedAt: string; identityType: "CUSTOMER_LINKED" | "REFERRAL_ONLY" };
+  linkedCustomer: { id: string; fullName: string; email: string } | null;
+  summary: { referrals: number; completed: number; earnedAmount: number; outstandingAmount: number };
+  payout: { status: "ON_FILE" | "MISSING" | "NOT_NEEDED"; bankName: string | null; accountName: string | null; maskedAccountNumber: string | null; updatedAt: string | null };
+  referrals: Array<{ id: string; referenceId: string; referredFullName: string; purpose: "BUYING" | "SELLING"; createdAt: string; completedAt: string | null; lifecycleStatus: "NEW" | "CONTACTED" | "IN_PROGRESS" | "COMPLETED" | "LOST"; rewardAmount: number | null; paymentStatus: "NOT_ELIGIBLE" | "OUTSTANDING" | "PAID"; payment: null | { id: string; amount: number; paidAt: string | null; receipt: { fileName: string | null; mimeType: string | null; sizeBytes: number | null }; recordedByAdminId: string | null } }>;
+};
+export type AdminReferralPaymentPreparation = { referrer: { id: string; fullName: string }; referral: { id: string; referenceId: string; referredFullName: string }; amount: number; payout: { bankName: string; accountName: string; accountNumber: string } };
