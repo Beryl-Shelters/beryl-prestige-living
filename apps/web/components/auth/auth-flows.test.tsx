@@ -27,6 +27,7 @@ vi.mock("@/lib/api/client", () => ({ customerApi: {
 } }));
 vi.mock("@/lib/analytics/customer", () => ({
   trackCustomerEvent: mocks.track,
+  anonymousCustomerAnalyticsDistinctId: () => Promise.resolve("anonymous-test-id"),
   initialPersonaForAnalytics: (persona: "FIND_PROPERTY" | "LIST_PROPERTY") => persona === "FIND_PROPERTY" ? "Find a Property" : "List a Property",
   customerPersonaForAnalytics: (persona: "BUYER" | "SELLER_DEVELOPER") => persona === "BUYER" ? "Buyer" : "Seller-Developer"
 }));
@@ -113,6 +114,7 @@ describe("customer authentication screens", () => {
       password: "Password123!",
       confirmPassword: "Password123!"
     });
+    expect(mocks.register.mock.calls[0]?.[1]).toBe("anonymous-test-id");
     expect(mocks.setPendingSignup).toHaveBeenCalledWith(expect.objectContaining({ intent: "FIND_PROPERTY", password: "Password123!" }));
     expect(mocks.track).toHaveBeenCalledWith("Signup Submitted", { Initial_Persona: "Find a Property" });
   });
@@ -140,7 +142,7 @@ describe("customer authentication screens", () => {
     await userEvent.type(screen.getByLabelText(/^password$/i), "Password123!");
     await userEvent.click(screen.getByRole("button", { name: /^log in$/i }));
     await waitFor(() => expect(mocks.login).toHaveBeenCalled());
-    expect(mocks.login).toHaveBeenCalledWith(identifier.includes("@") ? identifier : "+2348012345678", "Password123!");
+    expect(mocks.login).toHaveBeenCalledWith(identifier.includes("@") ? identifier : "+2348012345678", "Password123!", "anonymous-test-id");
     expect(mocks.track).toHaveBeenCalledWith("Login Submitted", { login_identifier_type: identifier.includes("@") ? "email" : "phone" });
   });
 

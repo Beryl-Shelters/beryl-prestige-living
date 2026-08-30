@@ -12,11 +12,25 @@ import { trackAdminEvent } from "@/lib/analytics/admin";
 type Staff = { id: string; fullName: string; email: string; phone: string | null; department: "TECH" | "MANAGEMENT"; adminRole: "ADMIN" | "SUPER_ADMIN"; status: "PENDING" | "ACTIVE" | "SUSPENDED" | "LOCKED"; createdAt: string };
 const schema = z.object({ fullName: z.string().trim().min(2, "Enter the Admin's full name"), email: z.string().trim().email("Enter a valid email"), phone: z.string().trim().optional(), department: z.enum(["TECH", "MANAGEMENT"]), adminRole: z.enum(["ADMIN", "SUPER_ADMIN"]) }); type Values = z.infer<typeof schema>;
 
+const fetchStaff = async (): Promise<Staff[]> => {
+  const response = await fetch("/api/admin/staff", { cache: "no-store" });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.message ?? "Unable to load Admin staff.");
+  return payload.data ?? [];
+};
+
 export function AdminManagement() {
   const [staff, setStaff] = useState<Staff[]>([]); const [loading, setLoading] = useState(true); const [open, setOpen] = useState(false); const [message, setMessage] = useState(""); const [resending, setResending] = useState<string | null>(null); const dialogRef = useRef<HTMLElement>(null);
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { department: "MANAGEMENT", adminRole: "ADMIN" } });
-  const load = async () => { setLoading(true); try { const response = await fetch("/api/admin/staff", { cache: "no-store" }); const payload = await response.json(); if (response.ok) setStaff(payload.data ?? []); else setMessage(payload.message ?? "Unable to load Admin staff."); } catch { setMessage("Unable to load Admin staff."); } finally { setLoading(false); } };
-  useEffect(() => { void load(); }, []);
+  const load = async () => { try { setStaff(await fetchStaff()); } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to load Admin staff."); } finally { setLoading(false); } };
+  useEffect(() => {
+    let active = true;
+    void fetchStaff()
+      .then((data) => { if (active) setStaff(data); })
+      .catch((error: unknown) => { if (active) setMessage(error instanceof Error ? error.message : "Unable to load Admin staff."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
   useEffect(() => {
     if (!open) return;
     void trackAdminEvent("Invite Admin Form Viewed", {});

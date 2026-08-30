@@ -10,10 +10,13 @@ export function errorMiddleware(
   const statusCode = error instanceof AppError ? error.statusCode : 500;
   const code = error instanceof AppError ? error.code : undefined;
   const details = error instanceof AppError ? error.details : undefined;
+  const message = error instanceof AppError
+    ? error.message
+    : "Internal server error";
 
   return res.status(statusCode).json({
     success: false,
-    message: error.message || "Internal server error",
+    message,
     ...(code ? { code } : {}),
     ...(details ?? {})
   });

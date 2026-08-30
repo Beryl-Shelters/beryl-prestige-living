@@ -16,11 +16,13 @@ Copy `.env.example` to `.env.local` and set the Express API base, normally:
 API_BASE_URL=http://localhost:5000/api/v1
 ```
 
-Production:
+Preview:
 
 ```txt
-API_BASE_URL=https://beryl-prestige-living-api.onrender.com/api/v1
+API_BASE_URL=https://dev-api.berylshelter.com/api/v1
 ```
+
+Set the production value to the branded production API only when promoting a verified release. `API_BASE_URL` remains server-only; browser code uses same-origin BFF routes.
 
 From the repository root, run `npm run dev:web`. Validation commands are `npm run lint:web`, `npm run type-check:web`, `npm run test:web`, and `npm run build:web`.
 
