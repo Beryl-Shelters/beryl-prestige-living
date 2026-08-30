@@ -278,6 +278,7 @@ describe("customer registration vertical slice", () => {
     });
     expect(result).not.toHaveProperty("password");
     expect(result).not.toHaveProperty("confirmPassword");
+    expect(result).not.toHaveProperty("otp");
     expect(mail.messages).toHaveLength(1);
     expect(store.accounts.get(registeredAccountId())?.initialPersona).toBe("BUYER");
     expect(analytics.accountCreated).toHaveBeenCalledWith(registeredAccountId(), "Find a Property");
@@ -383,6 +384,49 @@ describe("customer registration vertical slice", () => {
     await expect(
       service.verifyEmail({ email: registrationBody.email, otp: "123456" })
     ).rejects.toMatchObject({ code: "OTP_EXPIRED" });
+    expect(store.accounts.get(registeredAccountId())).toMatchObject({
+      accountStatus: "PENDING_VERIFICATION",
+      emailVerified: false,
+      authEmailConfirmed: false
+    });
+    expect(analytics.otpVerificationSucceeded).not.toHaveBeenCalled();
+  });
+
+  it("rejects a correct OTP exactly at the expiry boundary without spending an attempt", async () => {
+    await service.register(validInput());
+    currentTime = new Date(currentTime.getTime() + 10 * 60_000);
+
+    await expect(
+      service.verifyEmail({ email: registrationBody.email, otp: "123456" })
+    ).rejects.toMatchObject({ statusCode: 400, code: "OTP_EXPIRED" });
+    expect(store.challenges[0]).toMatchObject({ attempts: 0 });
+    expect(store.challenges[0].invalidatedAt).toEqual(currentTime);
+    expect(store.personas.size).toBe(0);
+    expect(store.customerRecords.size).toBe(0);
+  });
+
+  it("accepts a correct OTP immediately before the UTC expiry boundary", async () => {
+    await service.register(validInput());
+    currentTime = new Date("2026-07-28T10:09:59.999Z");
+
+    await expect(
+      service.verifyEmail({ email: registrationBody.email, otp: "123456" })
+    ).resolves.toMatchObject({ accountStatus: "ACTIVE", emailVerified: true });
+  });
+
+  it("maps raw verification-store failures to the stable safe API error", async () => {
+    await service.register(validInput());
+    store.verifyEmailOtp = async () => {
+      throw new Error("database host and internal challenge details");
+    };
+
+    await expect(
+      service.verifyEmail({ email: registrationBody.email, otp: "123456" })
+    ).rejects.toMatchObject({
+      statusCode: 503,
+      code: "VERIFICATION_UNAVAILABLE",
+      message: "Unable to verify email"
+    });
   });
 
   it("enforces the maximum attempt count", async () => {
@@ -468,6 +512,26 @@ describe("customer registration vertical slice", () => {
     await expect(
       service.verifyEmail({ email: registrationBody.email, otp: "123456" })
     ).rejects.toMatchObject({ code: "OTP_NO_LONGER_VALID" });
+  });
+
+  it("accepts only the replacement OTP and gives it a fresh full lifetime", async () => {
+    await service.register(validInput());
+    const firstExpiry = store.challenges[0].expiresAt;
+    currentTime = new Date(currentTime.getTime() + 61_000);
+    generatedOtp = "654321";
+
+    await service.resendVerificationOtp({ email: registrationBody.email });
+    const replacement = store.challenges[1];
+    expect(replacement.expiresAt).toEqual(
+      new Date(currentTime.getTime() + 10 * 60_000)
+    );
+    expect(replacement.expiresAt.getTime()).toBeGreaterThan(firstExpiry.getTime());
+    await expect(
+      service.verifyEmail({ email: registrationBody.email, otp: "123456" })
+    ).rejects.toMatchObject({ code: "OTP_NO_LONGER_VALID" });
+    await expect(
+      service.verifyEmail({ email: registrationBody.email, otp: "654321" })
+    ).resolves.toMatchObject({ accountStatus: "ACTIVE" });
   });
 
   it("creates Buyer membership for FIND_PROPERTY", async () => {

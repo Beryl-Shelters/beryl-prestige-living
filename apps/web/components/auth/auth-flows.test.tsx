@@ -51,6 +51,8 @@ describe("customer authentication screens", () => {
     vi.clearAllMocks();
     authState = { pendingSignup: null, resetEmail: "customer@example.com", login: mocks.login, setPendingSignup: mocks.setPendingSignup, setResetEmail: mocks.setResetEmail };
     mocks.register.mockResolvedValue(registerSuccess);
+    mocks.verifyEmail.mockReset();
+    mocks.verifyEmail.mockResolvedValue({ success: true, data: { accountStatus: "ACTIVE", emailVerified: true, activePersona: "BUYER", personas: ["BUYER"], onboardingStatus: "NOT_STARTED", nextAction: "COMPLETE_BUYER_ONBOARDING" } });
     mocks.forgot.mockResolvedValue({ success: true, data: { otpLength: 6, resendAvailableIn: 60, nextAction: "VERIFY_PASSWORD_RESET_OTP" } });
     mocks.verifyReset.mockResolvedValue({ success: true, data: { expiresIn: 600, nextAction: "SET_NEW_PASSWORD" } });
     mocks.reset.mockResolvedValue({ success: true, data: { sessionsInvalidated: true, nextAction: "LOGIN" } });
@@ -190,6 +192,32 @@ describe("customer authentication screens", () => {
     fireEvent.paste(screen.getByRole("group"), { clipboardData: { getData: () => "135790" } });
     expect(await screen.findByText(/code verified/i)).toBeInTheDocument();
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/reset-password"), { timeout: 2000 });
+  });
+
+  it("shows the safe expired-code message and does not advance signup", async () => {
+    authState.pendingSignup = { email: "customer@example.com", maskedEmail: "c•••r@example.com", intent: "FIND_PROPERTY", password: "Password123!" };
+    mocks.verifyEmail.mockRejectedValue(apiFailure("OTP_EXPIRED", "unsafe expiry detail"));
+    renderWithQuery(<VerificationScreen mode="email" />);
+
+    fireEvent.paste(screen.getByRole("group"), { clipboardData: { getData: () => "123456" } });
+
+    expect(await screen.findByText("That code has expired. Request a new one.")).toBeInTheDocument();
+    expect(screen.queryByText("unsafe expiry detail")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /resend code in 0:60/i })).toBeDisabled();
+    expect(mocks.login).not.toHaveBeenCalled();
+    expect(mocks.push).not.toHaveBeenCalled();
+  });
+
+  it("still advances signup after a valid unexpired email OTP", async () => {
+    authState.pendingSignup = { email: "customer@example.com", maskedEmail: "c•••r@example.com", intent: "FIND_PROPERTY", password: "Password123!" };
+    mocks.login.mockResolvedValue({ nextAction: "COMPLETE_BUYER_ONBOARDING" });
+    renderWithQuery(<VerificationScreen mode="email" />);
+
+    fireEvent.paste(screen.getByRole("group"), { clipboardData: { getData: () => "123456" } });
+
+    await waitFor(() => expect(mocks.verifyEmail).toHaveBeenCalledWith({ email: "customer@example.com", otp: "123456" }));
+    await waitFor(() => expect(mocks.login).toHaveBeenCalledWith("customer@example.com", "Password123!"));
+    expect(await screen.findByText("Verification successful")).toBeInTheDocument();
   });
 
   it("submits password reset through the proof-cookie bridge", async () => {

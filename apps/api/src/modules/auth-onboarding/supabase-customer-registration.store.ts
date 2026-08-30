@@ -184,8 +184,7 @@ export class SupabaseCustomerRegistrationStore
     const { data, error } = await supabaseAdmin
       .rpc("verify_customer_email_otp", {
         p_email: input.email,
-        p_code_hash: input.codeHash,
-        p_now: input.now.toISOString()
+        p_code_hash: input.codeHash
       })
       .single();
 
