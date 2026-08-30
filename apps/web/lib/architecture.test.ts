@@ -68,4 +68,19 @@ describe("web authentication architecture", () => {
     expect(css).toContain("@media (min-width: 1024px)");
     expect(css).toContain("overflow-x: hidden");
   });
+
+  it("constrains desktop auth artwork to the viewport without blocking form scroll", () => {
+    const desktopCss = css.slice(css.indexOf("@media (min-width: 1024px)"));
+    const artworkRule = desktopCss.match(/\.auth-artwork\s*\{([^}]*)\}/)?.[1] ?? "";
+    const shellRule = desktopCss.match(/\.auth-shell\s*\{([^}]*)\}/)?.[1] ?? "";
+
+    expect(shellRule).toContain("grid-template-columns");
+    expect(shellRule).toContain("align-items: start");
+    expect(artworkRule).toContain("display: flex");
+    expect(artworkRule).toContain("position: sticky");
+    expect(artworkRule).toContain("height: 100svh");
+    expect(artworkRule).toContain("min-height: 0");
+    expect(artworkRule).toContain("align-self: start");
+    expect(css).not.toMatch(/\.auth-shell\s*\{[^}]*overflow:\s*hidden/s);
+  });
 });
