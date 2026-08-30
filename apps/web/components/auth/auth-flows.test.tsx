@@ -61,6 +61,24 @@ describe("customer authentication screens", () => {
     expect(screen.getByRole("heading", { name: /create your account/i })).toBeInTheDocument();
   });
 
+  it("opens signup legal links in a new tab without submitting the form", async () => {
+    renderWithQuery(<SignupScreen />);
+    const privacy = screen.getByRole("link", { name: "Privacy Policy" });
+    const terms = screen.getByRole("link", { name: "Terms and Conditions" });
+
+    for (const link of [privacy, terms]) {
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
+      expect(link).toHaveAttribute("rel", expect.stringContaining("noreferrer"));
+    }
+    expect(privacy).toHaveAttribute("href", "/privacy");
+    expect(terms).toHaveAttribute("href", "/terms");
+
+    await userEvent.click(privacy);
+    await userEvent.click(terms);
+    expect(mocks.register).not.toHaveBeenCalled();
+  });
+
   it("tracks one safe signup-screen view despite normal re-renders", async () => {
     renderWithQuery(<SignupScreen />);
     await waitFor(() => expect(mocks.track).toHaveBeenCalledWith("Signup Screen Viewed", { entry_point: "direct" }));

@@ -76,6 +76,18 @@ describe("desktop referral Web experience", () => {
     expect(screen.queryByRole("link", { name: /sign up/i })).not.toBeInTheDocument();
   });
 
+  it("opens referral terms in a new tab without submitting the direct-referral form", async () => {
+    renderWithQuery(<DirectReferralScreen />);
+    const terms = screen.getByRole("link", { name: "Referral Terms" });
+    expect(terms).toHaveAttribute("href", "/terms");
+    expect(terms).toHaveAttribute("target", "_blank");
+    expect(terms).toHaveAttribute("rel", expect.stringContaining("noopener"));
+    expect(terms).toHaveAttribute("rel", expect.stringContaining("noreferrer"));
+
+    await userEvent.click(terms);
+    expect(mocks.submit).not.toHaveBeenCalled();
+  });
+
   it("uses the customer session for a logged-in submission instead of sending guest identity", async () => {
     mocks.session = { user: { id: "customer", fullName: "Ada Okafor", email: "ada@example.com", phone: "+2348012345678", accountStatus: "ACTIVE", emailVerified: true }, activePersona: "BUYER", personas: [], nextAction: "OPEN_BUYER_DASHBOARD" };
     mocks.submit.mockResolvedValue({ data: { referral: { id: "1", referenceId: "REF-2608-0001", referredFirstName: "Tomi", purpose: "SELLING", status: "NEW", submittedAt: "2026-08-28T00:00:00Z" }, referrer: { referralCode: "BSR-ADA", referralLink: "https://dev.berylshelter.com/r/BSR-ADA" }, nextAction: "OPEN_REFERRAL_DASHBOARD", trackingAvailable: false } });

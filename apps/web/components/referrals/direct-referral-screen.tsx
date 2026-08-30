@@ -86,7 +86,7 @@ export function DirectReferralScreen({ referralCode }: { referralCode?: string }
             <label>Anything else we should know? <small>Optional</small><textarea name="notes" maxLength={600} rows={4} /></label>
           </fieldset>
           <label className="referral-check"><input type="checkbox" checked={privateDisclosure} onChange={(event) => setPrivateDisclosure(event.target.checked)} /><span><strong>Don’t tell them I referred them</strong><small>We’ll keep your name private when we reach out.</small></span></label>
-          <label className="referral-check"><input type="checkbox" required /><span>I have permission to share these details and accept the <Link href="/terms">Referral Terms</Link>.</span></label>
+          <label className="referral-check"><input type="checkbox" required /><span>I have permission to share these details and accept the <Link href="/terms" target="_blank" rel="noopener noreferrer">Referral Terms</Link>.</span></label>
           {error ? <div className="referral-error" role="alert">{error}</div> : null}
           <button className="referral-primary-action referral-submit" type="submit" disabled={submitting}>{submitting ? "Submitting referral…" : "Submit Referral"}</button>
         </form>

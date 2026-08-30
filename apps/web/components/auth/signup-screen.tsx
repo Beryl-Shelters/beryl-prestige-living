@@ -2,9 +2,9 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Home, Search } from "lucide-react";
-import Link from "next/link";
+import NextLink from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { type ComponentProps, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import { AuthShell } from "./auth-shell";
@@ -19,6 +19,11 @@ import { publicWebUrl } from "@/lib/site-urls";
 import { anonymousCustomerAnalyticsDistinctId, initialPersonaForAnalytics, trackCustomerEvent } from "@/lib/analytics/customer";
 import { signupSchema, type SignupValues } from "@/lib/validation";
 import { useAuth } from "@/context/auth-provider";
+
+const Link = ({ href, ...props }: ComponentProps<typeof NextLink>) => {
+  const isLegalRoute = href === "/privacy" || href === "/terms";
+  return <NextLink href={href} {...props} {...(isLegalRoute ? { target: "_blank", rel: "noopener noreferrer" } : {})} />;
+};
 
 export function SignupScreen() {
   const trackedView = useRef(false);
