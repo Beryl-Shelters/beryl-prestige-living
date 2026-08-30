@@ -38,7 +38,7 @@ describe("Admin onboarding architecture", () => {
     ["My Listings", "Payments", "Subaccounts", "Save-as-you-earn", "Invest", "Refer & Earn", "Support"].forEach((label) => expect(sidebar).not.toContain(label));
     expect(sidebar).toContain(">Settings<");
     expect(sidebar).toContain("sidebar-profile");
-    expect(sidebar).toContain(">Log out<");
+    expect(sidebar).toContain('"Log out"');
   });
 
   it("uses the existing HttpOnly Admin BFF for list, invite, and resend operations", () => {

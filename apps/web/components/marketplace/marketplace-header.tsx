@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { Route } from "next";
+import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useState } from "react";
 import { ChevronDown, Gift, Heart, Search, UserRound } from "lucide-react";
 import { BerylShelterLogo } from "@/components/brand/beryl-shelter-logo";
@@ -17,7 +18,8 @@ type MarketplaceHeaderProps = {
 };
 
 export function MarketplaceHeader({ returnTo, searchValue, onSearchChange, onSearchSubmit }: MarketplaceHeaderProps) {
-  const { session, sessionLoading, logout } = useAuth();
+  const router = useRouter();
+  const { session, sessionLoading, logout, logoutPending } = useAuth();
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const authenticated = Boolean(session);
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
@@ -25,6 +27,11 @@ export function MarketplaceHeader({ returnTo, searchValue, onSearchChange, onSea
       event.preventDefault();
       onSearchSubmit();
     }
+  };
+  const signOut = async () => {
+    await logout();
+    router.replace("/marketplace");
+    router.refresh();
   };
 
   return <header className="marketplace-header">
@@ -49,7 +56,7 @@ export function MarketplaceHeader({ returnTo, searchValue, onSearchChange, onSea
         <button className="marketplace-account-button" type="button" onClick={() => setSwitcherOpen(true)} aria-haspopup="dialog">
           <span className="marketplace-account-avatar"><UserRound size={16} aria-hidden="true" /></span><span>{session?.user.fullName}</span><ChevronDown size={17} aria-hidden="true" />
         </button>
-        <button className="marketplace-logout-button" type="button" onClick={() => { void logout(); }}>Log out</button>
+        <button className="marketplace-logout-button" type="button" disabled={logoutPending} onClick={() => void signOut()}>{logoutPending ? "Logging out…" : "Log out"}</button>
       </> : null}
     </div>
     <PersonaSwitcher open={switcherOpen} onClose={() => setSwitcherOpen(false)} />

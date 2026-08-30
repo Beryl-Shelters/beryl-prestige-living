@@ -554,6 +554,26 @@ textarea.form-control {
 .persona-row:nth-child(even) {
   background: color-mix(in srgb, var(--color-brand-cream) 34%, white);
 }
+.persona-dialog-footer {
+  border-top: 1px solid var(--color-brand-line);
+  padding: 14px 18px 18px;
+}
+.persona-dialog-logout {
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--color-brand-brown);
+  font-weight: 750;
+  cursor: pointer;
+}
+.persona-dialog-logout:hover,
+.persona-dialog-logout:focus-visible { background: var(--color-brand-cream); }
+.persona-dialog-logout:disabled { cursor: wait; opacity: .65; }
 .dashboard-placeholder {
   min-height: 100svh;
   display: grid;

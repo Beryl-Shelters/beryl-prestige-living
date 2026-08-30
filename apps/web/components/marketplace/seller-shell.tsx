@@ -36,7 +36,7 @@ const primaryNavigation: Array<{ label: string; icon: typeof LayoutDashboard; hr
 
 export function SellerShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { session, logout } = useAuth();
+  const { session, logout, logoutPending } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [personaOpen, setPersonaOpen] = useState(false);
   const name = session?.user.fullName || "Seller";
@@ -63,7 +63,7 @@ export function SellerShell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="seller-sidebar-profile">
           <span className="seller-avatar" aria-hidden="true">{initials}</span><span><strong>{name}</strong><small>{session?.user.email || "Seller account"}</small></span>
-          <button type="button" aria-label="Log out" onClick={() => void signOut()}><LogOut size={18} /></button>
+          <button type="button" disabled={logoutPending} onClick={() => void signOut()}><LogOut size={18} aria-hidden="true" /><span>{logoutPending ? "Logging out…" : "Log out"}</span></button>
         </div>
       </aside>
       <div className="seller-app-main">

@@ -49,13 +49,13 @@ export function AccountRequiredModal({ visible, returnTo, onClose }: { visible: 
   </View></SafeAreaView></Modal>;
 }
 
-export function MarketplaceAccountMenu({ visible, onClose, onSwitchProfile, onLogout }: { visible: boolean; onClose: () => void; onSwitchProfile: () => void; onLogout: () => void }) {
+export function MarketplaceAccountMenu({ visible, onClose, onSwitchProfile, onLogout, logoutPending = false }: { visible: boolean; onClose: () => void; onSwitchProfile: () => void; onLogout: () => void; logoutPending?: boolean }) {
   const router = useRouter();
   return <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose}><SafeAreaView style={styles.menuSafe}><Pressable style={styles.backdrop} onPress={onClose}/><View accessibilityViewIsModal style={styles.accountMenu}><View style={styles.menuHandle}/><View style={styles.menuHeading}><Text accessibilityRole="header" style={styles.menuTitle}>Account</Text><Pressable accessibilityRole="button" accessibilityLabel="Close account menu" onPress={onClose} style={styles.iconButton}><Feather name="x" size={23} color={colors.ink}/></Pressable></View>
     <Pressable accessibilityRole="button" onPress={()=>{onClose();router.push("/saved");}} style={styles.menuRow}><Feather name="heart" size={20} color={colors.brown}/><Text style={styles.menuLabel}>Saved properties</Text><Feather name="chevron-right" size={19} color={colors.muted}/></Pressable>
     <Pressable accessibilityRole="button" onPress={()=>{onClose();router.push("/refer");}} style={styles.menuRow}><Feather name="gift" size={20} color={colors.brown}/><Text style={styles.menuLabel}>Refer & earn</Text><Feather name="chevron-right" size={19} color={colors.muted}/></Pressable>
     <Pressable accessibilityRole="button" onPress={()=>{onClose();onSwitchProfile();}} style={styles.menuRow}><Feather name="repeat" size={20} color={colors.brown}/><Text style={styles.menuLabel}>Switch profile</Text><Feather name="chevron-right" size={19} color={colors.muted}/></Pressable>
-    <Pressable accessibilityRole="button" onPress={onLogout} style={styles.menuRow}><Feather name="log-out" size={20} color={colors.brown}/><Text style={styles.menuLabel}>Log out</Text></Pressable>
+    <Pressable accessibilityRole="button" accessibilityState={{ disabled: logoutPending }} disabled={logoutPending} onPress={onLogout} style={styles.menuRow}><Feather name="log-out" size={20} color={colors.brown}/><Text style={styles.menuLabel}>{logoutPending ? "Logging out…" : "Log out"}</Text></Pressable>
   </View></SafeAreaView></Modal>;
 }
 

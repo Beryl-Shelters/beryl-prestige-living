@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { customerApi } from "@/lib/api/client";
 import { customerPersonaForAnalytics, identifyCustomerAnalytics, resetCustomerAnalytics, trackCustomerEvent } from "@/lib/analytics/customer";
 import type { CustomerSessionState, GettingStartedAs, LoginResult } from "@/lib/contracts";
@@ -16,6 +16,7 @@ type AuthContextValue = {
   setResetEmail: (email: string) => void;
   login: (identifier: string, password: string, analyticsDistinctId?: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
+  logoutPending: boolean;
   refreshSession: () => Promise<CustomerSessionState>;
   setSession: (state: CustomerSessionState | null) => void;
 };
@@ -23,7 +24,10 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   const [session, setSession] = useState<CustomerSessionState | null>(null);
+  const [logoutPending, setLogoutPending] = useState(false);
+  const logoutInFlight = useRef<Promise<void> | null>(null);
   const [pendingSignup, setPendingSignupState] = useState<PendingSignup | null>(null);
   const [resetEmail, setResetEmailState] = useState("");
   const restored = useQuery({ queryKey: ["customer-session"], queryFn: () => customerApi.session(), retry: false });
@@ -72,9 +76,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(result.data);
     return result.data;
   };
-  const logout = async () => {
-    void trackCustomerEvent("Logout", {});
-    try { await customerApi.logout(); } finally { await resetCustomerAnalytics(); setSession(null); }
+  const logout = () => {
+    if (logoutInFlight.current) return logoutInFlight.current;
+    const operation = (async () => {
+      setLogoutPending(true);
+      void trackCustomerEvent("Logout", {});
+      try {
+        await customerApi.logout();
+      } catch {
+        // The BFF clears HttpOnly cookies even when the upstream is unavailable.
+      } finally {
+        try { await resetCustomerAnalytics(); } catch { /* Session cleanup remains authoritative. */ }
+        setSession(null);
+        queryClient.setQueryData(["customer-session"], null);
+        queryClient.removeQueries({
+          predicate: ({ queryKey }) => {
+            const key = queryKey[0];
+            return typeof key === "string" && (
+              key === "personas" ||
+              key === "saved-properties" ||
+              key.startsWith("seller-") ||
+              key.startsWith("referral-")
+            );
+          }
+        });
+        try {
+          await queryClient.invalidateQueries({
+            predicate: ({ queryKey }) => queryKey[0] === "marketplace-properties" || queryKey[0] === "marketplace-property"
+          });
+        } catch { /* Public data can refetch naturally after local session cleanup. */ }
+        setLogoutPending(false);
+      }
+    })();
+    logoutInFlight.current = operation.finally(() => { logoutInFlight.current = null; });
+    return logoutInFlight.current;
   };
 
   const refreshSession = async () => {
@@ -85,7 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return refreshed.data.data;
   };
 
-  const value = { session: activeSession, sessionLoading: restored.isLoading, pendingSignup, resetEmail, setPendingSignup, setResetEmail, login, logout, refreshSession, setSession };
+  const value = { session: activeSession, sessionLoading: restored.isLoading, pendingSignup, resetEmail, setPendingSignup, setResetEmail, login, logout, logoutPending, refreshSession, setSession };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
