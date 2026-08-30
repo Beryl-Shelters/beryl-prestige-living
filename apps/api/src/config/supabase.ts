@@ -1,8 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
+import { env } from "./env";
+import { validateSupabaseEnvironment } from "./supabase-environment";
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = env.supabaseUrl;
+const supabaseAnonKey = env.supabaseAnonKey;
+const supabaseServiceRoleKey = env.supabaseServiceRoleKey;
 
 if (!supabaseUrl) {
   throw new Error("Missing SUPABASE_URL in .env");
@@ -15,6 +17,13 @@ if (!supabaseAnonKey) {
 if (!supabaseServiceRoleKey) {
   throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY in .env");
 }
+
+validateSupabaseEnvironment({
+  deploymentEnvironment:
+    env.deploymentEnvironment || (process.env.VITEST ? "test" : undefined),
+  supabaseUrl,
+  expectedProjectRef: env.expectedSupabaseProjectRef
+});
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
