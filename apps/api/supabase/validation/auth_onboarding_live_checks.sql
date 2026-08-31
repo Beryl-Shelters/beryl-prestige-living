@@ -90,9 +90,42 @@ where ns.nspname = 'public'
     'replace_customer_password_reset_otp',
     'verify_customer_password_reset_otp',
     'finalize_customer_password_reset',
-    'change_customer_password'
+    'change_customer_password',
+    'consume_customer_password_reset_proof',
+    'revoke_customer_sessions_for_password_change'
   )
 order by proc.proname;
+
+-- Bug #8 password-authority/recovery-clock preflight. The identity arguments
+-- expose overload/signature collisions; the result/search-path/ACL columns
+-- establish compatibility and SECURITY DEFINER posture without executing RPCs.
+select proc.proname as function_name,
+       pg_get_function_identity_arguments(proc.oid) as identity_arguments,
+       pg_get_function_result(proc.oid) as result_type,
+       proc.prosecdef as security_definer,
+       proc.proconfig as function_config,
+       proc.proacl as access_control_list,
+       has_function_privilege('service_role', proc.oid, 'EXECUTE') as service_role_execute,
+       has_function_privilege('authenticated', proc.oid, 'EXECUTE') as authenticated_execute,
+       has_function_privilege('anon', proc.oid, 'EXECUTE') as anon_execute
+from pg_proc proc
+join pg_namespace ns on ns.oid = proc.pronamespace
+where ns.nspname = 'public'
+  and proc.proname in (
+    'secure_hash_equals',
+    'verify_customer_email_otp',
+    'verify_customer_password_reset_otp',
+    'finalize_customer_password_reset',
+    'change_customer_password',
+    'consume_customer_password_reset_proof',
+    'revoke_customer_sessions_for_password_change'
+  )
+order by proc.proname, identity_arguments;
+
+select version, name
+from supabase_migrations.schema_migrations
+where version >= '202608280001'
+order by version;
 
 select lower(trim(email)) as normalized_email, count(*)
 from public.profiles

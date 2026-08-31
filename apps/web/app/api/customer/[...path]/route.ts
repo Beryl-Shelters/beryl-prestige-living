@@ -125,6 +125,7 @@ const sessionMutationPaths = new Set([
   "personas/activate",
   "personas/active"
 ]);
+const invalidResetProofCodes = new Set(["INVALID_RESET_TOKEN", "RESET_TOKEN_EXPIRED", "RESET_TOKEN_USED"]);
 
 const canonicalCustomerState = async (accessToken: string, cookieState?: string) => {
   if (!cookieState) return null;
@@ -172,7 +173,11 @@ const handleRequest = async (request: NextRequest, context: Context) => {
   if (path === "auth/logout") body = { refreshToken };
   if (path === "auth/reset-password") {
     const resetToken = cookieStore.get(SESSION_COOKIES.resetProof)?.value;
-    if (!resetToken) return NextResponse.json({ success: false, message: "Password reset session expired", code: "INVALID_RESET_TOKEN" }, { status: 401 });
+    if (!resetToken) {
+      const response = NextResponse.json({ success: false, message: "Password reset session expired", code: "INVALID_RESET_TOKEN" }, { status: 401 });
+      response.cookies.delete(SESSION_COOKIES.resetProof);
+      return response;
+    }
     body = { ...(body as object), resetToken };
   }
 
@@ -219,6 +224,9 @@ const handleRequest = async (request: NextRequest, context: Context) => {
   }
 
   const response = NextResponse.json(payload, { status: backend.status });
+  if (path === "auth/reset-password" && invalidResetProofCodes.has(payload?.code)) {
+    response.cookies.delete(SESSION_COOKIES.resetProof);
+  }
   if (backend.ok && accessToken && sessionMutationPaths.has(path)) {
     const state = await canonicalCustomerState(accessToken, cookieStore.get(SESSION_COOKIES.state)?.value);
     if (state) setSessionStateCookie(response, state);

@@ -32,3 +32,23 @@ export const friendlyAuthError = (error: ApiError) => {
       return error.message || "Something went wrong. Please try again.";
   }
 };
+
+export const friendlyPasswordResetError = (error: ApiError) => {
+  switch (error.code) {
+    case "INVALID_RESET_TOKEN":
+    case "RESET_TOKEN_EXPIRED":
+      return "Your password reset session has expired. Start again.";
+    case "RESET_TOKEN_USED":
+      return "This password reset session has already been used. Start again.";
+    case "PASSWORD_POLICY_INVALID":
+    case "PASSWORD_VALIDATION_ERROR":
+      return "Choose a password that meets all of the password requirements.";
+    case "NEW_PASSWORD_SAME_AS_CURRENT":
+      return "Your new password must be different from your current password.";
+    case "NETWORK_ERROR":
+    case "UPSTREAM_UNAVAILABLE":
+      return "We could not connect to the service. Please try again.";
+    default:
+      return error.message || "We could not reset your password. Please try again.";
+  }
+};

@@ -61,19 +61,21 @@ export type ResetPasswordResult = {
     | "INVALID_RESET_TOKEN"
     | "RESET_TOKEN_EXPIRED"
     | "RESET_TOKEN_USED"
-    | "NEW_PASSWORD_SAME_AS_CURRENT";
+    | "NEW_PASSWORD_SAME_AS_CURRENT"
+    | "PASSWORD_POLICY_INVALID";
+  userId?: string;
 };
 
 export type ChangePasswordStatus =
   | AccountMutationStatus
   | "CURRENT_PASSWORD_INCORRECT"
-  | "NEW_PASSWORD_SAME_AS_CURRENT";
+  | "NEW_PASSWORD_SAME_AS_CURRENT"
+  | "PASSWORD_POLICY_INVALID";
 
 export interface CustomerAuthenticationStore {
   authenticate(identifier: string, password: string): Promise<string | null>;
   getCustomerState(userId: string): Promise<CustomerIdentityState | null>;
   findCustomerIdByEmail(email: string): Promise<string | null>;
-  findCustomerIdByResetProofHash(proofHash: string): Promise<string | null>;
   createSession(input: {
     userId: string;
     sessionId: string;
@@ -109,8 +111,6 @@ export interface CustomerAuthenticationStore {
     email: string;
     codeHash: string;
     proofHash: string;
-    proofExpiresAt: Date;
-    now: Date;
   }): Promise<VerifyPasswordResetOtpResult>;
   resetPassword(input: {
     proofHash: string;
@@ -119,6 +119,7 @@ export interface CustomerAuthenticationStore {
   }): Promise<ResetPasswordResult>;
   changePassword(input: {
     userId: string;
+    email: string;
     currentPassword: string;
     newPassword: string;
     now: Date;

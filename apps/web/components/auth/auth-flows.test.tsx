@@ -251,6 +251,44 @@ describe("customer authentication screens", () => {
     expect(mocks.replace).toHaveBeenCalledWith("/login");
   });
 
+  it("does not submit mismatched reset passwords", async () => {
+    renderWithQuery(<ResetPasswordScreen />);
+    await userEvent.type(screen.getByLabelText(/^new password$/i), "NewPassword123!");
+    await userEvent.type(screen.getByLabelText(/confirm new password/i), "DifferentPassword123!");
+    await userEvent.click(screen.getByRole("button", { name: /save new password/i }));
+
+    expect(await screen.findByText(/passwords do not match/i)).toBeInTheDocument();
+    expect(mocks.reset).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["INVALID_RESET_TOKEN", "Your password reset session has expired. Start again."],
+    ["RESET_TOKEN_EXPIRED", "Your password reset session has expired. Start again."],
+    ["RESET_TOKEN_USED", "This password reset session has already been used. Start again."]
+  ])("shows safe restart guidance for %s", async (code, expected) => {
+    mocks.reset.mockRejectedValue(apiFailure(code, "unsafe backend detail"));
+    renderWithQuery(<ResetPasswordScreen />);
+    await userEvent.type(screen.getByLabelText(/^new password$/i), "NewPassword123!");
+    await userEvent.type(screen.getByLabelText(/confirm new password/i), "NewPassword123!");
+    await userEvent.click(screen.getByRole("button", { name: /save new password/i }));
+
+    expect(await screen.findByText(expected)).toBeInTheDocument();
+    expect(screen.queryByText("unsafe backend detail")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /start password reset again/i })).toHaveAttribute("href", "/forgot-password");
+    expect(screen.queryByRole("button", { name: /save new password/i })).not.toBeInTheDocument();
+  });
+
+  it("maps password-policy rejection without exposing provider text", async () => {
+    mocks.reset.mockRejectedValue(apiFailure("PASSWORD_POLICY_INVALID", "unsafe provider detail"));
+    renderWithQuery(<ResetPasswordScreen />);
+    await userEvent.type(screen.getByLabelText(/^new password$/i), "NewPassword123!");
+    await userEvent.type(screen.getByLabelText(/confirm new password/i), "NewPassword123!");
+    await userEvent.click(screen.getByRole("button", { name: /save new password/i }));
+
+    expect(await screen.findByText("Choose a password that meets all of the password requirements.")).toBeInTheDocument();
+    expect(screen.queryByText("unsafe provider detail")).not.toBeInTheDocument();
+  });
+
   it.each([
     ["INVALID_OTP", "That code was not right. 2 attempts left.", { attemptsRemaining: 2 }],
     ["OTP_EXPIRED", "That code has expired. Request a new one.", {}],

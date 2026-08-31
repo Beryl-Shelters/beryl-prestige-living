@@ -362,7 +362,6 @@ export class CustomerAuthenticationService {
   async verifyPasswordResetOtp(input: { email: string; otp: string }) {
     this.requirePasswordResetConfiguration();
     return this.safely(async () => {
-      const now = this.now();
       const resetToken = createResetProof();
       const result = await this.store.verifyPasswordResetOtp({
         email: input.email,
@@ -372,11 +371,7 @@ export class CustomerAuthenticationService {
           "CUSTOMER_PASSWORD_RESET",
           input.otp
         ),
-        proofHash: hashToken(resetToken),
-        proofExpiresAt: new Date(
-          now.getTime() + this.options.resetProofExpiresIn * 1_000
-        ),
-        now
+        proofHash: hashToken(resetToken)
       });
 
       if (result.status === "INVALID_OTP") {
@@ -438,8 +433,19 @@ export class CustomerAuthenticationService {
           result.status
         );
       }
-      const accountId = await this.store.findCustomerIdByResetProofHash(hashToken(resetToken)).catch(() => null);
-      this.analytics.passwordResetCompleted(accountId ?? undefined);
+      if (result.status === "PASSWORD_POLICY_INVALID") {
+        throw new AppError(
+          "New password does not meet the password policy",
+          400,
+          result.status
+        );
+      }
+      if (result.status !== "OK") {
+        throw new CustomerAuthenticationInfrastructureError(
+          "Unexpected password-reset result"
+        );
+      }
+      this.analytics.passwordResetCompleted(result.userId);
       return { sessionsInvalidated: true as const, nextAction: "LOGIN" as const };
     }, "Password reset is temporarily unavailable", "PASSWORD_RESET_UNAVAILABLE");
   }
@@ -463,6 +469,7 @@ export class CustomerAuthenticationService {
 
       const result = await this.store.changePassword({
         userId,
+        email: state.email,
         currentPassword,
         newPassword,
         now: this.now()
@@ -479,6 +486,13 @@ export class CustomerAuthenticationService {
           "New password must differ from current password",
           400,
           "NEW_PASSWORD_SAME_AS_CURRENT"
+        );
+      }
+      if (result.status === "PASSWORD_POLICY_INVALID") {
+        throw new AppError(
+          "New password does not meet the password policy",
+          400,
+          result.status
         );
       }
       if (result.status !== "OK") throw accountError(result.status);

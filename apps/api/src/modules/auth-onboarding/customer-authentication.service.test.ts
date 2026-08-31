@@ -16,7 +16,6 @@ let currentTime = new Date("2026-08-03T10:00:00.000Z");
 const authenticate = vi.fn();
 const getCustomerState = vi.fn();
 const findCustomerIdByEmail = vi.fn();
-const findCustomerIdByResetProofHash = vi.fn();
 const createSession = vi.fn();
 const rotateSession = vi.fn();
 const revokeSession = vi.fn();
@@ -34,7 +33,6 @@ const store = {
   authenticate,
   getCustomerState,
   findCustomerIdByEmail,
-  findCustomerIdByResetProofHash,
   createSession,
   rotateSession,
   revokeSession,
@@ -85,14 +83,13 @@ describe("customer authentication service", () => {
     authenticate.mockResolvedValue(userId);
     getCustomerState.mockResolvedValue({ ...buyerState });
     findCustomerIdByEmail.mockResolvedValue(userId);
-    findCustomerIdByResetProofHash.mockResolvedValue(userId);
     createSession.mockResolvedValue({ status: "OK", sessionVersion: 3 });
     rotateSession.mockResolvedValue({ status: "OK", sessionVersion: 3 });
     revokeSession.mockResolvedValue({ status: "OK" });
     replacePasswordResetOtp.mockResolvedValue({ status: "NOT_ELIGIBLE" });
     invalidatePasswordResetOtp.mockResolvedValue(undefined);
     verifyPasswordResetOtp.mockResolvedValue({ status: "VERIFIED" });
-    resetPassword.mockResolvedValue({ status: "OK" });
+    resetPassword.mockResolvedValue({ status: "OK", userId });
     changePassword.mockResolvedValue({ status: "OK" });
     sendPasswordResetOtp.mockResolvedValue(undefined);
   });
@@ -328,6 +325,8 @@ describe("customer authentication service", () => {
     expect(result).toMatchObject({ expiresIn: 600, nextAction: "SET_NEW_PASSWORD" });
     expect(stored.proofHash).toMatch(/^[a-f0-9]{64}$/);
     expect(stored.proofHash).not.toBe(result.resetToken);
+    expect(stored).not.toHaveProperty("proofExpiresAt");
+    expect(stored).not.toHaveProperty("now");
     expect(analytics.otpVerificationSucceeded).toHaveBeenCalledWith(userId, "forgot_password");
     expect(analytics.passwordResetOtpVerified).toHaveBeenCalledWith(userId);
   });
@@ -349,6 +348,17 @@ describe("customer authentication service", () => {
     await expect(
       service.resetPassword("reset-proof-token-at-least-32-characters", "NewPassword123!")
     ).rejects.toMatchObject({ code: status, statusCode });
+  });
+
+  it("maps authoritative password-policy rejection safely", async () => {
+    resetPassword.mockResolvedValue({ status: "PASSWORD_POLICY_INVALID", userId });
+    await expect(
+      service.resetPassword("reset-proof-token-at-least-32-characters", "NewPassword123!")
+    ).rejects.toMatchObject({
+      code: "PASSWORD_POLICY_INVALID",
+      statusCode: 400,
+      message: "New password does not meet the password policy"
+    });
   });
 
   it("requires the correct current password for authenticated change", async () => {
@@ -373,9 +383,17 @@ describe("customer authentication service", () => {
     ).resolves.toEqual({ sessionsInvalidated: true, nextAction: "LOGIN" });
     expect(changePassword).toHaveBeenCalledWith({
       userId,
+      email: "customer@example.com",
       currentPassword: "Password123!",
       newPassword: "NewPassword123!",
       now: currentTime
     });
+  });
+
+  it("maps authenticated-change password-policy rejection safely", async () => {
+    changePassword.mockResolvedValue({ status: "PASSWORD_POLICY_INVALID" });
+    await expect(
+      service.changePassword(userId, "Password123!", "NewPassword123!")
+    ).rejects.toMatchObject({ code: "PASSWORD_POLICY_INVALID", statusCode: 400 });
   });
 });

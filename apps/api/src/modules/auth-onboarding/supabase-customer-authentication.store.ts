@@ -23,6 +23,17 @@ const infrastructureFailure = () =>
 
 const rowOf = (data: unknown) => data as Record<string, unknown>;
 
+const passwordUpdateStatus = (
+  error: { code?: string } | null
+): "PASSWORD_POLICY_INVALID" | "NEW_PASSWORD_SAME_AS_CURRENT" | null => {
+  if (!error) return null;
+  if (error.code === "weak_password" || error.code === "validation_failed") {
+    return "PASSWORD_POLICY_INVALID" as const;
+  }
+  if (error.code === "same_password") return "NEW_PASSWORD_SAME_AS_CURRENT" as const;
+  throw infrastructureFailure();
+};
+
 export class SupabaseCustomerAuthenticationStore
   implements CustomerAuthenticationStore
 {
@@ -85,17 +96,6 @@ export class SupabaseCustomerAuthenticationStore
       .maybeSingle();
     if (error) throw infrastructureFailure();
     return data?.id ?? null;
-  }
-
-  async findCustomerIdByResetProofHash(proofHash: string) {
-    const { data, error } = await supabaseAdmin
-      .from("otp_challenges")
-      .select("customer_user_id")
-      .eq("purpose", "CUSTOMER_PASSWORD_RESET")
-      .eq("verified_proof_hash", proofHash)
-      .maybeSingle();
-    if (error) throw infrastructureFailure();
-    return data?.customer_user_id ?? null;
   }
 
   async createSession(input: Parameters<CustomerAuthenticationStore["createSession"]>[0]) {
@@ -192,9 +192,7 @@ export class SupabaseCustomerAuthenticationStore
       .rpc("verify_customer_password_reset_otp", {
         p_email: input.email,
         p_code_hash: input.codeHash,
-        p_proof_hash: input.proofHash,
-        p_proof_expires_at: input.proofExpiresAt.toISOString(),
-        p_now: input.now.toISOString()
+        p_proof_hash: input.proofHash
       })
       .single();
     if (error || !data) throw infrastructureFailure();
@@ -209,28 +207,46 @@ export class SupabaseCustomerAuthenticationStore
     input: Parameters<CustomerAuthenticationStore["resetPassword"]>[0]
   ): Promise<ResetPasswordResult> {
     const { data, error } = await supabaseAdmin
-      .rpc("finalize_customer_password_reset", {
-        p_proof_hash: input.proofHash,
-        p_new_password: input.newPassword,
-        p_now: input.now.toISOString()
+      .rpc("consume_customer_password_reset_proof", {
+        p_proof_hash: input.proofHash
       })
       .single();
     if (error || !data) throw infrastructureFailure();
-    return { status: rowOf(data).result_status as ResetPasswordResult["status"] };
+    const row = rowOf(data);
+    const status = row.result_status as ResetPasswordResult["status"];
+    const userId = row.result_user_id as string | undefined;
+    if (status !== "OK" || !userId) return { status, userId };
+
+    const update = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      password: input.newPassword
+    });
+    const updateStatus = passwordUpdateStatus(update.error);
+    return { status: updateStatus ?? "OK", userId };
   }
 
   async changePassword(
     input: Parameters<CustomerAuthenticationStore["changePassword"]>[0]
-  ) {
+  ): Promise<{ status: ChangePasswordStatus }> {
+    const authenticated = await supabase.auth.signInWithPassword({
+      email: input.email,
+      password: input.currentPassword
+    });
+    if (authenticated.error || authenticated.data.user?.id !== input.userId) {
+      return { status: "CURRENT_PASSWORD_INCORRECT" as const };
+    }
+
     const { data, error } = await supabaseAdmin
-      .rpc("change_customer_password", {
-        p_user_id: input.userId,
-        p_current_password: input.currentPassword,
-        p_new_password: input.newPassword,
-        p_now: input.now.toISOString()
+      .rpc("revoke_customer_sessions_for_password_change", {
+        p_user_id: input.userId
       })
       .single();
     if (error || !data) throw infrastructureFailure();
-    return { status: rowOf(data).result_status as ChangePasswordStatus };
+    const status = rowOf(data).result_status as ChangePasswordStatus;
+    if (status !== "OK") return { status };
+
+    const update = await supabaseAdmin.auth.admin.updateUserById(input.userId, {
+      password: input.newPassword
+    });
+    return { status: passwordUpdateStatus(update.error) ?? "OK" };
   }
 }

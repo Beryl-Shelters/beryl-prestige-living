@@ -104,6 +104,43 @@ describe("customer BFF cookie bridge", () => {
     expect(response.headers.get("set-cookie")).toContain("HttpOnly");
   });
 
+  it("rejects reset attempts without the HttpOnly proof before calling the API", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await call(["reset-password"], { newPassword: "NewPassword123!", confirmPassword: "NewPassword123!" });
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({ code: "INVALID_RESET_TOKEN" });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(response.headers.get("set-cookie")).toContain("beryl_reset_proof=");
+  });
+
+  it("injects only the HttpOnly reset proof and clears it after a successful reset", async () => {
+    state.cookies.set("beryl_reset_proof", "trusted-http-only-proof");
+    state.cookies.set("beryl_customer_access", "stale-access");
+    const fetchMock = vi.fn().mockResolvedValue(backendResponse({ success: true, message: "Password reset", data: { sessionsInvalidated: true, nextAction: "LOGIN" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await call(["reset-password"], { newPassword: "NewPassword123!", confirmPassword: "NewPassword123!", resetToken: "browser-supplied-proof" });
+
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      body: JSON.stringify({ newPassword: "NewPassword123!", confirmPassword: "NewPassword123!", resetToken: "trusted-http-only-proof" })
+    });
+    expect(response.headers.get("set-cookie")).toContain("beryl_reset_proof=");
+    expect(response.headers.get("set-cookie")).toContain("beryl_customer_access=");
+  });
+
+  it.each(["INVALID_RESET_TOKEN", "RESET_TOKEN_EXPIRED", "RESET_TOKEN_USED"])("clears the reset proof after %s", async (code) => {
+    state.cookies.set("beryl_reset_proof", "stale-http-only-proof");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(backendResponse({ success: false, message: "safe", code }, code === "RESET_TOKEN_USED" ? 409 : 401)));
+
+    const response = await call(["reset-password"], { newPassword: "NewPassword123!", confirmPassword: "NewPassword123!" });
+
+    expect(response.headers.get("set-cookie")).toContain("beryl_reset_proof=");
+    expect(response.headers.get("set-cookie")).toContain("Expires=Thu, 01 Jan 1970 00:00:00 GMT");
+  });
+
   it("clears session cookies after logout", async () => {
     state.cookies.set("beryl_customer_access", "dummy-access-token");
     state.cookies.set("beryl_customer_refresh", "dummy-refresh-token");
