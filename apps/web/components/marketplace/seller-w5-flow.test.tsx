@@ -123,6 +123,21 @@ describe("Seller Marketplace W5 flow", () => {
     expect(invalidate).not.toHaveBeenCalledWith(expect.objectContaining({ queryKey: ["seller-review", propertyId] }));
   });
 
+  it("uses authoritative Review validation before sending an incomplete property", async () => {
+    mocks.sellerReview.mockResolvedValueOnce({
+      success: true,
+      data: { review: { ...review, validation: { missingSections: ["PROPERTY_INFORMATION", "PHOTOS"], missingFields: ["description", "coverImage"] } } }
+    });
+    render(<SellerReviewStep propertyId={propertyId} />, testWrapper());
+    fireEvent.click(await screen.findByRole("button", { name: "Submit for Review" }));
+
+    expect(await screen.findByText("Your listing still needs attention before it can be submitted.")).toBeVisible();
+    expect(screen.getByText(incompleteSectionCopy.PROPERTY_INFORMATION)).toBeVisible();
+    expect(screen.getByText(incompleteSectionCopy.PHOTOS)).toBeVisible();
+    await waitFor(() => expect(document.getElementById("seller-review-validation")).toHaveFocus());
+    expect(mocks.submitSellerProperty).not.toHaveBeenCalled();
+  });
+
   it("renders incomplete submission safely with section-specific correction links", async () => {
     mocks.submitSellerProperty.mockRejectedValue(Object.assign(new Error("raw database text"), { isAxiosError: true, response: { data: { success: false, code: "LISTING_SUBMISSION_INCOMPLETE", message: "raw database text", missingSections: ["PHOTOS", "SALES_MANDATE"], missingFields: ["coverImage", "mandate"] } } }));
     render(<SellerReviewStep propertyId={propertyId} />, testWrapper());

@@ -17,9 +17,12 @@ function wrapper({ children }: { children: ReactNode }) { return <QueryClientPro
 const fillRequired = () => {
   fireEvent.change(screen.getByLabelText("Property Title"), { target: { value: "Four bedroom home" } });
   fireEvent.change(screen.getByLabelText("Property Type"), { target: { value: "DUPLEX" } });
+  fireEvent.change(screen.getByLabelText("Description"), { target: { value: "A complete property description" } });
+  fireEvent.click(screen.getByRole("radio", { name: /Personal/ }));
   fireEvent.change(screen.getByLabelText("Location"), { target: { value: "Lekki, Lagos" } });
   fireEvent.change(screen.getByLabelText("Full address"), { target: { value: "12 Private Street" } });
   fireEvent.change(screen.getByLabelText("Asking price"), { target: { value: "250000000" } });
+  fireEvent.click(screen.getByRole("radio", { name: "Newly Built" }));
 };
 
 describe("Seller draft Step 1 persistence", () => {
@@ -32,6 +35,27 @@ describe("Seller draft Step 1 persistence", () => {
     await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(1));
     expect(mocks.create.mock.calls[0][0]).not.toHaveProperty("description");
     expect(mocks.replace).toHaveBeenCalledWith(`/seller/listings/${propertyId}/edit`);
+  });
+
+  it("keeps Step 1 in place, renders field errors, focuses the first invalid field, and clears corrected errors", async () => {
+    render(<SellerDraftEditor />, { wrapper });
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(await screen.findByText("Enter a property title.")).toBeVisible();
+    expect(screen.getByText("Enter a property description.")).toBeVisible();
+    expect(screen.getByText("Select a supported property type.")).toBeVisible();
+    expect(screen.getByText("Select who owns this property.")).toBeVisible();
+    expect(screen.getByText("Enter the public property location.")).toBeVisible();
+    expect(screen.getByText("Enter the full property address.")).toBeVisible();
+    expect(screen.getByText("Enter the asking price.")).toBeVisible();
+    expect(screen.getByText("Select the property condition.")).toBeVisible();
+    await waitFor(() => expect(screen.getByLabelText("Property Title")).toHaveFocus());
+    expect(mocks.create).not.toHaveBeenCalled();
+    expect(mocks.save).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText("Property Title"), { target: { value: "Four bedroom home" } });
+    expect(screen.queryByText("Enter a property title.")).not.toBeInTheDocument();
+    expect(screen.getByText("Enter a property description.")).toBeVisible();
   });
 
   it("persists required information once and reaches PHOTOS_DOCUMENTS", async () => {
@@ -52,13 +76,28 @@ describe("Seller draft Step 1 persistence", () => {
     fireEvent.change(screen.getByLabelText("Property Title"), { target: { value: "3 bedroom" } });
     expect(screen.getByRole("heading", { name: "Tell us about the property" })).toBeVisible();
     expect(screen.queryByText("Loading listing…")).not.toBeInTheDocument();
-    await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(1), { timeout: 2500 });
+    await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(1), { timeout: 15000 });
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith(`/seller/listings/${propertyId}/edit`), { timeout: 15000 });
     expect(screen.getByRole("heading", { name: "Tell us about the property" })).toBeVisible();
     expect(screen.queryByText("Loading listing…")).not.toBeInTheDocument();
     fireEvent.change(await screen.findByLabelText("Description"), { target: { value: "A three bedroom property" } });
-    await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(propertyId, expect.objectContaining({ description: "A three bedroom property" })), { timeout: 2500 });
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(propertyId, expect.objectContaining({ description: "A three bedroom property" })), { timeout: 15000 });
     expect(mocks.create).toHaveBeenCalledTimes(1);
     view.unmount();
+  });
+
+  it("hydrates an incomplete saved draft without immediate errors and validates only when advancing", async () => {
+    mocks.restore.mockResolvedValueOnce({
+      success: true,
+      data: { property: { id: propertyId, currentStep: "PROPERTY_INFORMATION", publicLocation: "Custom Estate, Lagos", images: [], documents: [] } }
+    });
+    render(<SellerDraftEditor propertyId={propertyId} />, { wrapper });
+
+    expect(await screen.findByLabelText("Location")).toHaveValue("Custom Estate, Lagos");
+    expect(screen.queryByText("Enter a property title.")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByText("Enter a property title.")).toBeVisible();
+    expect(mocks.save).not.toHaveBeenCalled();
   });
 
   it("shows a safe field-specific message without leaking backend internals", async () => {

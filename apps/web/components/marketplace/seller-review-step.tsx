@@ -12,6 +12,7 @@ import type { SellerPropertyReview, SellerSubmissionResult } from "@/lib/contrac
 import { formatNaira, humanizeMarketplaceValue } from "@/lib/marketplace";
 import { sellerListingRouteForAction, sellerSubmissionRouteForAction } from "@/lib/seller-listings";
 import { incompleteSectionCopy } from "@/lib/seller-w5";
+import { validateSellerReview } from "@/lib/seller-wizard-validation";
 
 export function SellerReviewStep({ propertyId, onSubmitted }: { propertyId: string; onSubmitted?: (submission: SellerSubmissionResult) => void }) {
   const queryClient = useQueryClient();
@@ -19,10 +20,22 @@ export function SellerReviewStep({ propertyId, onSubmitted }: { propertyId: stri
   const [error, setError] = useState("");
   const [missingSections, setMissingSections] = useState<string[]>([]);
   const [submission, setSubmission] = useState<SellerSubmissionResult | null>(null);
+  const submissionLocked = useRef(false);
   const reviewQuery = useQuery({ queryKey: ["seller-review", propertyId], queryFn: () => customerApi.sellerReview(propertyId), enabled: !submission });
 
   const submit = async () => {
-    if (pending) return;
+    if (pending || submissionLocked.current) return;
+    const review = reviewQuery.data?.data.review;
+    if (review) {
+      const validation = validateSellerReview(review);
+      if (!validation.valid) {
+        setMissingSections(validation.missingSections);
+        setError("Your listing still needs attention before it can be submitted.");
+        window.setTimeout(() => document.getElementById("seller-review-validation")?.focus(), 0);
+        return;
+      }
+    }
+    submissionLocked.current = true;
     setPending(true);
     setError("");
     setMissingSections([]);
@@ -54,6 +67,7 @@ export function SellerReviewStep({ propertyId, onSubmitted }: { propertyId: stri
       } else {
         setError("We could not submit your listing. Please try again.");
       }
+      submissionLocked.current = false;
       setPending(false);
     }
   };
@@ -71,7 +85,7 @@ export function SellerReviewStep({ propertyId, onSubmitted }: { propertyId: stri
   return (
     <section className="seller-editor-card seller-review" aria-labelledby="review-title">
       <div className="seller-editor-heading seller-review-heading"><p className="seller-kicker">Step 4</p><h2 id="review-title">Review your property listing</h2><p>This is how your property information will appear to buyers.</p></div>
-      {error ? <ApiAlert>{error}</ApiAlert> : null}
+      {error ? <div id="seller-review-validation" tabIndex={-1}><ApiAlert>{error}</ApiAlert></div> : null}
       {missingSections.length ? <div className="seller-review-missing"><h3>Needs attention</h3><ul>{missingSections.map((section) => <li key={section}>{incompleteSectionCopy[section] ?? "Complete this section before submitting."} <Link href={sectionRoute(section, propertyId)}>Edit</Link></li>)}</ul></div> : null}
       <div className="seller-review-grid">
         <article>

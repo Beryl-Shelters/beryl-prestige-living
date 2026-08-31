@@ -18,6 +18,14 @@ import { formatNumericInput, numericInputValue } from "@/lib/numeric-input";
 import { continueSellerDraftToSalesMandate } from "@/lib/seller-draft-transition";
 import { toSellerDraftPayload } from "@/lib/seller-draft-payload";
 import { sellerListingRouteForAction } from "@/lib/seller-listings";
+import {
+  sellerPropertyInformationFieldIds,
+  sellerPropertyInformationFieldOrder,
+  type SellerPropertyInformationErrors,
+  type SellerPropertyInformationField,
+  validateSellerMedia,
+  validateSellerPropertyInformation,
+} from "@/lib/seller-wizard-validation";
 import { SellerMandateStep } from "./seller-mandate-step";
 import { SellerReviewStep, SellerSubmissionSuccess } from "./seller-review-step";
 import { SellerShell } from "./seller-shell";
@@ -72,6 +80,8 @@ export function SellerDraftEditor({
   const [submission, setSubmission] = useState<SellerSubmissionResult | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [stepOneErrors, setStepOneErrors] = useState<SellerPropertyInformationErrors>({});
+  const stepOneAdvanceLocked = useRef(false);
 
   const restored = useQuery({
     queryKey: ["seller-draft", id],
@@ -169,7 +179,21 @@ export function SellerDraftEditor({
   };
 
   const change = (key: keyof SellerDraft, value: unknown) => {
+    const next = { ...draft, [key]: value };
+    // Use the current state for persistence so compound controls that update
+    // more than one field in a single interaction do not restore stale data.
     setDraft((current) => ({ ...current, [key]: value }));
+    if (sellerPropertyInformationFieldOrder.includes(key as SellerPropertyInformationField)) {
+      const field = key as SellerPropertyInformationField;
+      const nextMessage = validateSellerPropertyInformation(next)[field];
+      setStepOneErrors((current) => {
+        if (!current[field]) return current;
+        const updated = { ...current };
+        if (nextMessage) updated[field] = nextMessage;
+        else delete updated[field];
+        return updated;
+      });
+    }
   };
 
   useEffect(() => {
@@ -197,23 +221,27 @@ export function SellerDraftEditor({
   }, [draft, persist, step]);
 
   const continueStepOne = async () => {
-    if (
-      !draft.title?.trim() ||
-      !draft.propertyCategory ||
-      !draft.propertyType ||
-      !draft.publicLocation?.trim() ||
-      !draft.fullAddress?.trim() ||
-      draft.askingPrice === undefined
-    ) {
-      setStatus("Complete the required property information before continuing.");
+    if (stepOneAdvanceLocked.current || pending) return;
+    const validation = validateSellerPropertyInformation(draft);
+    const firstInvalidField = sellerPropertyInformationFieldOrder.find((field) => validation[field]);
+    if (firstInvalidField) {
+      setStepOneErrors(validation);
+      setStatus("Correct the highlighted property information before continuing.");
+      window.setTimeout(() => document.getElementById(sellerPropertyInformationFieldIds[firstInvalidField])?.focus(), 0);
       return;
     }
 
-    if (!(await save(draft))) return;
-    const next = { ...draft, currentStep: "PHOTOS_DOCUMENTS" as const };
-    if (await save(next)) {
-      setDraft(next);
-      setStep("PHOTOS_DOCUMENTS");
+    setStepOneErrors({});
+    stepOneAdvanceLocked.current = true;
+    try {
+      if (!(await save(draft))) return;
+      const next = { ...draft, currentStep: "PHOTOS_DOCUMENTS" as const };
+      if (await save(next)) {
+        setDraft(next);
+        setStep("PHOTOS_DOCUMENTS");
+      }
+    } finally {
+      stepOneAdvanceLocked.current = false;
     }
   };
 
@@ -257,6 +285,7 @@ export function SellerDraftEditor({
       {step === "PROPERTY_INFORMATION" ? (
         <PropertyInformationStep
           draft={draft}
+          errors={stepOneErrors}
           customAmenity={custom}
           pending={pending}
           onChange={change}
@@ -293,6 +322,7 @@ function normalizeStep(step: SellerDraft["currentStep"]): EditorStep {
 
 export function PropertyInformationStep({
   draft,
+  errors = {},
   customAmenity,
   pending,
   onChange,
@@ -303,6 +333,7 @@ export function PropertyInformationStep({
   onContinue
 }: {
   draft: Partial<SellerDraft>;
+  errors?: SellerPropertyInformationErrors;
   customAmenity: string;
   pending: boolean;
   onChange: (key: keyof SellerDraft, value: unknown) => void;
@@ -317,16 +348,17 @@ export function PropertyInformationStep({
     if (value === null) onChange("initialDepositValue", null);
   };
   const selectedAmenities = draft.amenities ?? [];
+  const hasError = (...fields: SellerPropertyInformationField[]) => fields.some((field) => Boolean(errors[field]));
   return (
     <section className="seller-editor-card seller-property-form">
-      <CollapsibleSection title="Tell us about the property" sectionId="property-basics">
-        <label className="seller-field">Property Title<input placeholder="Enter property title here" value={draft.title ?? ""} onChange={(event) => onChange("title", event.target.value)} /></label>
-        <label className="seller-field">Property Type<select value={draft.propertyType ?? ""} onChange={(event) => onChange("propertyType", event.target.value || undefined)}><option value="">Select property type</option>{sellerPropertyTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <label className="seller-field">Description<textarea placeholder="Describe the property" value={draft.description ?? ""} onChange={(event) => onChange("description", event.target.value)} /></label>
-        <ChoiceGroup legend="Category" value={draft.propertyCategory} options={[["RESIDENTIAL", "Residential", "A home, flat or apartment"], ["COMMERCIAL", "Commercial", "An office or business property"]]} onSelect={(value) => onChange("propertyCategory", value)} />
-        <ChoiceGroup legend="Ownership" value={draft.ownershipType} stacked options={[["PERSONAL", "Personal", "I own this property."], ["THIRD_PARTY", "Third party", "I’m listing on the owner’s behalf."]]} onSelect={(value) => onChange("ownershipType", value)} />
+      <CollapsibleSection title="Tell us about the property" sectionId="property-basics" forceExpanded={hasError("title", "propertyType", "description", "propertyCategory", "ownershipType")}>
+        <label className="seller-field" htmlFor="seller-property-title">Property Title<RequiredIndicator /><input id="seller-property-title" aria-label="Property Title" required aria-invalid={Boolean(errors.title) || undefined} aria-describedby={errors.title ? "seller-property-title-error" : undefined} placeholder="Enter property title here" value={draft.title ?? ""} onChange={(event) => onChange("title", event.target.value)} /><FieldError id="seller-property-title-error" message={errors.title} /></label>
+        <label className="seller-field" htmlFor="seller-property-type">Property Type<RequiredIndicator /><select id="seller-property-type" aria-label="Property Type" required aria-invalid={Boolean(errors.propertyType) || undefined} aria-describedby={errors.propertyType ? "seller-property-type-error" : undefined} value={draft.propertyType ?? ""} onChange={(event) => onChange("propertyType", event.target.value || undefined)}><option value="">Select property type</option>{sellerPropertyTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><FieldError id="seller-property-type-error" message={errors.propertyType} /></label>
+        <label className="seller-field" htmlFor="seller-property-description">Description<RequiredIndicator /><textarea id="seller-property-description" aria-label="Description" required aria-invalid={Boolean(errors.description) || undefined} aria-describedby={errors.description ? "seller-property-description-error" : undefined} placeholder="Describe the property" value={draft.description ?? ""} onChange={(event) => onChange("description", event.target.value)} /><FieldError id="seller-property-description-error" message={errors.description} /></label>
+        <ChoiceGroup id="seller-property-category" legend="Category" required error={errors.propertyCategory} value={draft.propertyCategory} options={[["RESIDENTIAL", "Residential", "A home, flat or apartment"], ["COMMERCIAL", "Commercial", "An office or business property"]]} onSelect={(value) => onChange("propertyCategory", value)} />
+        <ChoiceGroup id="seller-property-ownership" legend="Ownership" required error={errors.ownershipType} value={draft.ownershipType} stacked options={[["PERSONAL", "Personal", "I own this property."], ["THIRD_PARTY", "Third party", "I’m listing on the owner’s behalf."]]} onSelect={(value) => onChange("ownershipType", value)} />
       </CollapsibleSection>
-      <CollapsibleSection title="Tell us about the location" sectionId="property-location">
+      <CollapsibleSection title="Tell us about the location" sectionId="property-location" forceExpanded={hasError("publicLocation", "fullAddress")}>
         <NigeriaLocationCombobox
           id="seller-property-location"
           label="Location"
@@ -337,28 +369,33 @@ export function PropertyInformationStep({
           rootClassName="seller-field seller-location-search"
           labelClassName=""
           inputClassName=""
+          required
+          ariaInvalid={Boolean(errors.publicLocation)}
+          ariaDescribedBy={errors.publicLocation ? "seller-property-location-error" : undefined}
         />
-        <label className="seller-field">Full address<textarea placeholder="Enter the complete property address" value={draft.fullAddress ?? ""} onChange={(event) => onChange("fullAddress", event.target.value)} /></label>
+        <FieldError id="seller-property-location-error" message={errors.publicLocation} />
+        <label className="seller-field" htmlFor="seller-property-full-address">Full address<RequiredIndicator /><textarea id="seller-property-full-address" aria-label="Full address" required aria-invalid={Boolean(errors.fullAddress) || undefined} aria-describedby={errors.fullAddress ? "seller-property-full-address-error" : undefined} placeholder="Enter the complete property address" value={draft.fullAddress ?? ""} onChange={(event) => onChange("fullAddress", event.target.value)} /><FieldError id="seller-property-full-address-error" message={errors.fullAddress} /></label>
         <p className="seller-privacy-note"><KeyRound size={16} aria-hidden="true" />The full address stays private and is only shared when appropriate.</p>
       </CollapsibleSection>
-      <CollapsibleSection title="Let’s discuss pricing" sectionId="property-pricing">
-        <label className="seller-field">Asking price<div className="seller-money-input"><span>₦</span><input aria-label="Asking price" inputMode="numeric" pattern="[0-9,]*" type="text" placeholder="Enter amount here" value={formatNumericInput(draft.askingPrice)} onChange={(event) => onChange("askingPrice", numericInputValue(event.target.value) ?? undefined)} /></div></label>
+      <CollapsibleSection title="Let’s discuss pricing" sectionId="property-pricing" forceExpanded={hasError("askingPrice", "initialDepositType", "initialDepositValue")}>
+        <label className="seller-field" htmlFor="seller-property-asking-price">Asking price<RequiredIndicator /><div className="seller-money-input"><span>₦</span><input id="seller-property-asking-price" required aria-label="Asking price" aria-invalid={Boolean(errors.askingPrice) || undefined} aria-describedby={errors.askingPrice ? "seller-property-asking-price-error" : undefined} inputMode="numeric" pattern="[0-9,]*" type="text" placeholder="Enter amount here" value={formatNumericInput(draft.askingPrice)} onChange={(event) => onChange("askingPrice", numericInputValue(event.target.value) ?? undefined)} /></div><FieldError id="seller-property-asking-price-error" message={errors.askingPrice} /></label>
         <ChoiceGroup legend="Is the price negotiable?" value={draft.negotiable ? "YES" : "NO"} options={[["YES", "Yes, negotiable"], ["NO", "No, fixed price"]]} onSelect={(value) => onChange("negotiable", value === "YES")} />
-        <ChoiceGroup legend="Initial deposit" value={draft.initialDepositType ?? "NONE"} options={[["NONE", "None"], ["AMOUNT", "Amount"], ["PERCENTAGE", "Percentage"]]} onSelect={(value) => setDepositType(value === "NONE" ? null : value as "AMOUNT" | "PERCENTAGE")} compact />
-        {draft.initialDepositType ? <label className="seller-field">{draft.initialDepositType === "AMOUNT" ? "Deposit amount" : "Deposit percentage"}<div className="seller-money-input"><span>{draft.initialDepositType === "AMOUNT" ? "₦" : "%"}</span><input aria-label={draft.initialDepositType === "AMOUNT" ? "Deposit amount" : "Deposit percentage"} inputMode="numeric" pattern="[0-9,]*" type="text" value={formatNumericInput(draft.initialDepositValue)} onChange={(event) => onChange("initialDepositValue", numericInputValue(event.target.value))} /></div></label> : null}
+        <ChoiceGroup id="seller-property-deposit-type" legend="Initial deposit" error={errors.initialDepositType} value={draft.initialDepositType ?? "NONE"} options={[["NONE", "None"], ["AMOUNT", "Amount"], ["PERCENTAGE", "Percentage"]]} onSelect={(value) => setDepositType(value === "NONE" ? null : value as "AMOUNT" | "PERCENTAGE")} compact />
+        {draft.initialDepositType ? <label className="seller-field" htmlFor="seller-property-deposit-value">{draft.initialDepositType === "AMOUNT" ? "Deposit amount" : "Deposit percentage"}<div className="seller-money-input"><span>{draft.initialDepositType === "AMOUNT" ? "₦" : "%"}</span><input id="seller-property-deposit-value" aria-label={draft.initialDepositType === "AMOUNT" ? "Deposit amount" : "Deposit percentage"} aria-invalid={Boolean(errors.initialDepositValue) || undefined} aria-describedby={errors.initialDepositValue ? "seller-property-deposit-value-error" : undefined} inputMode="numeric" pattern="[0-9,]*" type="text" value={formatNumericInput(draft.initialDepositValue)} onChange={(event) => onChange("initialDepositValue", numericInputValue(event.target.value))} /></div><FieldError id="seller-property-deposit-value-error" message={errors.initialDepositValue} /></label> : null}
       </CollapsibleSection>
-      <CollapsibleSection title="Give us more details about the property" sectionId="property-details">
+      <CollapsibleSection title="Give us more details about the property" sectionId="property-details" forceExpanded={hasError("bedrooms", "bathrooms", "toilets", "parkingSpaces", "numberOfFloors", "parkingCapacity", "condition", "furnishing", "amenities")}>
         <div className="seller-counter-grid">
-          {draft.propertyCategory === "COMMERCIAL" ? <><CounterField label="Number of floors" field="numberOfFloors" value={draft.numberOfFloors} onChange={onChange} /><CounterField label="Parking capacity" field="parkingCapacity" value={draft.parkingCapacity} onChange={onChange} /></> : <><CounterField label="Bedrooms" field="bedrooms" value={draft.bedrooms} onChange={onChange} /><CounterField label="Bathrooms" field="bathrooms" value={draft.bathrooms} onChange={onChange} /><CounterField label="Toilets" field="toilets" value={draft.toilets} onChange={onChange} /><CounterField label="Parking spaces" field="parkingSpaces" value={draft.parkingSpaces} onChange={onChange} /></>}
+          {draft.propertyCategory === "COMMERCIAL" ? <><CounterField id="seller-property-number-of-floors" error={errors.numberOfFloors} label="Number of floors" field="numberOfFloors" value={draft.numberOfFloors} onChange={onChange} /><CounterField id="seller-property-parking-capacity" error={errors.parkingCapacity} label="Parking capacity" field="parkingCapacity" value={draft.parkingCapacity} onChange={onChange} /></> : <><CounterField id="seller-property-bedrooms" error={errors.bedrooms} label="Bedrooms" field="bedrooms" value={draft.bedrooms} onChange={onChange} /><CounterField id="seller-property-bathrooms" error={errors.bathrooms} label="Bathrooms" field="bathrooms" value={draft.bathrooms} onChange={onChange} /><CounterField id="seller-property-toilets" error={errors.toilets} label="Toilets" field="toilets" value={draft.toilets} onChange={onChange} /><CounterField id="seller-property-parking-spaces" error={errors.parkingSpaces} label="Parking spaces" field="parkingSpaces" value={draft.parkingSpaces} onChange={onChange} /></>}
         </div>
-        <ChoiceGroup legend="Condition" value={draft.condition} options={[["OFF_PLAN", "Off Plan"], ["UNDER_CONSTRUCTION", "Under Construction"], ["NEWLY_BUILT", "Newly Built"], ["FAIRLY_USED", "Fairly Used"]]} onSelect={(value) => onChange("condition", value)} compact />
-        <ChoiceGroup legend="Furnishing" value={draft.furnishing ?? undefined} options={[["UNFURNISHED", "Unfurnished"], ["SEMI_FURNISHED", "Semi Furnished"], ["FULLY_FURNISHED", "Fully Furnished"]]} onSelect={(value) => onChange("furnishing", value)} compact />
-        <div className="seller-amenities-field">
+        <ChoiceGroup id="seller-property-condition" legend="Condition" required error={errors.condition} value={draft.condition} options={[["OFF_PLAN", "Off Plan"], ["UNDER_CONSTRUCTION", "Under Construction"], ["NEWLY_BUILT", "Newly Built"], ["FAIRLY_USED", "Fairly Used"]]} onSelect={(value) => onChange("condition", value)} compact />
+        <ChoiceGroup id="seller-property-furnishing" legend="Furnishing" error={errors.furnishing} value={draft.furnishing ?? undefined} options={[["UNFURNISHED", "Unfurnished"], ["SEMI_FURNISHED", "Semi Furnished"], ["FULLY_FURNISHED", "Fully Furnished"]]} onSelect={(value) => onChange("furnishing", value)} compact />
+        <div id="seller-property-amenities" className="seller-amenities-field" tabIndex={-1} aria-invalid={Boolean(errors.amenities) || undefined} aria-describedby={errors.amenities ? "seller-property-amenities-error" : undefined}>
           <strong>Amenities</strong>
           {selectedAmenities.length ? <div className="seller-selected-amenities">{selectedAmenities.map((amenity) => <span key={amenity}>{amenity}<button type="button" aria-label={`Remove ${amenity}`} onClick={() => onChange("amenities", selectedAmenities.filter((item) => item !== amenity))}><X size={14} /></button></span>)}</div> : null}
           <span className="seller-field-hint">Select available features</span>
           <div className="seller-amenity-suggestions">{amenityOptions.filter((amenity) => !selectedAmenities.includes(amenity)).map((amenity) => <button type="button" key={amenity} onClick={() => onChange("amenities", [...selectedAmenities, amenity])}><Plus size={14} />{amenity}</button>)}</div>
           <div className="seller-custom-amenity"><input aria-label="Custom amenity" value={customAmenity} onChange={(event) => onCustomAmenityChange(event.target.value)} placeholder="Add another amenity" /><button className="btn btn-secondary" type="button" onClick={onAddAmenity}>Add</button></div>
+          <FieldError id="seller-property-amenities-error" message={errors.amenities} />
         </div>
       </CollapsibleSection>
       <div className="seller-editor-actions seller-editor-footer-actions">
@@ -369,25 +406,37 @@ export function PropertyInformationStep({
   );
 }
 
-function CollapsibleSection({ title, sectionId, children }: { title: string; sectionId: string; children: React.ReactNode }) {
+function CollapsibleSection({ title, sectionId, children, forceExpanded = false }: { title: string; sectionId: string; children: React.ReactNode; forceExpanded?: boolean }) {
   const [expanded, setExpanded] = useState(true);
+  useEffect(() => { if (forceExpanded) setExpanded(true); }, [forceExpanded]);
   return <section className="seller-form-section"><h2><button className="seller-section-toggle" type="button" aria-expanded={expanded} aria-controls={sectionId} onClick={() => setExpanded((value) => !value)}><span>{title}</span><ChevronDown size={20} className={expanded ? "is-open" : ""} /></button></h2><div id={sectionId} hidden={!expanded} className="seller-section-content">{children}</div></section>;
 }
 
-function ChoiceGroup({ legend, value, options, onSelect, stacked = false, compact = false }: { legend: string; value?: string | boolean | null; options: ReadonlyArray<readonly [string, string, string?]>; onSelect: (value: string) => void; stacked?: boolean; compact?: boolean }) {
-  return <fieldset className={`seller-choice-group${stacked ? " is-stacked" : ""}${compact ? " is-compact" : ""}`}><legend>{legend}</legend><div>{options.map(([machineValue, label, note]) => <label key={machineValue} className={value === machineValue ? "is-selected" : ""}><input type="radio" name={legend.replace(/\s/g, "-").toLowerCase()} value={machineValue} checked={value === machineValue} onChange={() => onSelect(machineValue)} /><span><strong>{label}</strong>{note ? <small>{note}</small> : null}</span></label>)}</div></fieldset>;
+function ChoiceGroup({ id, legend, value, options, onSelect, error, required = false, stacked = false, compact = false }: { id?: string; legend: string; value?: string | boolean | null; options: ReadonlyArray<readonly [string, string, string?]>; onSelect: (value: string) => void; error?: string; required?: boolean; stacked?: boolean; compact?: boolean }) {
+  const errorId = id ? `${id}-error` : undefined;
+  return <fieldset id={id} tabIndex={-1} aria-invalid={Boolean(error) || undefined} aria-describedby={error ? errorId : undefined} className={`seller-choice-group${stacked ? " is-stacked" : ""}${compact ? " is-compact" : ""}`}><legend>{legend}{required ? <RequiredIndicator /> : null}</legend><div>{options.map(([machineValue, label, note]) => <label key={machineValue} className={value === machineValue ? "is-selected" : ""}><input type="radio" required={required} name={legend.replace(/\s/g, "-").toLowerCase()} value={machineValue} checked={value === machineValue} onChange={() => onSelect(machineValue)} /><span><strong>{label}</strong>{note ? <small>{note}</small> : null}</span></label>)}</div><FieldError id={errorId} message={error} /></fieldset>;
 }
 
-function CounterField({ label, field, value, onChange }: { label: string; field: keyof SellerDraft; value?: number | null; onChange: (key: keyof SellerDraft, value: unknown) => void }) {
+function CounterField({ id, label, field, value, error, onChange }: { id: string; label: string; field: keyof SellerDraft; value?: number | null; error?: string; onChange: (key: keyof SellerDraft, value: unknown) => void }) {
   const count = value ?? 0;
-  return <div className="seller-counter"><span>{label}</span><div><button type="button" aria-label={`Decrease ${label.toLowerCase()}`} disabled={count <= 0} onClick={() => onChange(field, Math.max(0, count - 1))}><Minus size={16} /></button><output aria-live="polite">{count}</output><button type="button" aria-label={`Increase ${label.toLowerCase()}`} onClick={() => onChange(field, count + 1)}><Plus size={16} /></button></div></div>;
+  return <div id={id} tabIndex={-1} className="seller-counter" aria-invalid={Boolean(error) || undefined} aria-describedby={error ? `${id}-error` : undefined}><span>{label}</span><div><button type="button" aria-label={`Decrease ${label.toLowerCase()}`} disabled={count <= 0} onClick={() => onChange(field, Math.max(0, count - 1))}><Minus size={16} /></button><output aria-live="polite">{count}</output><button type="button" aria-label={`Increase ${label.toLowerCase()}`} onClick={() => onChange(field, count + 1)}><Plus size={16} /></button></div><FieldError id={`${id}-error`} message={error} /></div>;
+}
+
+function RequiredIndicator() {
+  return <span className="seller-required-indicator" aria-hidden="true" />;
+}
+
+function FieldError({ id, message }: { id?: string; message?: string }) {
+  return message ? <span id={id} className="field-error" role="alert">{message}</span> : null;
 }
 
 function MediaStep({ propertyId, draft, onBack }: { propertyId: string; draft: Partial<SellerDraft>; onBack: () => void }) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [validationErrors, setValidationErrors] = useState<ReturnType<typeof validateSellerMedia>>({});
   const [busy, setBusy] = useState(false);
   const [type, setType] = useState("DEED");
+  const continueLocked = useRef(false);
   const refresh = () => location.reload();
 
   const upload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -409,7 +458,16 @@ function MediaStep({ propertyId, draft, onBack }: { propertyId: string; draft: P
   };
 
   const continueToSalesMandate = async () => {
-    if (busy) return;
+    if (busy || continueLocked.current) return;
+    const validation = validateSellerMedia(draft.images ?? []);
+    if (Object.keys(validation).length > 0) {
+      setError("");
+      setValidationErrors(validation);
+      window.setTimeout(() => document.getElementById("seller-property-images")?.focus(), 0);
+      return;
+    }
+    setValidationErrors({});
+    continueLocked.current = true;
     setError("");
     setBusy(true);
     try {
@@ -417,6 +475,8 @@ function MediaStep({ propertyId, draft, onBack }: { propertyId: string; draft: P
     } catch {
       setError("We could not continue to the Sales Mandate step. Please try again.");
       setBusy(false);
+    } finally {
+      continueLocked.current = false;
     }
   };
 
@@ -438,7 +498,7 @@ function MediaStep({ propertyId, draft, onBack }: { propertyId: string; draft: P
     <section className="seller-editor-card seller-media-step">
       <div className="seller-editor-heading"><p className="seller-kicker">Step 2</p><h2>Add some photos of the property to show buyers</h2><p>Add at least one clear photo. You can add up to ten photos and rearrange them at any time.</p></div>
       {error ? <ApiAlert>{error}</ApiAlert> : null}
-      <label className="seller-upload-dropzone"><Upload size={24} aria-hidden="true" /><strong>Add Photos</strong><span>JPEG, PNG or WEBP · 5MB each</span><input disabled={busy || images.length >= 10} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={upload} /></label>
+      <label className="seller-upload-dropzone" htmlFor="seller-property-images"><Upload size={24} aria-hidden="true" /><strong>Add Photos <span className="seller-required-indicator" aria-hidden="true" /></strong><span>JPEG, PNG or WEBP · 5MB each</span><input id="seller-property-images" required aria-invalid={Object.keys(validationErrors).length > 0 || undefined} aria-describedby={Object.keys(validationErrors).length > 0 ? "seller-property-images-error" : undefined} disabled={busy || images.length >= 10} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={upload} /></label>
       <p className="seller-upload-count">{images.length}/10 photos</p>
       {images.length ? (
         <div className="seller-media-grid">
@@ -455,6 +515,7 @@ function MediaStep({ propertyId, draft, onBack }: { propertyId: string; draft: P
           ))}
         </div>
       ) : <p className="seller-empty-media">No photos yet. Add a photo to begin.</p>}
+      {Object.keys(validationErrors).length > 0 ? <div id="seller-property-images-error" className="seller-media-validation" role="alert">{Object.values(validationErrors).map((message) => <p key={message}>{message}</p>)}</div> : null}
       <p className="seller-media-hint">Drag or use the controls to arrange your photos. Choose one cover image.</p>
       <div className="seller-documents-heading"><h3>Add supporting documents</h3><p>Documents are optional, private, and never shown on the public listing.</p></div>
       <label className="seller-field">Document type<select value={type} onChange={(event) => setType(event.target.value)}><option value="DEED">Deed</option><option value="SURVEY_PLAN">Survey plan</option><option value="OWNERSHIP_PAPERS">Ownership papers</option><option value="CERTIFICATE_OF_OCCUPANCY">Certificate of occupancy</option><option value="OTHER">Other</option></select></label>

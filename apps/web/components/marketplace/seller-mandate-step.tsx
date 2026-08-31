@@ -1,31 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { z } from "zod";
 import { ApiAlert, Spinner } from "@/components/ui/feedback";
 import { customerApi } from "@/lib/api/client";
 import { apiErrorOf } from "@/lib/api/errors";
 import type { SellerSalesMandateInput } from "@/lib/contracts";
 import { sellerListingRouteForAction } from "@/lib/seller-listings";
 import { mandatePayload } from "@/lib/seller-w5";
-
-const mandateSchema = z.object({
-  mandateType: z.enum(["EXCLUSIVE", "OPEN"], {
-    required_error: "Choose a mandate type.",
-    invalid_type_error: "Choose a mandate type."
-  }),
-  sellerFullName: z.string().trim().min(2, "Enter the Seller's full name."),
-  ownershipConfirmed: z.boolean().refine(Boolean, "Confirm that you own or are authorized to list this property."),
-  mandateAccepted: z.boolean().refine(Boolean, "Accept the Sales Mandate before continuing.")
-});
+import { sellerMandateSchema } from "@/lib/seller-wizard-validation";
 
 export function SellerMandateStep({ propertyId, onBack }: { propertyId: string; onBack: () => void }) {
   const router = useRouter();
   const [apiError, setApiError] = useState("");
+  const continueLocked = useRef(false);
   const query = useQuery({
     queryKey: ["seller-mandate", propertyId],
     queryFn: async () => {
@@ -41,7 +32,7 @@ export function SellerMandateStep({ propertyId, onBack }: { propertyId: string; 
     retry: false
   });
   const form = useForm<SellerSalesMandateInput>({
-    resolver: zodResolver(mandateSchema),
+    resolver: zodResolver(sellerMandateSchema),
     defaultValues: { sellerFullName: "", ownershipConfirmed: false, mandateAccepted: false }
   });
 
@@ -74,12 +65,16 @@ export function SellerMandateStep({ propertyId, onBack }: { propertyId: string; 
   };
 
   const continueToReview = form.handleSubmit(async (values) => {
+    if (continueLocked.current) return;
+    continueLocked.current = true;
     setApiError("");
     try {
       await continueMutation.mutateAsync(values);
     } catch (error) {
       const apiError = apiErrorOf(error);
       setApiError(apiError.code === "MANDATE_ACCEPTANCE_REQUIRED" ? "Accept the Sales Mandate before continuing." : "We could not continue to Review. Please try again.");
+    } finally {
+      continueLocked.current = false;
     }
   });
 
@@ -92,17 +87,17 @@ export function SellerMandateStep({ propertyId, onBack }: { propertyId: string; 
       <div className="seller-editor-heading"><p className="seller-kicker">Step 3</p><h2 id="sales-mandate-title">Will you also use other agents?</h2><p>Choose the sales mandate that works for you.</p></div>
       {apiError ? <ApiAlert>{apiError}</ApiAlert> : null}
       <form onSubmit={continueToReview} noValidate>
-        <fieldset className="seller-mandate-options">
-          <legend>Mandate type</legend>
-          <label className={form.watch("mandateType") === "EXCLUSIVE" ? "is-selected" : ""}><input type="radio" value="EXCLUSIVE" {...form.register("mandateType")} /><span><strong>Exclusive Sales Mandate</strong><small>Beryl Shelter will be the only agent marketing this property.</small></span></label>
-          <label className={form.watch("mandateType") === "OPEN" ? "is-selected" : ""}><input type="radio" value="OPEN" {...form.register("mandateType")} /><span><strong>Open Sales Mandate</strong><small>You may also market this property through other agents.</small></span></label>
-          {form.formState.errors.mandateType ? <p className="field-error" role="alert">{form.formState.errors.mandateType.message}</p> : null}
+        <fieldset id="seller-mandate-type" tabIndex={-1} aria-invalid={Boolean(form.formState.errors.mandateType) || undefined} aria-describedby={form.formState.errors.mandateType ? "seller-mandate-type-error" : undefined} className="seller-mandate-options">
+          <legend>Mandate type <span className="seller-required-indicator" aria-hidden="true" /></legend>
+          <label className={form.watch("mandateType") === "EXCLUSIVE" ? "is-selected" : ""}><input required type="radio" value="EXCLUSIVE" {...form.register("mandateType")} /><span><strong>Exclusive Sales Mandate</strong><small>Beryl Shelter will be the only agent marketing this property.</small></span></label>
+          <label className={form.watch("mandateType") === "OPEN" ? "is-selected" : ""}><input required type="radio" value="OPEN" {...form.register("mandateType")} /><span><strong>Open Sales Mandate</strong><small>You may also market this property through other agents.</small></span></label>
+          {form.formState.errors.mandateType ? <p id="seller-mandate-type-error" className="field-error" role="alert">{form.formState.errors.mandateType.message}</p> : null}
         </fieldset>
-        <label className="seller-field">Seller full name<input autoComplete="name" {...form.register("sellerFullName")} />{form.formState.errors.sellerFullName ? <span className="field-error" role="alert">{form.formState.errors.sellerFullName.message}</span> : null}</label>
-        <label className="seller-check"><input type="checkbox" {...form.register("ownershipConfirmed")} /><span>I confirm that I own this property or have authority to list it for sale.</span></label>
-        {form.formState.errors.ownershipConfirmed ? <p className="field-error" role="alert">{form.formState.errors.ownershipConfirmed.message}</p> : null}
-        <label className="seller-check"><input type="checkbox" {...form.register("mandateAccepted")} /><span>I acknowledge and accept this Sales Mandate.</span></label>
-        {form.formState.errors.mandateAccepted ? <p className="field-error" role="alert">{form.formState.errors.mandateAccepted.message}</p> : null}
+        <label className="seller-field" htmlFor="seller-full-name">Seller full name <span className="seller-required-indicator" aria-hidden="true" /><input id="seller-full-name" aria-label="Seller full name" required aria-invalid={Boolean(form.formState.errors.sellerFullName) || undefined} aria-describedby={form.formState.errors.sellerFullName ? "seller-full-name-error" : undefined} autoComplete="name" {...form.register("sellerFullName")} />{form.formState.errors.sellerFullName ? <span id="seller-full-name-error" className="field-error" role="alert">{form.formState.errors.sellerFullName.message}</span> : null}</label>
+        <label className="seller-check" htmlFor="seller-ownership-confirmed"><input id="seller-ownership-confirmed" required aria-invalid={Boolean(form.formState.errors.ownershipConfirmed) || undefined} aria-describedby={form.formState.errors.ownershipConfirmed ? "seller-ownership-confirmed-error" : undefined} type="checkbox" {...form.register("ownershipConfirmed")} /><span>I confirm that I own this property or have authority to list it for sale.</span></label>
+        {form.formState.errors.ownershipConfirmed ? <p id="seller-ownership-confirmed-error" className="field-error" role="alert">{form.formState.errors.ownershipConfirmed.message}</p> : null}
+        <label className="seller-check" htmlFor="seller-mandate-accepted"><input id="seller-mandate-accepted" required aria-invalid={Boolean(form.formState.errors.mandateAccepted) || undefined} aria-describedby={form.formState.errors.mandateAccepted ? "seller-mandate-accepted-error" : undefined} type="checkbox" {...form.register("mandateAccepted")} /><span>I acknowledge and accept this Sales Mandate.</span></label>
+        {form.formState.errors.mandateAccepted ? <p id="seller-mandate-accepted-error" className="field-error" role="alert">{form.formState.errors.mandateAccepted.message}</p> : null}
         <div className="seller-editor-actions seller-editor-footer-actions">
           <button className="btn btn-secondary" type="button" disabled={pending} onClick={() => void manualSave()}>{saveMandate.isPending ? "Saving…" : "Save as draft"}</button>
           <div><button className="btn btn-secondary" type="button" disabled={pending} onClick={onBack}>Back</button><button className="btn btn-primary" type="submit" disabled={pending}>{continueMutation.isPending ? "Saving…" : "Continue"}</button></div>

@@ -42,7 +42,7 @@ const restoredDraft = {
     property: {
       id: propertyId,
       currentStep: "PHOTOS_DOCUMENTS",
-      images: [],
+      images: [{ id: "image-1", url: "https://example.com/photo.jpg", order: 0, isCover: true }],
       documents: []
     }
   }
@@ -86,6 +86,28 @@ describe("Seller draft Step 2 transition", () => {
 
     request.resolve(restoredDraft);
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith(`/seller/listings/${propertyId}/edit?step=SALES_MANDATE`));
+  });
+
+  it("does not advance or mutate when Step 2 has no valid property photo", async () => {
+    mocks.sellerDraft.mockResolvedValueOnce({
+      ...restoredDraft,
+      data: { property: { ...restoredDraft.data.property, images: [] } }
+    });
+    render(<SellerDraftEditor propertyId={propertyId} initialStep="PHOTOS_DOCUMENTS" />, { wrapper });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Continue" }));
+
+    expect(await screen.findByText("Add at least one property photo before continuing.")).toBeVisible();
+    await waitFor(() => expect(screen.getByLabelText(/Add Photos/)).toHaveFocus());
+    expect(mocks.saveSellerDraft).not.toHaveBeenCalled();
+    expect(mocks.push).not.toHaveBeenCalled();
+  });
+
+  it("allows Back without validating or persisting Step 2", async () => {
+    render(<SellerDraftEditor propertyId={propertyId} initialStep="PHOTOS_DOCUMENTS" />, { wrapper });
+    fireEvent.click(await screen.findByRole("button", { name: "Back" }));
+    expect(await screen.findByRole("heading", { name: "Tell us about the property" })).toBeVisible();
+    expect(mocks.saveSellerDraft).not.toHaveBeenCalled();
   });
 
   it("stays on Step 2 and re-enables Continue when PATCH fails", async () => {

@@ -26,6 +26,9 @@ export function NigeriaLocationCombobox({
   inputClassName = "form-control",
   showSearchIcon = false,
   clearValueOnEscape = false,
+  required = false,
+  ariaInvalid = false,
+  ariaDescribedBy,
 }: {
   id: string;
   label: string;
@@ -39,6 +42,9 @@ export function NigeriaLocationCombobox({
   inputClassName?: string;
   showSearchIcon?: boolean;
   clearValueOnEscape?: boolean;
+  required?: boolean;
+  ariaInvalid?: boolean;
+  ariaDescribedBy?: string;
 }) {
   const generatedId = useId().replaceAll(":", "");
   const resultsId = `${id}-${generatedId}-results`;
@@ -125,6 +131,7 @@ export function NigeriaLocationCombobox({
     <div className={rootClassName}>
       <label className={labelClassName || undefined} htmlFor={id}>
         {label}
+        {required ? <span className="seller-required-indicator" aria-hidden="true" /> : null}
       </label>
       <div className="relative">
         {showSearchIcon && value.length === 0 ? (
@@ -148,8 +155,11 @@ export function NigeriaLocationCombobox({
           onKeyDown={handleKeys}
           placeholder={placeholder}
           autoComplete="off"
+          required={required}
           role="combobox"
           aria-autocomplete="list"
+          aria-invalid={ariaInvalid || undefined}
+          aria-describedby={ariaDescribedBy}
           aria-expanded={showResults}
           aria-controls={resultsId}
           aria-activedescendant={
