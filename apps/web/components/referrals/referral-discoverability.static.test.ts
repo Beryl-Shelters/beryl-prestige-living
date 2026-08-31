@@ -20,7 +20,9 @@ describe("referral discoverability entry points", () => {
 
   it("routes the existing Seller navigation item to the same canonical landing", () => {
     const sellerShell = source("components/marketplace/seller-shell.tsx");
-    expect(sellerShell).toContain('{ label: "Refer & earn", icon: Gift, href: "/refer" }');
+    expect(sellerShell).toContain('label: "Refer & Earn"');
+    expect(sellerShell).toContain('href: "/refer"');
+    expect(sellerShell).toContain('pathname === "/refer" || pathname === "/referrals"');
   });
 
   it("adds a public property-detail referral action without introducing a property referral submission contract", () => {

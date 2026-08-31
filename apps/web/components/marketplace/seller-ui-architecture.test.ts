@@ -6,11 +6,18 @@ import { describe, expect, it } from "vitest";
 const source = (relativePath: string) => readFileSync(new URL(relativePath, import.meta.url), "utf8");
 
 describe("Seller desktop UI architecture", () => {
-  it("provides the PDF-defined Seller shell navigation and account controls", () => {
+  it("provides only supported Seller navigation and account controls", () => {
     const shell = source("./seller-shell.tsx");
-    for (const label of ["Dashboard", "My Listings", "Payments", "Subaccounts", "Save-as-you-earn", "Invest", "Refer & earn", "Support", "Settings"]) {
+    for (const label of ["My Listings", "Add Property", "Refer & Earn"]) {
       expect(shell).toContain(label);
     }
+    for (const prohibited of ["Payments", "Subaccounts", "Save-as-you-earn", "Invest", "Support", "Settings"]) {
+      expect(shell).not.toContain(prohibited);
+    }
+    expect(shell).toContain('href: "/seller/listings"');
+    expect(shell).toContain('href: "/seller/listings/new"');
+    expect(shell).toContain('href: "/refer"');
+    expect(shell).not.toContain("Dashboard");
     expect(shell).toContain("seller-topbar");
     expect(shell).toContain("PersonaSwitcher");
     expect(shell).toContain("await logout()");
