@@ -22,6 +22,7 @@ import dashboardRoutes from "../modules/dashboard/dashboard.routes";
 import customerOnboardingRoutes from "../modules/auth-onboarding/customer-onboarding.routes";
 import customerPersonaRoutes from "../modules/auth-onboarding/customer-persona.routes";
 import marketplaceRoutes from "../modules/marketplace/marketplace.routes";
+import locationRoutes from "../modules/location/location.routes";
 
 
 const router = Router();
@@ -49,5 +50,6 @@ router.use("/dashboard", dashboardRoutes);
 router.use("/onboarding", customerOnboardingRoutes);
 router.use("/personas", customerPersonaRoutes);
 router.use("/marketplace", marketplaceRoutes);
+router.use("/locations", locationRoutes);
 
 export default router;

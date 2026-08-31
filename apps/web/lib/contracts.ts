@@ -107,6 +107,15 @@ export type PersonaMutationResult = {
   nextAction: NextAction;
 };
 
+export type LocationSuggestion = {
+  id: string;
+  label: string;
+  state: string;
+  type: "STATE" | "CITY" | "LGA" | "AREA";
+};
+
+export type LocationSearchResult = { locations: LocationSuggestion[] };
+
 export type MarketplaceSort =
   | "DEFAULT"
   | "PRICE_HIGH_TO_LOW"

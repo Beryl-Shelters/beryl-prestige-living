@@ -98,5 +98,6 @@ export const env = {
   termiiSenderId: process.env.TERMII_SENDER_ID || "",
   termiiChannel: process.env.TERMII_CHANNEL || "",
   referralPayoutEncryptionKey:
-    process.env.REFERRAL_PAYOUT_ENCRYPTION_KEY || ""
+    process.env.REFERRAL_PAYOUT_ENCRYPTION_KEY || "",
+  geonamesUsername: process.env.GEONAMES_USERNAME?.trim() || ""
 };

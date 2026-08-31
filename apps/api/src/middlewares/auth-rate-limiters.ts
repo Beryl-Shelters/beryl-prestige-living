@@ -69,3 +69,4 @@ export const adminReferralPaymentRateLimiter = rateLimit({
   keyGenerator: (req) => `${req.user?.id ?? ipKeyGenerator(req.ip || "unknown")}:${req.params.referralId ?? "unknown"}`,
   message: { success: false, message: "Too many payment attempts, please try again later", code: "REFERRAL_PAYMENT_RATE_LIMITED" }
 });
+export const locationSearchRateLimiter = authLimiter(60, "LOCATION_SEARCH_RATE_LIMITED");

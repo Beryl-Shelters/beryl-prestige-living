@@ -4,6 +4,7 @@ import type {
   CustomerSessionState,
   ForgotPasswordResult,
   LoginResult,
+  LocationSearchResult,
   MarketplaceSearchParams,
   MarketplaceSearchResult,
   MarketplaceInterestRequest,
@@ -81,6 +82,9 @@ export const marketplaceApi = {
     .then(dataOf),
   detail: (propertyId: string) => axios
     .get<ApiSuccess<MarketplacePropertyDetailResult>>(`/api/marketplace/${propertyId}`)
+    .then(dataOf),
+  locations: (q: string, signal?: AbortSignal) => axios
+    .get<ApiSuccess<LocationSearchResult>>("/api/locations/search", { params: { q }, signal })
     .then(dataOf)
 };
 

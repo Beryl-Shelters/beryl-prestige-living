@@ -4,11 +4,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithQuery } from "@/test/render";
 import { BuyerOnboardingScreen } from "./buyer-onboarding-screen";
 import { SellerOnboardingScreen } from "./seller-onboarding-screen";
+import { LocationSearch } from "./location-search";
 
 const mocks = vi.hoisted(() => ({
   replace: vi.fn(),
   buyer: vi.fn(),
   seller: vi.fn(),
+  locations: vi.fn(),
   track: vi.fn()
 }));
 
@@ -20,7 +22,8 @@ vi.mock("@/lib/api/client", () => ({
   customerApi: {
     buyerOnboarding: mocks.buyer,
     sellerOnboarding: mocks.seller
-  }
+  },
+  marketplaceApi: { locations: mocks.locations }
 }));
 vi.mock("@/lib/analytics/customer", () => ({
   trackCustomerEvent: mocks.track,
@@ -32,6 +35,7 @@ describe("customer onboarding screens", () => {
     vi.clearAllMocks();
     mocks.buyer.mockResolvedValue({ success: true, data: { nextAction: "OPEN_BUYER_DASHBOARD" } });
     mocks.seller.mockResolvedValue({ success: true, data: { nextAction: "OPEN_SELLER_DASHBOARD" } });
+    mocks.locations.mockResolvedValue({ success: true, data: { locations: [] } });
   });
 
   it("selects and removes a buyer location", async () => {
@@ -50,6 +54,67 @@ describe("customer onboarding screens", () => {
     expect(screen.queryByTestId("location-search-icon")).not.toBeInTheDocument();
     await userEvent.clear(search);
     expect(screen.getByTestId("location-search-icon")).toBeInTheDocument();
+  });
+
+  it("renders existing stored string preferences unchanged", () => {
+    renderWithQuery(<LocationSearch selected={["Lekki, Lagos", "Victoria Island, Lagos"]} onChange={vi.fn()} />);
+    expect(screen.getByLabelText("Selected locations")).toHaveTextContent("Lekki, Lagos");
+    expect(screen.getByLabelText("Selected locations")).toHaveTextContent("Victoria Island, Lagos");
+  });
+
+  it("searches broader Nigerian locations after a debounce and supports keyboard selection", async () => {
+    mocks.locations.mockResolvedValueOnce({
+      success: true,
+      data: { locations: [{ id: "2337639", label: "Ilesa, Osun", state: "Osun", type: "CITY" }] }
+    });
+    renderWithQuery(<BuyerOnboardingScreen />);
+    const search = screen.getByRole("combobox", { name: /select your preferred location/i });
+    await userEvent.type(search, "  Ile");
+    expect(await screen.findByRole("option", { name: /ilesa, osun/i })).toBeInTheDocument();
+    expect(mocks.locations).toHaveBeenCalledWith("Ile", expect.any(AbortSignal));
+    await userEvent.keyboard("{ArrowDown}{Enter}");
+    expect(screen.getByLabelText("Selected locations")).toHaveTextContent("Ilesa, Osun");
+  });
+
+  it("does not search remotely before two non-space characters", async () => {
+    renderWithQuery(<BuyerOnboardingScreen />);
+    await userEvent.type(screen.getByRole("combobox", { name: /select your preferred location/i }), " I");
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    expect(mocks.locations).not.toHaveBeenCalled();
+  });
+
+  it("shows loading, no-result, and safe provider failure states while retaining popular choices", async () => {
+    let resolveSearch!: (value: unknown) => void;
+    mocks.locations.mockImplementationOnce(() => new Promise((resolve) => { resolveSearch = resolve; }));
+    renderWithQuery(<BuyerOnboardingScreen />);
+    const search = screen.getByRole("combobox", { name: /select your preferred location/i });
+    await userEvent.type(search, "Zzz");
+    expect(await screen.findByText(/searching nigeria/i)).toBeInTheDocument();
+    resolveSearch({ success: true, data: { locations: [] } });
+    expect(await screen.findByText(/no matching nigerian locations/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /victoria island, lagos/i })).toBeInTheDocument();
+
+    mocks.locations.mockRejectedValueOnce(new Error("secret provider response"));
+    await userEvent.clear(search);
+    await userEvent.type(search, "Kaduna");
+    expect(await screen.findByText(/could not load location suggestions/i)).toBeInTheDocument();
+    expect(screen.queryByText(/secret provider response/i)).not.toBeInTheDocument();
+  });
+
+  it("keeps multiple selections and submits the existing string array contract", async () => {
+    mocks.locations.mockResolvedValueOnce({
+      success: true,
+      data: { locations: [{ id: "1", label: "Aba, Abia", state: "Abia", type: "CITY" }] }
+    });
+    renderWithQuery(<BuyerOnboardingScreen />);
+    await userEvent.type(screen.getByRole("combobox", { name: /select your preferred location/i }), "Aba");
+    await userEvent.click(await screen.findByRole("button", { name: /aba, abia/i }));
+    await userEvent.click(screen.getByRole("button", { name: /victoria island, lagos/i }));
+    await userEvent.click(screen.getByRole("button", { name: /find a property/i }));
+    await waitFor(() => expect(mocks.buyer.mock.calls[0]?.[0]).toEqual({
+      preferredLocations: ["Aba, Abia", "Victoria Island, Lagos"],
+      currency: "NGN"
+    }));
   });
 
   it("updates both budget prefixes when the selected currency changes", async () => {
