@@ -12,6 +12,8 @@ describe("web authentication architecture", () => {
   const proxy = source("proxy.ts");
   const css = source("app/globals.css");
   const authProvider = source("context/auth-provider.tsx");
+  const providers = source("app/providers.tsx");
+  const routePolicy = source("lib/customer-route-policy.ts");
 
   it("connects every approved customer endpoint", () => {
     for (const [browserPath, upstreamPath] of [["/register", "auth/register"], ["/verify-email", "auth/verify-email"], ["/resend-verification-otp", "auth/resend-verification-otp"], ["/login", "auth/login"], ["/forgot-password", "auth/forgot-password"], ["/verify-password-reset-otp", "auth/verify-password-reset-otp"], ["/reset-password", "auth/reset-password"], ["/refresh", "auth/refresh"], ["/logout", "auth/logout"], ["/change-password", "auth/change-password"], ["/onboarding/status", "onboarding/status"], ["/onboarding/buyer", "onboarding/buyer"], ["/onboarding/seller", "onboarding/seller"], ["/personas", "personas"], ["/personas/activate", "personas/activate"], ["/personas/active", "personas/active"]]) {
@@ -54,6 +56,9 @@ describe("web authentication architecture", () => {
   it("redirects unauthenticated protected routes", () => {
     expect(proxy).toContain('new URL("/login"');
     expect(proxy).toContain('"/seller/:path*"');
+    expect(proxy).toContain('"/marketplace/:path*"');
+    expect(routePolicy).toContain('"/marketplace"');
+    expect(providers).toContain("CustomerRouteGate");
   });
 
   it("marks all scoped routes noindex and nofollow", () => {

@@ -12,10 +12,11 @@ describe("Marketplace session and visual integration", () => {
   const buyer = source("app/(protected)/buyer/page.tsx");
   const seller = source("app/(protected)/seller/page.tsx");
 
-  it("keeps Marketplace public while consuming the canonical customer session in its header", () => {
+  it("keeps the guest-capable Marketplace components behind the current-release customer route policy", () => {
     expect(header).toContain("useAuth");
     expect(search).toContain("MarketplaceHeader");
-    expect(source("proxy.ts")).not.toContain('"/marketplace"');
+    expect(source("lib/customer-route-policy.ts")).toContain('"/marketplace"');
+    expect(source("app/providers.tsx")).toContain("CustomerRouteGate");
   });
 
   it("removes the invented hero and retains desktop result controls", () => {

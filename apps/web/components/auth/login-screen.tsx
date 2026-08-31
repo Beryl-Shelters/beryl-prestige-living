@@ -13,8 +13,8 @@ import { useAuth } from "@/context/auth-provider";
 import { apiErrorOf, friendlyAuthError } from "@/lib/api/errors";
 import { normalizePhone } from "@/lib/phone";
 import { publicWebUrl } from "@/lib/site-urls";
-import { routeForNextAction } from "@/lib/navigation";
 import { safeReturnTo } from "@/lib/return-to";
+import { loginDestination } from "@/lib/customer-route-policy";
 import { anonymousCustomerAnalyticsDistinctId, trackCustomerEvent } from "@/lib/analytics/customer";
 import { loginSchema, type LoginValues } from "@/lib/validation";
 
@@ -33,7 +33,7 @@ export function LoginScreen() {
       const result = await mutation.mutateAsync(values);
       setRouting(true);
       const returnTo = safeReturnTo(searchParams.get("returnTo"));
-      window.setTimeout(() => router.push((returnTo ?? routeForNextAction(result.nextAction)) as import("next").Route), 700);
+      window.setTimeout(() => router.push(loginDestination(result.nextAction, returnTo) as import("next").Route), 700);
     } catch (caught) { setError(friendlyAuthError(apiErrorOf(caught))); }
   });
 

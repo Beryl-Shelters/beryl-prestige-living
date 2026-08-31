@@ -3,7 +3,7 @@ import { MarketplacePropertyDetailScreen } from "@/components/marketplace/proper
 
 export const metadata: Metadata = {
   title: "Property details",
-  robots: { index: true, follow: true }
+  robots: { index: false, follow: false }
 };
 
 export default async function MarketplacePropertyDetailPage({ params }: { params: Promise<{ propertyId: string }> }) {

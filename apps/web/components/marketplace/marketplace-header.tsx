@@ -30,7 +30,7 @@ export function MarketplaceHeader({ returnTo, searchValue, onSearchChange, onSea
   };
   const signOut = async () => {
     await logout();
-    router.replace("/marketplace");
+    router.replace("/login");
     router.refresh();
   };
 

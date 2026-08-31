@@ -11,7 +11,8 @@ const mocks = vi.hoisted(() => ({
   buyer: vi.fn(),
   seller: vi.fn(),
   locations: vi.fn(),
-  track: vi.fn()
+  track: vi.fn(),
+  refreshSession: vi.fn()
 }));
 
 vi.mock("next/navigation", () => ({
@@ -29,12 +30,14 @@ vi.mock("@/lib/analytics/customer", () => ({
   trackCustomerEvent: mocks.track,
   customerPersonaForAnalytics: (persona: "BUYER" | "SELLER_DEVELOPER") => persona === "BUYER" ? "Buyer" : "Seller-Developer"
 }));
+vi.mock("@/context/auth-provider", () => ({ useAuth: () => ({ refreshSession: mocks.refreshSession }) }));
 
 describe("customer onboarding screens", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.buyer.mockResolvedValue({ success: true, data: { nextAction: "OPEN_BUYER_DASHBOARD" } });
     mocks.seller.mockResolvedValue({ success: true, data: { nextAction: "OPEN_SELLER_DASHBOARD" } });
+    mocks.refreshSession.mockResolvedValue({ activePersona: "BUYER", personas: [{ type: "BUYER", onboardingStatus: "COMPLETED" }], nextAction: "OPEN_BUYER_DASHBOARD" });
     mocks.locations.mockResolvedValue({ success: true, data: { locations: [] } });
   });
 
@@ -143,7 +146,8 @@ describe("customer onboarding screens", () => {
     renderWithQuery(<BuyerOnboardingScreen />);
     await userEvent.click(screen.getAllByRole("button", { name: /^skip$/i })[0]);
     await waitFor(() => expect(mocks.buyer.mock.calls[0]?.[0]).toEqual({ skip: true }));
-    expect(mocks.replace).toHaveBeenCalledWith("/buyer");
+    expect(mocks.refreshSession).toHaveBeenCalledOnce();
+    expect(mocks.replace).toHaveBeenCalledWith("/marketplace");
     expect(mocks.track).not.toHaveBeenCalledWith("Buyer Onboarding Completed", expect.anything());
   });
 
@@ -157,11 +161,13 @@ describe("customer onboarding screens", () => {
     await waitFor(() => expect(mocks.track).toHaveBeenCalledWith("Buyer Onboarding Completed", { preferred_locations: ["Victoria Island, Lagos"], budget_provided: true, skipped_budget: false }));
     expect(mocks.replace).not.toHaveBeenCalled();
     resolveRequest();
-    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/buyer"));
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/marketplace"));
+    expect(mocks.refreshSession).toHaveBeenCalledOnce();
     expect(mocks.track).toHaveBeenCalledTimes(1);
   });
 
   it("submits an individual seller profile", async () => {
+    mocks.refreshSession.mockResolvedValueOnce({ activePersona: "SELLER_DEVELOPER", personas: [{ type: "SELLER_DEVELOPER", onboardingStatus: "COMPLETED" }], nextAction: "OPEN_SELLER_DASHBOARD" });
     renderWithQuery(<SellerOnboardingScreen />);
     await userEvent.click(screen.getByRole("button", { name: /^continue$/i }));
     await waitFor(() => expect(mocks.seller.mock.calls[0]?.[0]).toEqual({ profileType: "INDIVIDUAL" }));
@@ -176,6 +182,7 @@ describe("customer onboarding screens", () => {
   });
 
   it("tracks seller completion at the valid client action, before backend confirmation, once", async () => {
+    mocks.refreshSession.mockResolvedValueOnce({ activePersona: "SELLER_DEVELOPER", personas: [{ type: "SELLER_DEVELOPER", onboardingStatus: "COMPLETED" }], nextAction: "OPEN_SELLER_DASHBOARD" });
     let resolveRequest!: () => void;
     mocks.seller.mockImplementationOnce(() => new Promise<void>((resolve) => { resolveRequest = resolve; }));
     renderWithQuery(<SellerOnboardingScreen />);
@@ -191,14 +198,17 @@ describe("customer onboarding screens", () => {
     expect(mocks.track).toHaveBeenCalledWith("Seller Onboarding Completed", { profile_type: "Business", company_name_provided: true, company_address_provided: true });
     expect(mocks.replace).not.toHaveBeenCalled();
     resolveRequest();
-    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/seller"));
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/seller/listings"));
+    expect(mocks.refreshSession).toHaveBeenCalledOnce();
     expect(mocks.track).toHaveBeenCalledTimes(1);
   });
 
   it("submits seller skip", async () => {
+    mocks.refreshSession.mockResolvedValueOnce({ activePersona: "SELLER_DEVELOPER", personas: [{ type: "SELLER_DEVELOPER", onboardingStatus: "COMPLETED" }], nextAction: "OPEN_SELLER_DASHBOARD" });
     renderWithQuery(<SellerOnboardingScreen />);
     await userEvent.click(screen.getAllByRole("button", { name: /^skip$/i })[0]);
     await waitFor(() => expect(mocks.seller.mock.calls[0]?.[0]).toEqual({ skip: true }));
-    expect(mocks.replace).toHaveBeenCalledWith("/seller");
+    expect(mocks.refreshSession).toHaveBeenCalledOnce();
+    expect(mocks.replace).toHaveBeenCalledWith("/seller/listings");
   });
 });

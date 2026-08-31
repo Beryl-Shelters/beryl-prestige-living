@@ -15,7 +15,8 @@ const mocks = vi.hoisted(() => ({
 }));
 
 let authState: Record<string, unknown>;
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push, replace: mocks.replace, back: mocks.back }), useSearchParams: () => new URLSearchParams() }));
+let searchParams = new URLSearchParams();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push, replace: mocks.replace, back: mocks.back }), useSearchParams: () => searchParams }));
 vi.mock("@/context/auth-provider", () => ({ useAuth: () => authState }));
 vi.mock("@/lib/api/client", () => ({ customerApi: {
   register: mocks.register,
@@ -49,6 +50,7 @@ const completeSignup = async () => {
 describe("customer authentication screens", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    searchParams = new URLSearchParams();
     authState = { pendingSignup: null, resetEmail: "customer@example.com", login: mocks.login, setPendingSignup: mocks.setPendingSignup, setResetEmail: mocks.setResetEmail };
     mocks.register.mockResolvedValue(registerSuccess);
     mocks.verifyEmail.mockReset();
@@ -192,6 +194,26 @@ describe("customer authentication screens", () => {
     fireEvent.paste(screen.getByRole("group"), { clipboardData: { getData: () => "135790" } });
     expect(await screen.findByText(/code verified/i)).toBeInTheDocument();
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/reset-password"), { timeout: 2000 });
+  });
+
+  it("returns a completed customer to a safe protected destination", async () => {
+    searchParams = new URLSearchParams("returnTo=%2Fmarketplace%2F11111111-1111-4111-8111-111111111111%3Ffrom%3Dsaved");
+    mocks.login.mockResolvedValue({ nextAction: "OPEN_BUYER_DASHBOARD" });
+    renderWithQuery(<LoginScreen />);
+    await userEvent.type(screen.getByLabelText(/email address \/ phone/i), "customer@example.com");
+    await userEvent.type(screen.getByLabelText(/^password$/i), "Password123!");
+    await userEvent.click(screen.getByRole("button", { name: /^log in$/i }));
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/marketplace/11111111-1111-4111-8111-111111111111?from=saved"), { timeout: 2000 });
+  });
+
+  it("routes incomplete onboarding before a protected return destination", async () => {
+    searchParams = new URLSearchParams("returnTo=%2Fmarketplace");
+    mocks.login.mockResolvedValue({ nextAction: "COMPLETE_BUYER_ONBOARDING" });
+    renderWithQuery(<LoginScreen />);
+    await userEvent.type(screen.getByLabelText(/email address \/ phone/i), "customer@example.com");
+    await userEvent.type(screen.getByLabelText(/^password$/i), "Password123!");
+    await userEvent.click(screen.getByRole("button", { name: /^log in$/i }));
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/onboarding/buyer"), { timeout: 2000 });
   });
 
   it("shows the safe expired-code message and does not advance signup", async () => {

@@ -95,16 +95,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return typeof key === "string" && (
               key === "personas" ||
               key === "saved-properties" ||
+              key === "marketplace-properties" ||
+              key === "marketplace-property" ||
               key.startsWith("seller-") ||
               key.startsWith("referral-")
             );
           }
         });
-        try {
-          await queryClient.invalidateQueries({
-            predicate: ({ queryKey }) => queryKey[0] === "marketplace-properties" || queryKey[0] === "marketplace-property"
-          });
-        } catch { /* Public data can refetch naturally after local session cleanup. */ }
         setLogoutPending(false);
       }
     })();

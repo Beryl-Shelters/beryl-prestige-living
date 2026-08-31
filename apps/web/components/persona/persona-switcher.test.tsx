@@ -136,7 +136,7 @@ describe("PersonaSwitcher", () => {
     renderWithQuery(<PersonaSwitcher open onClose={mocks.close} />);
     await userEvent.click(await screen.findByRole("button", { name: /^log out$/i }));
     expect(mocks.logout).toHaveBeenCalledOnce();
-    expect(mocks.replace).toHaveBeenCalledWith("/marketplace");
+    expect(mocks.replace).toHaveBeenCalledWith("/login");
     expect(mocks.refresh).toHaveBeenCalledOnce();
   });
 

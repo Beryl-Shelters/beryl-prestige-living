@@ -89,7 +89,7 @@ export function PersonaSwitcher({ open, onClose }: { open: boolean; onClose: () 
     if (logoutPending) return;
     await logout();
     onClose();
-    router.replace("/marketplace");
+    router.replace("/login");
     router.refresh();
   };
 

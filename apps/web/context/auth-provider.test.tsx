@@ -40,14 +40,16 @@ describe("AuthProvider logout state", () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     client.setQueryData(["saved-properties"], { private: true });
     client.setQueryData(["seller-marketplace-listings"], { private: true });
-    client.setQueryData(["marketplace-properties", {}], { public: true });
+    client.setQueryData(["marketplace-properties", {}], { privateForThisRelease: true });
+    client.setQueryData(["marketplace-property", "property-id"], { privateForThisRelease: true });
     render(<QueryClientProvider client={client}><AuthProvider><SessionProbe /></AuthProvider></QueryClientProvider>);
     expect(await screen.findByText("BUYER")).toBeVisible();
     await userEvent.click(screen.getByRole("button", { name: /^log out$/i }));
     await waitFor(() => expect(screen.getByText("Anonymous")).toBeVisible());
     expect(client.getQueryData(["saved-properties"])).toBeUndefined();
     expect(client.getQueryData(["seller-marketplace-listings"])).toBeUndefined();
-    expect(client.getQueryData(["marketplace-properties", {}])).toEqual({ public: true });
+    expect(client.getQueryData(["marketplace-properties", {}])).toBeUndefined();
+    expect(client.getQueryData(["marketplace-property", "property-id"])).toBeUndefined();
     expect(mocks.logout).toHaveBeenCalledOnce();
     expect(mocks.reset).toHaveBeenCalledOnce();
   });

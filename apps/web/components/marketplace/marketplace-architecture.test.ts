@@ -12,10 +12,10 @@ describe("Marketplace W1 architecture boundaries", () => {
   const bridge = source("app/api/marketplace/route.ts");
   const proxy = source("proxy.ts");
 
-  it("creates the public Marketplace route with indexable metadata", () => {
+  it("keeps the guest-capable Marketplace screen behind current-release auth-only metadata and routing", () => {
     expect(page).toContain("MarketplaceScreen");
-    expect(page).toContain("index: true");
-    expect(proxy).not.toContain('"/marketplace"');
+    expect(page).toContain("index: false");
+    expect(proxy).toContain('"/marketplace/:path*"');
   });
 
   it("uses the public same-origin BFF and server-only API configuration", () => {

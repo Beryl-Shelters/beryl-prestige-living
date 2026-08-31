@@ -35,7 +35,7 @@ describe("Marketplace header session states", () => {
     renderWithQuery(<MarketplaceHeader returnTo="/marketplace" />);
     await userEvent.click(screen.getByRole("button", { name: /^log out$/i }));
     await waitFor(() => expect(mocks.auth.logout).toHaveBeenCalledOnce());
-    expect(mocks.replace).toHaveBeenCalledWith("/marketplace");
+    expect(mocks.replace).toHaveBeenCalledWith("/login");
     expect(mocks.refresh).toHaveBeenCalledOnce();
   });
 });

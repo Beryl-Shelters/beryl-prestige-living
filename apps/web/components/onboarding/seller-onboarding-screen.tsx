@@ -16,9 +16,12 @@ import {
   type SellerOnboardingValues,
 } from "@/lib/validation";
 import { trackCustomerEvent } from "@/lib/analytics/customer";
+import { useAuth } from "@/context/auth-provider";
+import { routeForNextAction } from "@/lib/navigation";
 
 export function SellerOnboardingScreen() {
   const router = useRouter();
+  const { refreshSession } = useAuth();
   const [error, setError] = useState("");
   const form = useForm<SellerOnboardingValues>({
     resolver: zodResolver(sellerOnboardingSchema),
@@ -36,7 +39,8 @@ export function SellerOnboardingScreen() {
     setError("");
     try {
       await mutation.mutateAsync(body);
-      router.replace("/seller");
+      const refreshed = await refreshSession();
+      router.replace(routeForNextAction(refreshed.nextAction));
     } catch (caught) {
       setError(apiErrorOf(caught).message);
     }

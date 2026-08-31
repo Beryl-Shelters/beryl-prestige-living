@@ -5,7 +5,7 @@ import type { MarketplacePageSearchParams } from "@/lib/marketplace";
 export const metadata: Metadata = {
   title: "Property Marketplace",
   description: "Explore verified properties for sale across Nigeria with Beryl Shelter.",
-  robots: { index: true, follow: true }
+  robots: { index: false, follow: false }
 };
 
 export default async function MarketplacePage({ searchParams }: { searchParams: Promise<MarketplacePageSearchParams> }) {
