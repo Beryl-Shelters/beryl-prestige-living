@@ -8,6 +8,7 @@ import type { Route } from "next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, Check, ChevronDown, Cloud, FileText, Images, KeyRound, Minus, Plus, Upload, X } from "lucide-react";
 import { BerylShelterLogo } from "@/components/brand/beryl-shelter-logo";
+import { NigeriaLocationCombobox } from "@/components/location/nigeria-location-combobox";
 import { ApiAlert } from "@/components/ui/feedback";
 import { customerApi } from "@/lib/api/client";
 import { apiErrorOf } from "@/lib/api/errors";
@@ -326,7 +327,17 @@ export function PropertyInformationStep({
         <ChoiceGroup legend="Ownership" value={draft.ownershipType} stacked options={[["PERSONAL", "Personal", "I own this property."], ["THIRD_PARTY", "Third party", "I’m listing on the owner’s behalf."]]} onSelect={(value) => onChange("ownershipType", value)} />
       </CollapsibleSection>
       <CollapsibleSection title="Tell us about the location" sectionId="property-location">
-        <label className="seller-field">Location<input placeholder="Where is the property located?" value={draft.publicLocation ?? ""} onChange={(event) => onChange("publicLocation", event.target.value)} /></label>
+        <NigeriaLocationCombobox
+          id="seller-property-location"
+          label="Location"
+          value={draft.publicLocation ?? ""}
+          onValueChange={(value) => onChange("publicLocation", value)}
+          onSelect={(location) => onChange("publicLocation", location.label)}
+          placeholder="Where is the property located?"
+          rootClassName="seller-field seller-location-search"
+          labelClassName=""
+          inputClassName=""
+        />
         <label className="seller-field">Full address<textarea placeholder="Enter the complete property address" value={draft.fullAddress ?? ""} onChange={(event) => onChange("fullAddress", event.target.value)} /></label>
         <p className="seller-privacy-note"><KeyRound size={16} aria-hidden="true" />The full address stays private and is only shared when appropriate.</p>
       </CollapsibleSection>
