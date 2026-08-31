@@ -8,22 +8,23 @@ const source = (relativePath: string) => readFileSync(new URL(relativePath, impo
 describe("Seller desktop UI architecture", () => {
   it("provides only supported Seller navigation and account controls", () => {
     const shell = source("./seller-shell.tsx");
-    for (const label of ["My Listings", "Add Property", "Refer & Earn"]) {
+    for (const label of ["My Listings", "Refer & Earn"]) {
       expect(shell).toContain(label);
     }
     for (const prohibited of ["Payments", "Subaccounts", "Save-as-you-earn", "Invest", "Support", "Settings"]) {
       expect(shell).not.toContain(prohibited);
     }
     expect(shell).toContain('href: "/seller/listings"');
-    expect(shell).toContain('href: "/seller/listings/new"');
     expect(shell).toContain('href: "/refer"');
     expect(shell).not.toContain("Dashboard");
+    expect(shell).not.toContain("Add Property");
     expect(shell).toContain("seller-topbar");
     expect(shell).toContain("PersonaSwitcher");
     expect(shell).toContain("await logout()");
   });
 
   it("wraps My Listings and listing management in the shell without wrapping initial creation", () => {
+    expect(source("../../app/(protected)/seller/page.tsx")).toContain('redirect("/seller/listings")');
     expect(source("../../app/(protected)/seller/listings/page.tsx")).toContain("<SellerShell><SellerListingsScreen");
     expect(source("../../app/(protected)/seller/listings/[propertyId]/page.tsx")).toContain("<SellerShell><SellerListingManagementScreen");
     expect(source("../../app/(protected)/seller/listings/new/page.tsx")).not.toContain("SellerShell");

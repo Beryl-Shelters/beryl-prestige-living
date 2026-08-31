@@ -12,7 +12,6 @@ import {
   ListChecks,
   LogOut,
   Menu,
-  PlusCircle,
   X,
 } from "lucide-react";
 import { PersonaSwitcher } from "@/components/persona/persona-switcher";
@@ -31,14 +30,7 @@ const primaryNavigation: Array<{
     active: (pathname) =>
       pathname === "/seller" ||
       pathname === "/seller/listings" ||
-      (pathname.startsWith("/seller/listings/") &&
-        pathname !== "/seller/listings/new"),
-  },
-  {
-    label: "Add Property",
-    icon: PlusCircle,
-    href: "/seller/listings/new",
-    active: (pathname) => pathname === "/seller/listings/new",
+      pathname.startsWith("/seller/listings/"),
   },
   {
     label: "Refer & Earn",

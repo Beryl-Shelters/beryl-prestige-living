@@ -68,9 +68,10 @@ describe("SellerShell", () => {
     expect(screen.getByRole("complementary", { name: "Seller navigation" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "My Listings" })).toHaveAttribute("href", "/seller/listings");
     expect(screen.getByRole("link", { name: "My Listings" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Add Property" })).toHaveAttribute("href", "/seller/listings/new");
     expect(screen.getByRole("link", { name: "Refer & Earn" })).toHaveAttribute("href", "/refer");
     expect(screen.getByRole("button", { name: "Log out" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Dashboard" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Add Property" })).not.toBeInTheDocument();
     for (const prohibited of prohibitedItems) {
       expect(screen.queryByText(prohibited)).not.toBeInTheDocument();
     }
@@ -78,6 +79,7 @@ describe("SellerShell", () => {
 
   it.each([
     "/seller",
+    "/seller/listings/new",
     "/seller/listings/property-id",
     "/seller/listings/property-id/edit",
   ])("keeps My Listings active on %s", (pathname) => {
@@ -85,15 +87,6 @@ describe("SellerShell", () => {
     render(<SellerShell><main>Listing route</main></SellerShell>);
 
     expect(screen.getByRole("link", { name: "My Listings" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Add Property" })).not.toHaveAttribute("aria-current");
-  });
-
-  it("marks Add Property active on the canonical creation route", () => {
-    mocks.pathname = "/seller/listings/new";
-    render(<SellerShell><main>Create listing</main></SellerShell>);
-
-    expect(screen.getByRole("link", { name: "Add Property" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "My Listings" })).not.toHaveAttribute("aria-current");
   });
 
   it.each(["/refer", "/referrals"])("marks Refer & Earn active on %s", (pathname) => {
