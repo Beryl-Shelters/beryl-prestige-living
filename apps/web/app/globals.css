@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./buyer-shell.css";
 @import "./seller-editor.css";
 @import "./seller-shell.css";
 @import "./referrals.css";
