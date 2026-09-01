@@ -156,42 +156,29 @@ export const submitReferral = async (payload: SubmitReferralInput, customerUserI
   if (payload.referralCode && payload.referralCode !== identity.referralCode) {
     throw new AppError("Referral code does not match this referrer", 400, "REFERRAL_CODE_INVALID");
   }
-  const contactValue = payload.referred.contactMethod === "EMAIL"
-    ? payload.referred.email!
-    : payload.referred.phone!;
-  const inserted = await supabaseAdmin.from("referrals").insert({
-    referrer_id: identity.customerUserId,
-    referrer_identity_id: identity.id,
-    referral_type: payload.purpose === "BUYING" ? "buyer" : "seller",
-    referral_code: identity.referralCode,
-    referral_link: referralLink(identity.referralCode),
-    referred_name: payload.referred.fullName,
-    referred_email: payload.referred.email || null,
-    referred_phone: payload.referred.phone || null,
-    notes: payload.notes || null,
-    status: "pending",
-    registered_user_id: null,
-    purpose: payload.purpose,
-    preferred_contact_method: payload.referred.contactMethod,
-    referred_full_name: payload.referred.fullName,
-    referred_contact_value: contactValue,
-    private_referrer_disclosure: payload.privateReferrerDisclosure,
-    consent_confirmed_at: new Date().toISOString(),
-    lifecycle_status: "NEW",
-    reward_amount: null,
-    payment_status: "NOT_ELIGIBLE"
-  }).select("id,reference_id,purpose,lifecycle_status,created_at").single();
-  if (inserted.error || !inserted.data) {
+  const inserted = await supabaseAdmin.rpc("create_referral_with_lead", {
+    p_referrer_identity_id: identity.id,
+    p_referred_full_name: payload.referred.fullName,
+    p_referred_email: payload.referred.email || null,
+    p_referred_phone: payload.referred.phone || null,
+    p_purpose: payload.purpose,
+    p_preferred_contact_method: payload.referred.contactMethod,
+    p_notes: payload.notes || null,
+    p_private_referrer_disclosure: payload.privateReferrerDisclosure,
+    p_referral_link: referralLink(identity.referralCode)
+  });
+  const referral = Array.isArray(inserted.data) ? inserted.data[0] : inserted.data;
+  if (inserted.error || !referral) {
     throw safeFailure("Referral submission is temporarily unavailable", "REFERRAL_SUBMISSION_FAILED");
   }
   return {
     referral: {
-      id: inserted.data.id,
-      referenceId: inserted.data.reference_id,
+      id: referral.referral_id,
+      referenceId: referral.reference_id,
       referredFirstName: payload.referred.fullName.split(/\s+/)[0],
-      purpose: inserted.data.purpose,
-      status: inserted.data.lifecycle_status,
-      submittedAt: inserted.data.created_at
+      purpose: referral.purpose,
+      status: referral.lifecycle_status,
+      submittedAt: referral.created_at
     },
     referrer: { referralCode: identity.referralCode, referralLink: referralLink(identity.referralCode) },
     nextAction: customerUserId ? "OPEN_REFERRAL_DASHBOARD" : "REQUEST_TRACKING_CODE",

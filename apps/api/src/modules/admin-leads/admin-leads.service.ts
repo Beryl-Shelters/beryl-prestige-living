@@ -47,7 +47,11 @@ export const listLeads = async (input: { q?: string; limit: number }) => {
       propertyReferenceId: row.property_reference_id,
       stage,
       inquiryType: row.inquiry_type,
-      receivedAt: row.received_at
+      receivedAt: row.received_at,
+      source: row.lead_source === "REFERRAL" ? "REFERRAL" as const : null,
+      referredBy: row.referrer_id && row.referrer_full_name
+        ? { id: row.referrer_id, fullName: row.referrer_full_name }
+        : null
     };
   });
   return { counts, total: Object.values(counts).reduce((sum, count) => sum + count, 0), items, perStageLimit: input.limit, query: input.q ?? null };
@@ -60,7 +64,7 @@ export const getLeadDetail = async (leadId: string) => {
   if (error) throw new AppError("Lead management is temporarily unavailable", 503, "LEADS_UNAVAILABLE");
   if (!inquiry) throw new AppError("Lead not found", 404, "LEAD_NOT_FOUND");
 
-  const [profileResult, personasResult, propertyResult, historyResult] = await Promise.all([
+  const [profileResult, personasResult, propertyResult, historyResult, referralResult] = await Promise.all([
     inquiry.user_id
       ? supabaseAdmin.from("profiles").select("id,full_name,email,phone_number,email_verified_at,account_status,referred_by").eq("id", inquiry.user_id).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
@@ -70,15 +74,19 @@ export const getLeadDetail = async (leadId: string) => {
     inquiry.property_id
       ? supabaseAdmin.from("properties").select("id,owner_id,property_code,title,public_location,price,category,property_type,marketplace_status,initial_deposit_type,initial_deposit_value,property_images(id,image_url,sort_order,is_cover)").eq("id", inquiry.property_id).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
-    supabaseAdmin.from("inquiry_lead_stage_history").select("id,previous_stage,new_stage,changed_by_admin_id,created_at").eq("inquiry_id", leadId).order("created_at", { ascending: false })
+    supabaseAdmin.from("inquiry_lead_stage_history").select("id,previous_stage,new_stage,changed_by_admin_id,created_at").eq("inquiry_id", leadId).order("created_at", { ascending: false }),
+    supabaseAdmin.from("referrals").select("id,referrer_identity_id").eq("lead_inquiry_id", leadId).maybeSingle()
   ]);
-  if (profileResult.error || personasResult.error || propertyResult.error || historyResult.error) {
+  if (profileResult.error || personasResult.error || propertyResult.error || historyResult.error || referralResult.error) {
     throw new AppError("Lead management is temporarily unavailable", 503, "LEADS_UNAVAILABLE");
   }
 
   const profile: any = profileResult.data;
-  const referrerResult = profile?.referred_by
-    ? await supabaseAdmin.from("profiles").select("id,full_name").eq("id", profile.referred_by).maybeSingle()
+  const referral: any = referralResult.data;
+  const referrerResult = referral?.referrer_identity_id
+    ? await supabaseAdmin.from("referrers").select("id,full_name").eq("id", referral.referrer_identity_id).maybeSingle()
+    : profile?.referred_by
+      ? await supabaseAdmin.from("profiles").select("id,full_name").eq("id", profile.referred_by).maybeSingle()
     : { data: null, error: null };
   if (referrerResult.error) throw new AppError("Lead management is temporarily unavailable", 503, "LEADS_UNAVAILABLE");
 
@@ -111,6 +119,7 @@ export const getLeadDetail = async (leadId: string) => {
     referenceId: leadReference(inquiry.id),
     stage: canonicalLeadStage(inquiry.lead_stage, inquiry.status),
     inquiryType: inquiry.inquiry_type,
+    source: referral ? "REFERRAL" as const : null,
     receivedAt: inquiry.created_at,
     updatedAt: inquiry.updated_at,
     customer: {

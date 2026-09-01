@@ -7,6 +7,7 @@ const lead = {
   referenceId: "ENQ-11111111",
   stage: "CONTACTED" as const,
   inquiryType: "MARKETPLACE_INTEREST_CALL",
+  source: "REFERRAL" as const,
   receivedAt: "2026-08-22T10:00:00.000Z",
   updatedAt: "2026-08-22T10:00:00.000Z",
   customer: {
@@ -33,6 +34,15 @@ describe("Admin Lead Won confirmation", () => {
   beforeEach(() => {
     fetchMock.mockReset();
     vi.stubGlobal("fetch", fetchMock);
+  });
+
+  it("shows Referral source and Referred by independently on a property-independent Lead", async () => {
+    fetchMock.mockResolvedValueOnce(response({ lead }));
+    render(<AdminLeadDetailScreen leadId={lead.id} />);
+    expect(await screen.findByText("Referral")).toBeInTheDocument();
+    expect(screen.getByText("Referred by")).toBeInTheDocument();
+    expect(screen.getByText("Emeka Chukwu")).toBeInTheDocument();
+    expect(screen.getByText("This enquiry is not linked to a property.")).toBeInTheDocument();
   });
 
   it("does not mutate on open or cancel, then confirms exactly once and refreshes", async () => {

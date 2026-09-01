@@ -16,8 +16,9 @@ const readableDate = (value: string) => new Intl.DateTimeFormat("en-NG", { dateS
 
 function LeadCard({ lead }: { lead: AdminLeadCard }) {
   return <Link href={`/dashboard/leads/${lead.id}` as never} className="lead-card">
-    <span className="lead-card-reference">{lead.referenceId}</span>
+    <span className="lead-card-top"><span className="lead-card-reference">{lead.referenceId}</span>{lead.source === "REFERRAL" ? <span className="lead-source-badge">Referral</span> : null}</span>
     <strong>{lead.customerName}</strong>
+    {lead.referredBy ? <span className="lead-card-referrer">Referred by {lead.referredBy.fullName}</span> : null}
     <span><Home size={14} aria-hidden />{lead.propertyTitle || "General property enquiry"}</span>
     {lead.propertyReferenceId ? <small>{lead.propertyReferenceId}</small> : null}
     <time dateTime={lead.receivedAt}><CalendarDays size={14} aria-hidden />{readableDate(lead.receivedAt)}</time>

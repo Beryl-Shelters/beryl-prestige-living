@@ -70,6 +70,8 @@ const arrange = (overrides?: {
   inquiry?: Result;
   profile?: Result;
   referrer?: Result;
+  referral?: Result;
+  referralIdentity?: Result;
   personas?: Result;
   property?: Result;
   history?: Result;
@@ -84,6 +86,8 @@ const arrange = (overrides?: {
     user_personas: [overrides?.personas ?? { data: [{ id: "persona-1", persona_type: "BUYER", onboarding_status: "COMPLETED" }], error: null }],
     properties: [overrides?.property ?? { data: property, error: null }],
     inquiry_lead_stage_history: [overrides?.history ?? { data: [], error: null }],
+    referrals: [overrides?.referral ?? { data: null, error: null }],
+    referrers: overrides?.referralIdentity ? [overrides.referralIdentity] : [],
     mandates: [overrides?.mandate ?? { data: { marketplace_mandate_type: "EXCLUSIVE" }, error: null }]
   };
 };
@@ -117,6 +121,7 @@ describe("Admin lead detail retrieval", () => {
         seller: null
       },
       referredBy: null,
+      source: null,
       history: []
     });
     const profileSelect = database.calls.find((call) => call.table === "profiles" && call.method === "select");
@@ -134,6 +139,26 @@ describe("Admin lead detail retrieval", () => {
     expect(result.referredBy).toEqual({ id: "referrer-1", fullName: "Emeka Chukwu" });
     expect(JSON.stringify(result.referredBy)).not.toContain("must-not-leak");
     const referrerSelect = database.calls.filter((call) => call.table === "profiles" && call.method === "select").at(-1);
+    expect(referrerSelect?.args[0]).toBe("id,full_name");
+  });
+
+  it("resolves referral source and guest referrer from the authoritative referral relationship", async () => {
+    arrange({
+      inquiry: { data: { ...inquiry, user_id: null, property_id: null, email: null, inquiry_type: "REFERRAL_BUYING_CALL" }, error: null },
+      profile: { data: null, error: null },
+      personas: { data: [], error: null },
+      property: { data: null, error: null },
+      referral: { data: { id: "referral-1", referrer_identity_id: "guest-referrer-1" }, error: null },
+      referralIdentity: { data: { id: "guest-referrer-1", full_name: "Guest Referrer", phone_e164: "must-not-leak" }, error: null }
+    });
+    const result = await getLeadDetail(leadId);
+    expect(result).toMatchObject({
+      source: "REFERRAL",
+      referredBy: { id: "guest-referrer-1", fullName: "Guest Referrer" },
+      customer: { email: null, phone: "+2348000000000", preferredContactMethod: "CALL" }
+    });
+    expect(JSON.stringify(result.referredBy)).not.toContain("must-not-leak");
+    const referrerSelect = database.calls.find((call) => call.table === "referrers" && call.method === "select");
     expect(referrerSelect?.args[0]).toBe("id,full_name");
   });
 

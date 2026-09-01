@@ -6,6 +6,7 @@ import { referralStatusLabel } from "./referral.types";
 
 const root = process.cwd();
 const migration = readFileSync(join(root, "supabase/migrations/202608280001_referral_platform_foundation.sql"), "utf8");
+const leadProjectionMigration = readFileSync(join(root, "supabase/migrations/202609010001_referral_admin_lead_projection.sql"), "utf8");
 const service = readFileSync(join(root, "src/modules/referral/referral.service.ts"), "utf8");
 const routes = readFileSync(join(root, "src/modules/referral/referral.routes.ts"), "utf8");
 const provider = readFileSync(join(root, "src/modules/referral/referral.provider.ts"), "utf8");
@@ -38,7 +39,7 @@ describe("referral platform foundation", () => {
   });
   it("does not calculate a reward from property price", () => {
     expect(service).not.toMatch(/price\s*\*\s*0?\.25/);
-    expect(service).toContain("reward_amount: null");
+    expect(leadProjectionMigration).toMatch(/reward_amount,[\s\S]*null,[\s\S]*'NOT_ELIGIBLE'/);
   });
   it("aggregates only completed authoritative rewards", () => expect(service).toContain('row.lifecycle_status === "COMPLETED" && row.reward_amount !== null'));
   it("keeps guest tracking sessions separate from customer tokens", () => {
