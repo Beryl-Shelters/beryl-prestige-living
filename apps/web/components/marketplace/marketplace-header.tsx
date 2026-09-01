@@ -12,12 +12,13 @@ import { loginHrefFor } from "@/lib/return-to";
 
 type MarketplaceHeaderProps = {
   returnTo: string;
+  embedded?: boolean;
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   onSearchSubmit?: () => void;
 };
 
-export function MarketplaceHeader({ returnTo, searchValue, onSearchChange, onSearchSubmit }: MarketplaceHeaderProps) {
+export function MarketplaceHeader({ returnTo, embedded = false, searchValue, onSearchChange, onSearchSubmit }: MarketplaceHeaderProps) {
   const router = useRouter();
   const { session, sessionLoading, logout, logoutPending } = useAuth();
   const [switcherOpen, setSwitcherOpen] = useState(false);
@@ -34,14 +35,14 @@ export function MarketplaceHeader({ returnTo, searchValue, onSearchChange, onSea
     router.refresh();
   };
 
-  return <header className="marketplace-header">
-    <Link className="marketplace-brand" href="/marketplace" aria-label="Beryl Shelter Marketplace"><BerylShelterLogo /><span className="marketplace-brand-name">Beryl Shelter</span></Link>
+  return <header className={`marketplace-header${embedded ? " marketplace-header-embedded" : ""}`}>
+    {!embedded ? <Link className="marketplace-brand" href="/marketplace" aria-label="Beryl Shelter Marketplace"><BerylShelterLogo /><span className="marketplace-brand-name">Beryl Shelter</span></Link> : null}
     <form className="marketplace-header-search" role="search" action="/marketplace" method="get" onSubmit={submitSearch}>
       <Search aria-hidden="true" size={19} />
       <label className="sr-only" htmlFor="marketplace-search">Search properties</label>
       <input id="marketplace-search" name="q" {...(searchValue === undefined ? { defaultValue: "" } : { value: searchValue, onChange: (event: ChangeEvent<HTMLInputElement>) => onSearchChange?.(event.target.value) })} placeholder={'Try “Lekki” or “Detached House”'} />
     </form>
-    <div className="marketplace-header-actions">
+    {!embedded ? <div className="marketplace-header-actions">
       {sessionLoading ? <span className="marketplace-session-status" aria-live="polite">Loading account…</span> : null}
       <Link className="marketplace-refer-button" href={"/refer" as Route} aria-label="Refer & Earn">
         <Gift size={17} aria-hidden="true" /><span>Refer &amp; Earn</span>
@@ -58,7 +59,7 @@ export function MarketplaceHeader({ returnTo, searchValue, onSearchChange, onSea
         </button>
         <button className="marketplace-logout-button" type="button" disabled={logoutPending} onClick={() => void signOut()}>{logoutPending ? "Logging out…" : "Log out"}</button>
       </> : null}
-    </div>
-    <PersonaSwitcher open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
+    </div> : null}
+    {!embedded ? <PersonaSwitcher open={switcherOpen} onClose={() => setSwitcherOpen(false)} /> : null}
   </header>;
 }

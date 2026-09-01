@@ -7,13 +7,16 @@ const source = (path: string) => readFileSync(join(root, path), "utf8");
 
 describe("Buyer navigation architecture", () => {
   const shell = source("components/marketplace/buyer-shell.tsx");
+  const personaShell = source("components/marketplace/customer-persona-shell.tsx");
   const providers = source("app/providers.tsx");
   const policy = source("lib/customer-route-policy.ts");
   const buyerOnboarding = source("components/onboarding/buyer-onboarding-screen.tsx");
   const styles = source("app/buyer-shell.css");
 
   it("wraps Customer-gated pages without turning navigation into authorization", () => {
-    expect(providers).toContain("<CustomerRouteGate><BuyerShell>");
+    expect(providers).toContain("<CustomerRouteGate><CustomerPersonaShell>");
+    expect(personaShell).toContain("return <SellerShell>{children}</SellerShell>");
+    expect(personaShell).toContain("return <BuyerShell>{children}</BuyerShell>");
     expect(policy).toContain('"/marketplace"');
     expect(policy).toContain('"/saved"');
     expect(shell).toContain('session.nextAction === "OPEN_BUYER_DASHBOARD"');

@@ -245,7 +245,7 @@ export function MarketplaceScreen({ initialSearchParams = {} }: { initialSearchP
   const lastResult = total ? Math.min(firstResult + (data?.properties.length ?? 0) - 1, total) : 0;
 
   return <div className="marketplace-page">
-    <MarketplaceHeader returnTo={marketplaceQueryString(query)} searchValue={searchValue} onSearchChange={setSearchValue} onSearchSubmit={() => commit({ q: searchValue.trim() })} />
+    <MarketplaceHeader embedded={session?.activePersona === "SELLER_DEVELOPER"} returnTo={marketplaceQueryString(query)} searchValue={searchValue} onSearchChange={setSearchValue} onSearchSubmit={() => commit({ q: searchValue.trim() })} />
 
     <main>
       <section className="marketplace-results-shell" aria-labelledby="marketplace-results-heading">

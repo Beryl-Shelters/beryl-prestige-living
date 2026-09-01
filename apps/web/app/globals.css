@@ -762,6 +762,15 @@ textarea.form-control {
   color: inherit;
   text-decoration: none;
 }
+.marketplace-header-embedded {
+  min-height: 70px;
+  padding-block: 9px;
+  justify-content: stretch;
+}
+.marketplace-header-embedded .marketplace-header-search {
+  width: min(100%, 980px);
+  margin-inline: auto;
+}
 .marketplace-header .brand-logo-mark {
   width: 38px;
   height: 38px;

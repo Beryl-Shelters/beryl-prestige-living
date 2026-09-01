@@ -5,9 +5,9 @@ import { renderWithQuery } from "@/test/render";
 import { PersonaSwitcher } from "./persona-switcher";
 import { customerApi } from "@/lib/api/client";
 
-const mocks = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn(), activate: vi.fn(), switchPersona: vi.fn(), close: vi.fn(), logout: vi.fn(), track: vi.fn(), updatePersona: vi.fn(), prepare: vi.fn(), refreshSession: vi.fn() }));
+const mocks = vi.hoisted(() => ({ pathname: "/account", push: vi.fn(), replace: vi.fn(), refresh: vi.fn(), activate: vi.fn(), switchPersona: vi.fn(), close: vi.fn(), logout: vi.fn(), track: vi.fn(), updatePersona: vi.fn(), prepare: vi.fn(), refreshSession: vi.fn() }));
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push, replace: mocks.replace, refresh: mocks.refresh }) }));
+vi.mock("next/navigation", () => ({ usePathname: () => mocks.pathname, useRouter: () => ({ push: mocks.push, replace: mocks.replace, refresh: mocks.refresh }) }));
 vi.mock("@/lib/api/client", () => ({ customerApi: {
   personas: vi.fn().mockResolvedValue({ success: true, data: { activePersona: "BUYER", personas: [
     { type: "BUYER", onboardingStatus: "COMPLETED", activated: true },
@@ -27,6 +27,8 @@ vi.mock("@/context/auth-provider", () => ({ useAuth: () => ({ session: null, ref
 describe("PersonaSwitcher", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.pathname = "/account";
+    window.history.replaceState({}, "", "/account");
     vi.mocked(customerApi.personas).mockReset().mockResolvedValue({ success: true, message: "ok", data: { activePersona: "BUYER", personas: [
       { type: "BUYER", onboardingStatus: "COMPLETED", activated: true },
       { type: "SELLER_DEVELOPER", onboardingStatus: "NOT_STARTED", activated: false }
@@ -72,6 +74,27 @@ describe("PersonaSwitcher", () => {
     renderWithQuery(<PersonaSwitcher open onClose={mocks.close} />);
     await userEvent.click(await screen.findByRole("button", { name: /^switch$/i }));
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/marketplace"));
+  });
+
+  it.each([
+    { from: "BUYER", to: "SELLER_DEVELOPER", nextAction: "OPEN_SELLER_DASHBOARD" },
+    { from: "SELLER_DEVELOPER", to: "BUYER", nextAction: "OPEN_BUYER_DASHBOARD" },
+  ] as const)("keeps Marketplace in place while switching $from to $to", async ({ from, to, nextAction }) => {
+    const client = await import("@/lib/api/client");
+    mocks.pathname = "/marketplace";
+    window.history.replaceState({}, "", "/marketplace?q=lekki");
+    vi.mocked(client.customerApi.personas).mockResolvedValueOnce({ success: true, message: "ok", data: { activePersona: from, personas: [
+      { type: "BUYER", onboardingStatus: "COMPLETED", activated: true },
+      { type: "SELLER_DEVELOPER", onboardingStatus: "COMPLETED", activated: true },
+    ] } });
+    mocks.switchPersona.mockResolvedValueOnce({ success: true, data: { activePersona: to, nextAction } });
+    mocks.refreshSession.mockResolvedValueOnce({ activePersona: to, personas: [{ type: "BUYER", onboardingStatus: "COMPLETED" }, { type: "SELLER_DEVELOPER", onboardingStatus: "COMPLETED" }], nextAction });
+
+    renderWithQuery(<PersonaSwitcher open onClose={mocks.close} />);
+    await userEvent.click(await screen.findByRole("button", { name: /^switch$/i }));
+
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/marketplace?q=lekki"));
+    expect(mocks.refreshSession).toHaveBeenCalledOnce();
   });
 
   it("uses refreshed onboarding state rather than a stale mutation destination", async () => {

@@ -1,7 +1,8 @@
 "use client";
 
 import { Building2, Check, LogOut, Plus, UserRound, X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import type { Route } from "next";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -21,6 +22,7 @@ const labels: Record<PersonaType, { title: string; subtitle: string }> = {
 
 export function PersonaSwitcher({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const { session, refreshSession, logout, logoutPending } = useAuth();
   const dialog = useRef<HTMLDivElement>(null);
@@ -77,7 +79,12 @@ export function PersonaSwitcher({ open, onClose }: { open: boolean; onClose: () 
       if (persona.activated && previousPersona) void trackCustomerEvent("Persona Switched", { from_persona: previousPersona, to_persona: customerPersonaForAnalytics(result.data.activePersona) });
       if (result.data.nextAction === "COMPLETE_BUYER_ONBOARDING" || result.data.nextAction === "COMPLETE_SELLER_ONBOARDING") prepareOnboardingAnalyticsTrigger({ persona: customerPersonaForAnalytics(result.data.activePersona), source: "persona_activation" });
       onClose();
-      router.push(routeForNextAction(refreshedSession.nextAction));
+      const staysInMarketplace =
+        (pathname === "/marketplace" || pathname.startsWith("/marketplace/")) &&
+        (refreshedSession.nextAction === "OPEN_BUYER_DASHBOARD" ||
+          refreshedSession.nextAction === "OPEN_SELLER_DASHBOARD");
+      const currentMarketplaceRoute = `${pathname}${window.location.search}`;
+      router.push((staysInMarketplace ? currentMarketplaceRoute : routeForNextAction(refreshedSession.nextAction)) as Route);
     } catch (caught) {
       setError(apiErrorOf(caught).message);
     } finally {

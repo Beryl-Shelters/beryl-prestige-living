@@ -682,7 +682,7 @@ export function MarketplacePropertyDetailScreen({
   const returnTo = `/marketplace/${propertyId}`;
   return (
     <div className="property-detail-page">
-      <MarketplaceHeader returnTo={returnTo} />
+      <MarketplaceHeader embedded={session?.activePersona === "SELLER_DEVELOPER"} returnTo={returnTo} />
       <main className="property-detail-main">
         <div className="property-detail-topbar">
           <Link className="property-detail-back" href="/marketplace">

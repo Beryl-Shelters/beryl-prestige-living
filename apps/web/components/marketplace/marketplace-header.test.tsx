@@ -30,6 +30,17 @@ describe("Marketplace header session states", () => {
     expect(screen.queryByRole("link", { name: "Log in" })).not.toBeInTheDocument();
   });
 
+  it("reduces the Seller-embedded header to the Marketplace search without duplicate account navigation", () => {
+    mocks.auth.session = { user: { id: "customer", fullName: "Test Seller", email: "seller@example.com", phone: null, accountStatus: "ACTIVE", emailVerified: true }, activePersona: "SELLER_DEVELOPER", personas: [], nextAction: "OPEN_SELLER_DASHBOARD" };
+    renderWithQuery(<MarketplaceHeader embedded returnTo="/marketplace" />);
+
+    expect(screen.getByRole("search")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Beryl Shelter Marketplace" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Refer & Earn" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /test seller/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^log out$/i })).not.toBeInTheDocument();
+  });
+
   it("logs an authenticated Buyer out through the existing session flow", async () => {
     mocks.auth.session = { user: { id: "customer", fullName: "Test Customer", email: "test@example.com", phone: null, accountStatus: "ACTIVE", emailVerified: true }, activePersona: "BUYER", personas: [], nextAction: "OPEN_BUYER_DASHBOARD" };
     renderWithQuery(<MarketplaceHeader returnTo="/marketplace" />);
