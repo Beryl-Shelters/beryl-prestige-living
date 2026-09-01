@@ -7,10 +7,10 @@ import { SellerReviewStep } from "./seller-review-step";
 import { incompleteSectionCopy } from "@/lib/seller-w5";
 
 const mocks = vi.hoisted(() => ({
-  push: vi.fn(), sellerMandate: vi.fn(), saveSellerMandate: vi.fn(), saveSellerDraft: vi.fn(),
+  push: vi.fn(), replace: vi.fn(), sellerMandate: vi.fn(), saveSellerMandate: vi.fn(), saveSellerDraft: vi.fn(),
   sellerReview: vi.fn(), submitSellerProperty: vi.fn()
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push, replace: mocks.replace }) }));
 vi.mock("@/lib/api/client", () => ({ customerApi: mocks }));
 
 const propertyId = "11111111-1111-4111-8111-111111111111";
@@ -62,6 +62,63 @@ describe("Seller Marketplace W5 flow", () => {
     expect(screen.getByText(/Confirm that you own/)).toBeVisible();
     expect(screen.getByText("Accept the Sales Mandate before continuing.")).toBeVisible();
     expect(mocks.saveSellerMandate).not.toHaveBeenCalled();
+  });
+
+  it("saves a structurally valid but incomplete Step 3 draft once and redirects only after success", async () => {
+    mocks.sellerMandate.mockResolvedValue({ success: true, data: { mandate: null } });
+    const save = deferred<unknown>();
+    mocks.saveSellerMandate.mockReturnValueOnce(save.promise);
+    render(<SellerMandateStep propertyId={propertyId} onBack={vi.fn()} />, testWrapper());
+    fireEvent.click(await screen.findByRole("radio", { name: /^Open Sales Mandate/ }));
+    fireEvent.change(screen.getByLabelText("Seller full name"), { target: { value: "  Test Seller  " } });
+    const saveButton = screen.getByRole("button", { name: "Save as draft" });
+
+    fireEvent.click(saveButton);
+    fireEvent.click(saveButton);
+    await waitFor(() => expect(mocks.saveSellerMandate).toHaveBeenCalledTimes(1));
+    expect(mocks.saveSellerMandate).toHaveBeenCalledWith(propertyId, { mandateType: "OPEN", sellerFullName: "Test Seller", ownershipConfirmed: false, mandateAccepted: false });
+    expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled();
+    expect(mocks.replace).not.toHaveBeenCalled();
+
+    save.resolve({ success: true });
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/seller/listings"));
+    expect(mocks.saveSellerDraft).not.toHaveBeenCalled();
+  });
+
+  it("saves an untouched Step 3 as an incomplete property draft without requiring a mandate", async () => {
+    mocks.sellerMandate.mockResolvedValue({ success: true, data: { mandate: null } });
+    const save = deferred<unknown>();
+    mocks.saveSellerDraft.mockReturnValueOnce(save.promise);
+    render(<SellerMandateStep propertyId={propertyId} onBack={vi.fn()} />, testWrapper());
+
+    const saveButton = await screen.findByRole("button", { name: "Save as draft" });
+    fireEvent.click(saveButton);
+    fireEvent.click(saveButton);
+    await waitFor(() => expect(mocks.saveSellerDraft).toHaveBeenCalledTimes(1));
+    expect(mocks.saveSellerDraft).toHaveBeenCalledWith(propertyId, { currentStep: "SALES_MANDATE" });
+    expect(mocks.saveSellerMandate).not.toHaveBeenCalled();
+    expect(screen.queryByText("Choose a mandate type.")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled();
+    expect(mocks.replace).not.toHaveBeenCalled();
+
+    save.resolve({ success: true });
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/seller/listings"));
+  });
+
+  it("keeps Step 3 values after failure and permits a successful retry", async () => {
+    mocks.saveSellerMandate.mockRejectedValueOnce(new Error("save failed")).mockResolvedValueOnce({ success: true });
+    render(<SellerMandateStep propertyId={propertyId} onBack={vi.fn()} />, testWrapper());
+    expect(await screen.findByDisplayValue("Existing Seller")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save as draft" }));
+    expect(await screen.findByText("Something went wrong. Please try again.")).toBeVisible();
+    expect(screen.getByLabelText("Seller full name")).toHaveValue("Existing Seller");
+    expect(screen.getByRole("button", { name: "Save as draft" })).toBeEnabled();
+    expect(mocks.replace).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save as draft" }));
+    await waitFor(() => expect(mocks.saveSellerMandate).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/seller/listings"));
   });
 
   it("saves OPEN using the existing property, then PATCHes REVIEW, and only then navigates", async () => {

@@ -82,6 +82,7 @@ export function SellerDraftEditor({
   const [deleteError, setDeleteError] = useState("");
   const [stepOneErrors, setStepOneErrors] = useState<SellerPropertyInformationErrors>({});
   const stepOneAdvanceLocked = useRef(false);
+  const saveAsDraftLocked = useRef(false);
 
   const restored = useQuery({
     queryKey: ["seller-draft", id],
@@ -203,7 +204,7 @@ export function SellerDraftEditor({
     if (snapshot === savedSnapshot.current) return;
 
     const timer = window.setTimeout(async () => {
-      if (snapshot === savedSnapshot.current) return;
+      if (saveAsDraftLocked.current || snapshot === savedSnapshot.current) return;
       const sequence = ++saveSequence.current;
       setStatus("Saving…");
       try {
@@ -242,6 +243,18 @@ export function SellerDraftEditor({
       }
     } finally {
       stepOneAdvanceLocked.current = false;
+    }
+  };
+
+  const saveAsDraft = async () => {
+    if (saveAsDraftLocked.current || pending) return;
+    saveAsDraftLocked.current = true;
+    try {
+      if (!(await save(draft))) return;
+      await queryClient.invalidateQueries({ queryKey: ["seller-marketplace-listings"], refetchType: "none" });
+      router.replace("/seller/listings");
+    } finally {
+      saveAsDraftLocked.current = false;
     }
   };
 
@@ -291,7 +304,7 @@ export function SellerDraftEditor({
           onChange={change}
           onCustomAmenityChange={setCustom}
           onAddAmenity={addAmenity}
-          onSave={() => void save()}
+          onSave={() => void saveAsDraft()}
           onBack={() => router.push("/seller/listings")}
           onContinue={() => void continueStepOne()}
         />
@@ -456,6 +469,7 @@ const idleMediaOperation: MediaOperation = { kind: "idle" };
 
 function MediaStep({ propertyId, draft, onBack, onRefresh }: { propertyId: string; draft: Partial<SellerDraft>; onBack: () => void; onRefresh: () => Promise<void> }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [error, setError] = useState("");
   const [validationErrors, setValidationErrors] = useState<ReturnType<typeof validateSellerMedia>>({});
   const [operation, setOperation] = useState<MediaOperation>(idleMediaOperation);
@@ -563,11 +577,14 @@ function MediaStep({ propertyId, draft, onBack, onRefresh }: { propertyId: strin
 
   const saveMediaDraft = async () => {
     if (busy) return;
-    await runOperation(
+    const saved = await runOperation(
       { kind: "saving-draft" },
       async () => { await customerApi.saveSellerDraft(propertyId, { currentStep: "PHOTOS_DOCUMENTS" }); },
       "We could not save this draft. Please try again."
     );
+    if (!saved) return;
+    await queryClient.invalidateQueries({ queryKey: ["seller-marketplace-listings"], refetchType: "none" });
+    router.replace("/seller/listings");
   };
 
   const images = [...(draft.images ?? [])].sort((first, second) => first.order - second.order);

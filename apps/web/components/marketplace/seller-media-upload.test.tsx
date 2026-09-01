@@ -122,12 +122,44 @@ describe("Seller media upload operations", () => {
     fireEvent.change(input, { target: { files: [sizedFile("deed.pdf", "application/pdf")] } });
     expect(await screen.findByRole("status", { name: "Uploading document…" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save as draft" })).toBeDisabled();
 
     upload.resolve({ success: true });
     expect(await screen.findByText("deed.pdf")).toBeVisible();
     await waitFor(() => expect(screen.queryByRole("status", { name: "Uploading document…" })).not.toBeInTheDocument());
     expect(mocks.sellerDraft).toHaveBeenCalledTimes(2);
     expect(input).toHaveValue("");
+  });
+
+  it("saves Step 2 once and redirects to My Listings only after persistence succeeds", async () => {
+    const request = deferred();
+    mocks.saveSellerDraft.mockReturnValueOnce(request.promise);
+    await renderMedia(response());
+    const saveButton = screen.getByRole("button", { name: "Save as draft" });
+
+    fireEvent.click(saveButton);
+    fireEvent.click(saveButton);
+    await waitFor(() => expect(mocks.saveSellerDraft).toHaveBeenCalledTimes(1));
+    expect(mocks.saveSellerDraft).toHaveBeenCalledWith(propertyId, { currentStep: "PHOTOS_DOCUMENTS" });
+    expect(screen.getByRole("button", { name: "Save as draft" })).toBeDisabled();
+    expect(mocks.replace).not.toHaveBeenCalledWith("/seller/listings");
+
+    request.resolve({ success: true });
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/seller/listings"));
+  });
+
+  it("keeps Step 2 available after a failed draft save and redirects after retry", async () => {
+    mocks.saveSellerDraft.mockRejectedValueOnce(new Error("network")).mockResolvedValueOnce({ success: true });
+    await renderMedia(response());
+
+    fireEvent.click(screen.getByRole("button", { name: "Save as draft" }));
+    expect(await screen.findByText("We could not save this draft. Please try again.")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Save as draft" })).toBeEnabled();
+    expect(mocks.replace).not.toHaveBeenCalledWith("/seller/listings");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save as draft" }));
+    await waitFor(() => expect(mocks.saveSellerDraft).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/seller/listings"));
   });
 
   it("clears failed photo state, preserves media, and allows the exact same image to be retried", async () => {

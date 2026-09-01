@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiAlert, Spinner } from "@/components/ui/feedback";
 import { customerApi } from "@/lib/api/client";
 import { apiErrorOf } from "@/lib/api/errors";
@@ -15,8 +15,10 @@ import { sellerMandateSchema } from "@/lib/seller-wizard-validation";
 
 export function SellerMandateStep({ propertyId, onBack }: { propertyId: string; onBack: () => void }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [apiError, setApiError] = useState("");
   const continueLocked = useRef(false);
+  const manualSaveLocked = useRef(false);
   const query = useQuery({
     queryKey: ["seller-mandate", propertyId],
     queryFn: async () => {
@@ -42,6 +44,7 @@ export function SellerMandateStep({ propertyId, onBack }: { propertyId: string; 
   }, [form, query.data]);
 
   const saveMandate = useMutation({ mutationFn: (values: SellerSalesMandateInput) => customerApi.saveSellerMandate(propertyId, mandatePayload(values)) });
+  const saveStepDraft = useMutation({ mutationFn: () => customerApi.saveSellerDraft(propertyId, { currentStep: "SALES_MANDATE" }) });
   const continueMutation = useMutation({
     mutationFn: async (values: SellerSalesMandateInput) => {
       await customerApi.saveSellerMandate(propertyId, mandatePayload(values));
@@ -51,16 +54,24 @@ export function SellerMandateStep({ propertyId, onBack }: { propertyId: string; 
   });
 
   const manualSave = async () => {
+    if (manualSaveLocked.current || saveMandate.isPending || saveStepDraft.isPending || continueMutation.isPending) return;
+    manualSaveLocked.current = true;
     setApiError("");
-    const values = form.getValues();
-    if (!values.mandateType || !values.sellerFullName.trim()) {
-      await form.trigger(["mandateType", "sellerFullName"]);
-      return;
-    }
     try {
-      await saveMandate.mutateAsync(values);
+      const values = form.getValues();
+      const hasMandateValues = Boolean(values.mandateType || values.sellerFullName.trim() || values.ownershipConfirmed || values.mandateAccepted);
+      if (hasMandateValues && (!values.mandateType || !values.sellerFullName.trim())) {
+        await form.trigger(["mandateType", "sellerFullName"]);
+        return;
+      }
+      if (hasMandateValues) await saveMandate.mutateAsync(values);
+      else await saveStepDraft.mutateAsync();
+      await queryClient.invalidateQueries({ queryKey: ["seller-marketplace-listings"], refetchType: "none" });
+      router.replace("/seller/listings");
     } catch (error) {
       setApiError(apiErrorOf(error).message || "We could not save the Sales Mandate.");
+    } finally {
+      manualSaveLocked.current = false;
     }
   };
 
@@ -81,7 +92,7 @@ export function SellerMandateStep({ propertyId, onBack }: { propertyId: string; 
   if (query.isLoading) return <section className="seller-editor-card"><Spinner label="Loading Sales Mandate" /></section>;
   if (query.isError) return <section className="seller-editor-card"><ApiAlert>We could not restore the Sales Mandate.</ApiAlert><button className="btn btn-secondary" type="button" onClick={() => query.refetch()}>Try again</button></section>;
 
-  const pending = saveMandate.isPending || continueMutation.isPending;
+  const pending = saveMandate.isPending || saveStepDraft.isPending || continueMutation.isPending;
   return (
     <section className="seller-editor-card seller-mandate" aria-labelledby="sales-mandate-title">
       <div className="seller-editor-heading"><p className="seller-kicker">Step 3</p><h2 id="sales-mandate-title">Will you also use other agents?</h2><p>Choose the sales mandate that works for you.</p></div>
@@ -99,7 +110,7 @@ export function SellerMandateStep({ propertyId, onBack }: { propertyId: string; 
         <label className="seller-check" htmlFor="seller-mandate-accepted"><input id="seller-mandate-accepted" required aria-invalid={Boolean(form.formState.errors.mandateAccepted) || undefined} aria-describedby={form.formState.errors.mandateAccepted ? "seller-mandate-accepted-error" : undefined} type="checkbox" {...form.register("mandateAccepted")} /><span>I acknowledge and accept this Sales Mandate.</span></label>
         {form.formState.errors.mandateAccepted ? <p id="seller-mandate-accepted-error" className="field-error" role="alert">{form.formState.errors.mandateAccepted.message}</p> : null}
         <div className="seller-editor-actions seller-editor-footer-actions">
-          <button className="btn btn-secondary" type="button" disabled={pending} onClick={() => void manualSave()}>{saveMandate.isPending ? "Saving…" : "Save as draft"}</button>
+          <button className="btn btn-secondary" type="button" disabled={pending} onClick={() => void manualSave()}>{saveMandate.isPending || saveStepDraft.isPending ? "Saving…" : "Save as draft"}</button>
           <div><button className="btn btn-secondary" type="button" disabled={pending} onClick={onBack}>Back</button><button className="btn btn-primary" type="submit" disabled={pending}>{continueMutation.isPending ? "Saving…" : "Continue"}</button></div>
         </div>
       </form>

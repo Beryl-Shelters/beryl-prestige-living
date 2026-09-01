@@ -14,6 +14,12 @@ vi.mock("@/lib/api/client", () => ({ customerApi: {
 const propertyId = "11111111-1111-4111-8111-111111111111";
 const created = { success: true, data: { property: { id: propertyId, currentStep: "PROPERTY_INFORMATION", images: [], documents: [] } } };
 function wrapper({ children }: { children: ReactNode }) { return <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{children}</QueryClientProvider>; }
+function deferred<T = unknown>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => { resolve = resolvePromise; reject = rejectPromise; });
+  return { promise, resolve, reject };
+}
 const fillRequired = () => {
   fireEvent.change(screen.getByLabelText("Property Title"), { target: { value: "Four bedroom home" } });
   fireEvent.change(screen.getByLabelText("Property Type"), { target: { value: "DUPLEX" } });
@@ -28,13 +34,61 @@ const fillRequired = () => {
 describe("Seller draft Step 1 persistence", () => {
   beforeEach(() => { vi.clearAllMocks(); mocks.create.mockResolvedValue(created); mocks.save.mockResolvedValue(created); mocks.restore.mockResolvedValue(created); mocks.management.mockResolvedValue({ success: true, data: { management: { summary: { status: "DRAFT", rejectionFeedback: null, rejectionReason: null } } } }); });
 
-  it("creates one canonical partial draft from Save as draft", async () => {
+  it("creates one canonical partial draft and redirects to My Listings only after Save as draft succeeds", async () => {
+    const request = deferred<typeof created>();
+    mocks.create.mockReturnValueOnce(request.promise);
     render(<SellerDraftEditor />, { wrapper });
     fireEvent.change(screen.getByLabelText("Description"), { target: { value: "  " } });
     fireEvent.click(screen.getByRole("button", { name: "Save as draft" }));
     await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(1));
     expect(mocks.create.mock.calls[0][0]).not.toHaveProperty("description");
+    expect(mocks.replace).not.toHaveBeenCalledWith("/seller/listings");
+    request.resolve(created);
+    await waitFor(() => expect(mocks.replace).toHaveBeenLastCalledWith("/seller/listings"));
     expect(mocks.replace).toHaveBeenCalledWith(`/seller/listings/${propertyId}/edit`);
+    expect(mocks.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("updates an existing draft by its canonical ID without creating a duplicate, then redirects", async () => {
+    render(<SellerDraftEditor propertyId={propertyId} />, { wrapper });
+    await screen.findByLabelText("Property Title");
+    fireEvent.click(screen.getByRole("button", { name: "Save as draft" }));
+
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(propertyId, expect.any(Object)));
+    await waitFor(() => expect(mocks.replace).toHaveBeenLastCalledWith("/seller/listings"));
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
+
+  it("blocks duplicate requests while saving an incomplete draft", async () => {
+    const request = deferred<typeof created>();
+    mocks.create.mockReturnValueOnce(request.promise);
+    render(<SellerDraftEditor />, { wrapper });
+    const saveButton = screen.getByRole("button", { name: "Save as draft" });
+
+    fireEvent.click(saveButton);
+    fireEvent.click(saveButton);
+    await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("button", { name: "Save as draft" })).toBeDisabled();
+    expect(mocks.replace).not.toHaveBeenCalledWith("/seller/listings");
+
+    request.resolve(created);
+    await waitFor(() => expect(mocks.replace).toHaveBeenLastCalledWith("/seller/listings"));
+  });
+
+  it("stays on Step 1 after failure, preserves values, and redirects after a successful retry", async () => {
+    mocks.create.mockRejectedValueOnce(Object.assign(new Error("storage failure"), { isAxiosError: true, response: { data: { success: false, message: "Property draft could not be saved", code: "DRAFT_PERSISTENCE_UNAVAILABLE" } } }));
+    render(<SellerDraftEditor />, { wrapper });
+    fireEvent.change(screen.getByLabelText("Property Title"), { target: { value: "My unfinished home" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save as draft" }));
+
+    expect(await screen.findByText("We couldn’t save this property draft right now. Please try again.")).toBeVisible();
+    expect(screen.getByLabelText("Property Title")).toHaveValue("My unfinished home");
+    expect(screen.getByRole("button", { name: "Save as draft" })).toBeEnabled();
+    expect(mocks.replace).not.toHaveBeenCalledWith("/seller/listings");
+
+    fireEvent.click(screen.getByRole("button", { name: "Save as draft" }));
+    await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mocks.replace).toHaveBeenLastCalledWith("/seller/listings"));
   });
 
   it("keeps Step 1 in place, renders field errors, focuses the first invalid field, and clears corrected errors", async () => {
