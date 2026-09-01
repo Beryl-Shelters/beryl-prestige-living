@@ -6,9 +6,37 @@ import { describe, expect, it } from "vitest";
 const source = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 
 describe("referral discoverability entry points", () => {
+  it("adds exactly one guest referral mini hero to the public homepage", () => {
+    const homepage = source("app/page.tsx");
+    const miniHero = source("components/referrals/guest-referral-mini-hero.tsx");
+    const styles = source("app/globals.css");
+
+    expect(homepage.match(/<GuestReferralMiniHero/g)).toHaveLength(1);
+    expect(homepage).toContain('customerAppUrl("/refer/direct")');
+    expect(miniHero).toContain('data-referral-entry="public-home"');
+    expect(miniHero).toContain("Fill in their details");
+    expect(miniHero).not.toContain("useAuth");
+    expect(miniHero).not.toMatch(/href=.*\/(?:login|signup|onboarding)/);
+    expect(styles).toContain("@media (max-width: 767px)");
+    expect(styles).toContain("@media (max-width: 389px)");
+  });
+
   it("keeps the canonical referral landing public", () => {
     expect(existsSync(resolve(process.cwd(), "app/refer/page.tsx"))).toBe(true);
     expect(source("proxy.ts")).not.toContain('"/refer"');
+  });
+
+  it("keeps all acquisition routes public while Marketplace remains Customer-auth-only", () => {
+    const policy = source("lib/customer-route-policy.ts");
+    const gate = source("components/auth/customer-route-gate.tsx");
+    const proxy = source("proxy.ts");
+
+    expect(policy).toContain('"/marketplace"');
+    for (const route of ["/refer", "/refer/direct", "/r/"]) {
+      expect(policy).not.toContain(`"${route}"`);
+      expect(proxy).not.toContain(`"${route}"`);
+    }
+    expect(gate).toContain("isCustomerAuthRoute(pathname)");
   });
 
   it("exposes the canonical referral landing from public and buyer Marketplace navigation", () => {

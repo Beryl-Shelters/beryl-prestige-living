@@ -88,8 +88,8 @@ describe("desktop referral Web experience", () => {
     expect(mocks.submit).not.toHaveBeenCalled();
   });
 
-  it("uses the customer session for a logged-in submission instead of sending guest identity", async () => {
-    mocks.session = { user: { id: "customer", fullName: "Ada Okafor", email: "ada@example.com", phone: "+2348012345678", accountStatus: "ACTIVE", emailVerified: true }, activePersona: "BUYER", personas: [], nextAction: "OPEN_BUYER_DASHBOARD" };
+  it.each(["BUYER", "SELLER_DEVELOPER"] as const)("uses the %s customer session for a logged-in submission instead of sending guest identity", async (activePersona) => {
+    mocks.session = { user: { id: "customer", fullName: "Ada Okafor", email: "ada@example.com", phone: "+2348012345678", accountStatus: "ACTIVE", emailVerified: true }, activePersona, personas: [], nextAction: activePersona === "BUYER" ? "OPEN_BUYER_DASHBOARD" : "OPEN_SELLER_DASHBOARD" };
     mocks.submit.mockResolvedValue({ data: { referral: { id: "1", referenceId: "REF-2608-0001", referredFirstName: "Tomi", purpose: "SELLING", status: "NEW", submittedAt: "2026-08-28T00:00:00Z" }, referrer: { referralCode: "BSR-ADA", referralLink: "https://dev.berylshelter.com/r/BSR-ADA" }, nextAction: "OPEN_REFERRAL_DASHBOARD", trackingAvailable: false } });
     renderWithQuery(<DirectReferralScreen />);
     await userEvent.click(screen.getByRole("button", { name: "Selling" }));
