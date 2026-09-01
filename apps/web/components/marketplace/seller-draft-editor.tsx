@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, Check, ChevronDown, Cloud, FileText, Images, KeyRound, Minus, Plus, Upload, X } from "lucide-react";
 import { BerylShelterLogo } from "@/components/brand/beryl-shelter-logo";
 import { NigeriaLocationCombobox } from "@/components/location/nigeria-location-combobox";
-import { ApiAlert } from "@/components/ui/feedback";
+import { ApiAlert, Spinner } from "@/components/ui/feedback";
 import { customerApi } from "@/lib/api/client";
 import { apiErrorOf } from "@/lib/api/errors";
 import type { SellerDraft, SellerSubmissionResult } from "@/lib/contracts";
@@ -296,7 +296,18 @@ export function SellerDraftEditor({
           onContinue={() => void continueStepOne()}
         />
       ) : step === "PHOTOS_DOCUMENTS" ? (
-        <MediaStep propertyId={id!} draft={draft} onBack={() => setStep("PROPERTY_INFORMATION")} />
+        <MediaStep
+          propertyId={id!}
+          draft={draft}
+          onBack={() => setStep("PROPERTY_INFORMATION")}
+          onRefresh={async () => {
+            const refreshed = await restored.refetch();
+            if (refreshed.error) throw refreshed.error;
+            const property = refreshed.data?.data.property;
+            if (!property) throw new Error("Draft refresh did not return the property");
+            setDraft(property);
+          }}
+        />
       ) : step === "SALES_MANDATE" ? (
         <SellerMandateStep propertyId={id!} onBack={() => setStep("PHOTOS_DOCUMENTS")} />
       ) : <SellerReviewStep propertyId={id!} onSubmitted={setSubmission} />}
@@ -430,31 +441,102 @@ function FieldError({ id, message }: { id?: string; message?: string }) {
   return message ? <span id={id} className="field-error" role="alert">{message}</span> : null;
 }
 
-function MediaStep({ propertyId, draft, onBack }: { propertyId: string; draft: Partial<SellerDraft>; onBack: () => void }) {
+type MediaOperation =
+  | { kind: "idle" }
+  | { kind: "uploading-images"; count: number }
+  | { kind: "uploading-document" }
+  | { kind: "reordering" }
+  | { kind: "setting-cover" }
+  | { kind: "deleting-image" }
+  | { kind: "deleting-document" }
+  | { kind: "saving-draft" }
+  | { kind: "continuing" };
+
+const idleMediaOperation: MediaOperation = { kind: "idle" };
+
+function MediaStep({ propertyId, draft, onBack, onRefresh }: { propertyId: string; draft: Partial<SellerDraft>; onBack: () => void; onRefresh: () => Promise<void> }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [validationErrors, setValidationErrors] = useState<ReturnType<typeof validateSellerMedia>>({});
-  const [busy, setBusy] = useState(false);
+  const [operation, setOperation] = useState<MediaOperation>(idleMediaOperation);
+  const operationRef = useRef<MediaOperation>(idleMediaOperation);
   const [type, setType] = useState("DEED");
   const continueLocked = useRef(false);
-  const refresh = () => location.reload();
+  const busy = operation.kind !== "idle";
+
+  const runOperation = async (nextOperation: MediaOperation, action: () => Promise<void>, failureMessage: string) => {
+    if (operationRef.current.kind !== "idle") return false;
+    operationRef.current = nextOperation;
+    setOperation(nextOperation);
+    setError("");
+    try {
+      await action();
+      return true;
+    } catch {
+      setError(failureMessage);
+      return false;
+    } finally {
+      operationRef.current = idleMediaOperation;
+      setOperation(idleMediaOperation);
+    }
+  };
+
+  const refreshAfter = async (action: () => Promise<unknown>) => {
+    await action();
+    await onRefresh();
+  };
 
   const upload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []);
+    const input = event.currentTarget;
+    const files = Array.from(input.files ?? []);
     if (files.some((file) => !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) || files.length + (draft.images?.length ?? 0) > 10) {
       setError("Use up to ten JPEG, PNG, or WEBP images, each up to 5MB.");
+      input.value = "";
       return;
     }
-    setBusy(true);
+    if (!files.length || operationRef.current.kind !== "idle") {
+      input.value = "";
+      return;
+    }
     const body = new FormData();
     files.forEach((file) => body.append("images", file));
-    try {
-      await customerApi.uploadSellerImages(propertyId, body);
-      refresh();
-    } catch {
-      setError("Image upload failed. Please try again.");
-      setBusy(false);
+    await runOperation(
+      { kind: "uploading-images", count: files.length },
+      async () => {
+        await customerApi.uploadSellerImages(propertyId, body);
+        await onRefresh();
+        setValidationErrors({});
+      },
+      "Image upload failed. Please try again."
+    );
+    input.value = "";
+  };
+
+  const uploadDocument = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file || file.type !== "application/pdf" || file.size > 10 * 1024 * 1024) {
+      setError("Use a PDF up to 10MB.");
+      input.value = "";
+      return;
     }
+    if (operationRef.current.kind !== "idle") {
+      input.value = "";
+      return;
+    }
+    const body = new FormData();
+    body.append("document", file);
+    body.append("documentType", type);
+    body.append("displayName", file.name);
+    await runOperation(
+      { kind: "uploading-document" },
+      async () => {
+        await customerApi.uploadSellerDocument(propertyId, body);
+        await onRefresh();
+      },
+      "Document upload failed. Please try again."
+    );
+    input.value = "";
   };
 
   const continueToSalesMandate = async () => {
@@ -468,13 +550,12 @@ function MediaStep({ propertyId, draft, onBack }: { propertyId: string; draft: P
     }
     setValidationErrors({});
     continueLocked.current = true;
-    setError("");
-    setBusy(true);
     try {
-      await continueSellerDraftToSalesMandate(propertyId, customerApi.saveSellerDraft, router.push);
-    } catch {
-      setError("We could not continue to the Sales Mandate step. Please try again.");
-      setBusy(false);
+      await runOperation(
+        { kind: "continuing" },
+        () => continueSellerDraftToSalesMandate(propertyId, customerApi.saveSellerDraft, router.push),
+        "We could not continue to the Sales Mandate step. Please try again."
+      );
     } finally {
       continueLocked.current = false;
     }
@@ -482,23 +563,35 @@ function MediaStep({ propertyId, draft, onBack }: { propertyId: string; draft: P
 
   const saveMediaDraft = async () => {
     if (busy) return;
-    setError("");
-    setBusy(true);
-    try {
-      await customerApi.saveSellerDraft(propertyId, { currentStep: "PHOTOS_DOCUMENTS" });
-      setBusy(false);
-    } catch {
-      setError("We could not save this draft. Please try again.");
-      setBusy(false);
-    }
+    await runOperation(
+      { kind: "saving-draft" },
+      async () => { await customerApi.saveSellerDraft(propertyId, { currentStep: "PHOTOS_DOCUMENTS" }); },
+      "We could not save this draft. Please try again."
+    );
   };
 
   const images = [...(draft.images ?? [])].sort((first, second) => first.order - second.order);
+  const photoOperationMessage = operation.kind === "uploading-images"
+    ? `Uploading ${operation.count === 1 ? "photo" : `${operation.count} photos`}…`
+    : operation.kind === "reordering"
+      ? "Updating photo order…"
+      : operation.kind === "setting-cover"
+        ? "Updating cover photo…"
+        : operation.kind === "deleting-image"
+          ? "Deleting photo…"
+          : null;
+  const documentOperationMessage = operation.kind === "uploading-document"
+    ? "Uploading document…"
+    : operation.kind === "deleting-document"
+      ? "Deleting document…"
+      : null;
+
   return (
     <section className="seller-editor-card seller-media-step">
       <div className="seller-editor-heading"><p className="seller-kicker">Step 2</p><h2>Add some photos of the property to show buyers</h2><p>Add at least one clear photo. You can add up to ten photos and rearrange them at any time.</p></div>
       {error ? <ApiAlert>{error}</ApiAlert> : null}
       <label className="seller-upload-dropzone" htmlFor="seller-property-images"><Upload size={24} aria-hidden="true" /><strong>Add Photos <span className="seller-required-indicator" aria-hidden="true" /></strong><span>JPEG, PNG or WEBP · 5MB each</span><input id="seller-property-images" required aria-invalid={Object.keys(validationErrors).length > 0 || undefined} aria-describedby={Object.keys(validationErrors).length > 0 ? "seller-property-images-error" : undefined} disabled={busy || images.length >= 10} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={upload} /></label>
+      {photoOperationMessage ? <MediaOperationStatus message={photoOperationMessage} /> : null}
       <p className="seller-upload-count">{images.length}/10 photos</p>
       {images.length ? (
         <div className="seller-media-grid">
@@ -507,9 +600,9 @@ function MediaStep({ propertyId, draft, onBack }: { propertyId: string; draft: P
               <Image src={image.url} alt={`Property photo ${index + 1}`} width={640} height={420} />
               <strong>{image.isCover ? "Cover" : `Photo ${index + 1}`}</strong>
               <div>
-                <button disabled={busy || index === 0} type="button" onClick={async () => { setBusy(true); await customerApi.reorderSellerImages(propertyId, [...images.slice(0, index - 1), image, images[index - 1], ...images.slice(index + 1)].map((item) => item.id)); refresh(); }}>Move left</button>
-                {!image.isCover ? <button disabled={busy} type="button" onClick={async () => { setBusy(true); await customerApi.setSellerCover(propertyId, image.id); refresh(); }}>Set as cover</button> : null}
-                <button disabled={busy} type="button" onClick={async () => { setBusy(true); await customerApi.deleteSellerImage(propertyId, image.id); refresh(); }}>Delete</button>
+                <button disabled={busy || index === 0} type="button" onClick={() => void runOperation({ kind: "reordering" }, () => refreshAfter(() => customerApi.reorderSellerImages(propertyId, [...images.slice(0, index - 1), image, images[index - 1], ...images.slice(index + 1)].map((item) => item.id))), "We could not reorder photos. Please try again.")}>Move left</button>
+                {!image.isCover ? <button disabled={busy} type="button" onClick={() => void runOperation({ kind: "setting-cover" }, () => refreshAfter(() => customerApi.setSellerCover(propertyId, image.id)), "We could not update the cover photo. Please try again.")}>Set as cover</button> : null}
+                <button disabled={busy} type="button" onClick={() => void runOperation({ kind: "deleting-image" }, () => refreshAfter(() => customerApi.deleteSellerImage(propertyId, image.id)), "We could not delete this photo. Please try again.")}>Delete</button>
               </div>
             </article>
           ))}
@@ -518,22 +611,18 @@ function MediaStep({ propertyId, draft, onBack }: { propertyId: string; draft: P
       {Object.keys(validationErrors).length > 0 ? <div id="seller-property-images-error" className="seller-media-validation" role="alert">{Object.values(validationErrors).map((message) => <p key={message}>{message}</p>)}</div> : null}
       <p className="seller-media-hint">Drag or use the controls to arrange your photos. Choose one cover image.</p>
       <div className="seller-documents-heading"><h3>Add supporting documents</h3><p>Documents are optional, private, and never shown on the public listing.</p></div>
-      <label className="seller-field">Document type<select value={type} onChange={(event) => setType(event.target.value)}><option value="DEED">Deed</option><option value="SURVEY_PLAN">Survey plan</option><option value="OWNERSHIP_PAPERS">Ownership papers</option><option value="CERTIFICATE_OF_OCCUPANCY">Certificate of occupancy</option><option value="OTHER">Other</option></select></label>
-      <label className="seller-upload-dropzone"><FileText size={24} aria-hidden="true" /><strong>Upload supporting document</strong><span>PDF · 10MB maximum</span><input disabled={busy} type="file" accept="application/pdf" onChange={async (event) => {
-        const file = event.target.files?.[0];
-        if (!file || file.type !== "application/pdf" || file.size > 10 * 1024 * 1024) { setError("Use a PDF up to 10MB."); return; }
-        setBusy(true);
-        const body = new FormData();
-        body.append("document", file);
-        body.append("documentType", type);
-        body.append("displayName", file.name);
-        try { await customerApi.uploadSellerDocument(propertyId, body); refresh(); } catch { setError("Document upload failed. Please try again."); setBusy(false); }
-      }} /></label>
-      {draft.documents?.length ? <ul className="seller-document-list">{draft.documents.map((document) => <li key={document.id}><FileText size={18} /><span><strong>{document.displayName}</strong><small>{document.documentType}</small></span><button aria-label={`Delete ${document.displayName}`} disabled={busy} type="button" onClick={async () => { setBusy(true); await customerApi.deleteSellerDocument(propertyId, document.id); refresh(); }}><X size={17} /></button></li>)}</ul> : <p className="seller-empty-media">No supporting documents uploaded.</p>}
+      <label className="seller-field">Document type<select disabled={busy} value={type} onChange={(event) => setType(event.target.value)}><option value="DEED">Deed</option><option value="SURVEY_PLAN">Survey plan</option><option value="OWNERSHIP_PAPERS">Ownership papers</option><option value="CERTIFICATE_OF_OCCUPANCY">Certificate of occupancy</option><option value="OTHER">Other</option></select></label>
+      <label className="seller-upload-dropzone"><FileText size={24} aria-hidden="true" /><strong>Upload supporting document</strong><span>PDF · 10MB maximum</span><input disabled={busy} type="file" accept="application/pdf" onChange={uploadDocument} /></label>
+      {documentOperationMessage ? <MediaOperationStatus message={documentOperationMessage} /> : null}
+      {draft.documents?.length ? <ul className="seller-document-list">{draft.documents.map((document) => <li key={document.id}><FileText size={18} /><span><strong>{document.displayName}</strong><small>{document.documentType}</small></span><button aria-label={`Delete ${document.displayName}`} disabled={busy} type="button" onClick={() => void runOperation({ kind: "deleting-document" }, () => refreshAfter(() => customerApi.deleteSellerDocument(propertyId, document.id)), "We could not delete this document. Please try again.")}><X size={17} /></button></li>)}</ul> : <p className="seller-empty-media">No supporting documents uploaded.</p>}
       <div className="seller-editor-actions seller-editor-footer-actions">
         <button className="btn btn-secondary" type="button" disabled={busy} onClick={() => void saveMediaDraft()}>Save as draft</button>
-        <div><button className="btn btn-secondary" type="button" disabled={busy} onClick={onBack}>Back</button><button className="btn btn-primary" type="button" disabled={busy} onClick={() => void continueToSalesMandate()}>{busy ? "Saving…" : "Continue"}</button></div>
+        <div><button className="btn btn-secondary" type="button" disabled={busy} onClick={onBack}>Back</button><button className="btn btn-primary" type="button" disabled={busy} onClick={() => void continueToSalesMandate()}>{operation.kind === "continuing" ? "Saving…" : "Continue"}</button></div>
       </div>
     </section>
   );
+}
+
+function MediaOperationStatus({ message }: { message: string }) {
+  return <div className="seller-media-operation"><Spinner label={message} /><span aria-hidden="true">{message}</span></div>;
 }
