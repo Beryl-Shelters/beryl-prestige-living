@@ -95,15 +95,64 @@ describe("Seller Marketplace W5 flow", () => {
     expect(mocks.push).not.toHaveBeenCalled();
   });
 
-  it("requests authoritative review data and renders safe information, ordered images, mandate, and canonical edit links", async () => {
+  it("renders the approved compact and expanded buyer preview with canonical edit links", async () => {
+    mocks.sellerReview.mockResolvedValueOnce({ success: true, data: { review: { ...review, buyerPreview: { ...review.buyerPreview, furnishing: "SEMI_FURNISHED", initialDeposit: { type: "PERCENTAGE", value: 25 } } } } });
     render(<SellerReviewStep propertyId={propertyId} />, testWrapper());
-    expect(await screen.findByText("Four bedroom home")).toBeVisible();
-    expect(screen.getByText("BRL-1001")).toBeVisible(); expect(screen.getByText("Exclusive Sales Mandate")).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Review your property listing" })).toBeVisible();
+    expect(screen.getByText("Here is what we’ll show to buyers. Before you submit your listing, make sure to review the details.")).toBeVisible();
+    expect(screen.getByText("₦250,000,000")).toBeVisible();
+    expect(screen.getByText("Four bedroom home")).toBeVisible();
+    expect(screen.getByText("Detached")).toBeVisible();
+    expect(screen.getByText("Lekki, Lagos")).toBeVisible();
+    expect(screen.getByText("4 Beds")).toBeVisible();
+    expect(screen.getByText("4 Baths")).toBeVisible();
+    expect(screen.getByText("5 Toilets")).toBeVisible();
+    expect(screen.getByText("3 Parking spaces")).toBeVisible();
     expect(mocks.sellerReview).toHaveBeenCalledWith(propertyId);
-    const gallery = screen.getByText("Cover").parentElement?.parentElement as HTMLElement;
-    expect(within(gallery).getAllByRole("img")[0]).toHaveAttribute("alt", "Four bedroom home photo 1");
-    const editLinks = screen.getAllByRole("link", { name: "Edit" }).map((link) => link.getAttribute("href"));
-    expect(editLinks).toEqual(expect.arrayContaining([`/seller/listings/${propertyId}/edit?step=property-information`, `/seller/listings/${propertyId}/edit?step=photos-documents`, `/seller/listings/${propertyId}/edit?step=SALES_MANDATE`]));
+    const preview = screen.getByRole("article", { name: "Buyer listing preview" });
+    expect(within(preview).getByRole("img", { name: "Four bedroom home cover photo" })).toBeVisible();
+    expect(preview.querySelector('[data-cover-image="true"]')).toBeTruthy();
+    expect(screen.getByText("1/2")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Edit property information" })).toHaveAttribute("href", `/seller/listings/${propertyId}/edit?step=property-information`);
+    expect(screen.getByRole("link", { name: "Edit photos and documents" })).toHaveAttribute("href", `/seller/listings/${propertyId}/edit?step=photos-documents`);
+    expect(screen.getByRole("link", { name: "Edit Sales Mandate" })).toHaveAttribute("href", `/seller/listings/${propertyId}/edit?step=SALES_MANDATE`);
+    expect(screen.getByRole("link", { name: "Back" })).toHaveAttribute("href", `/seller/listings/${propertyId}/edit?step=SALES_MANDATE`);
+    expect(screen.getByRole("button", { name: "Submit for Review" })).toBeEnabled();
+    expect(screen.queryByText("Existing Seller")).not.toBeInTheDocument();
+    expect(screen.queryByText("12 Private Street")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "See the full buyer view" }));
+    expect(screen.getByRole("button", { name: "Change view" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("heading", { name: "About this property" })).toBeVisible();
+    expect(screen.getByText("A complete description")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Property details" })).toBeVisible();
+    expect(screen.getByText("Semi Furnished")).toBeVisible();
+    expect(screen.getByText("25%")).toBeVisible();
+    expect(screen.getByText("BRL-1001")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "What’s included" })).toBeVisible();
+    expect(within(preview).getAllByRole("heading", { level: 4 }).map((heading) => heading.textContent)).toEqual(["About this property", "Property details", "What’s included"]);
+    expect(screen.getByText("Pool")).toBeVisible();
+    expect(screen.getByText("Security")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Next property photo" }));
+    expect(screen.getByRole("img", { name: "Four bedroom home photo" })).toBeVisible();
+  });
+
+  it("omits absent optional buyer-preview values without leaking nulls or inventing content", async () => {
+    mocks.sellerReview.mockResolvedValueOnce({
+      success: true,
+      data: { review: { ...review, mandate: null, sellerPrivate: { fullAddress: null }, buyerPreview: { ...review.buyerPreview, title: null, description: null, propertyType: null, propertyCategory: null, publicLocation: null, askingPrice: null, negotiable: false, initialDeposit: null, condition: null, furnishing: null, bedrooms: null, bathrooms: null, toilets: null, parkingSpaces: null, numberOfFloors: null, parkingCapacity: null, amenities: [], images: [], coverImage: null, photoCount: 0 } } }
+    });
+    render(<SellerReviewStep propertyId={propertyId} />, testWrapper());
+    expect(await screen.findByText("Price not provided")).toBeVisible();
+    expect(screen.getByText("Untitled property")).toBeVisible();
+    expect(screen.getByText("Property image unavailable")).toBeVisible();
+    expect(screen.queryByText(/undefined|null/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Property facts")).toBeEmptyDOMElement();
+    fireEvent.click(screen.getByRole("button", { name: "See the full buyer view" }));
+    expect(screen.queryByRole("heading", { name: "About this property" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "What’s included" })).not.toBeInTheDocument();
+    expect(screen.getByText("BRL-1001")).toBeVisible();
+    expect(mocks.submitSellerProperty).not.toHaveBeenCalled();
   });
 
   it("prevents duplicate submit, shows a reference-only success confirmation, and refreshes Seller caches", async () => {

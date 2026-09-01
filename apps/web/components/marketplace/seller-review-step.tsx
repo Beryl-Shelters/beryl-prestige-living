@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2 } from "lucide-react";
+import { Bath, BedDouble, Car, CheckCircle2, ChevronLeft, ChevronRight, Eye, Images, MapPin, Toilet } from "lucide-react";
 import { ApiAlert } from "@/components/ui/feedback";
 import { customerApi } from "@/lib/api/client";
 import { apiErrorOf } from "@/lib/api/errors";
@@ -20,6 +20,8 @@ export function SellerReviewStep({ propertyId, onSubmitted }: { propertyId: stri
   const [error, setError] = useState("");
   const [missingSections, setMissingSections] = useState<string[]>([]);
   const [submission, setSubmission] = useState<SellerSubmissionResult | null>(null);
+  const [fullPreview, setFullPreview] = useState(false);
+  const [activeImageId, setActiveImageId] = useState<string | null>(null);
   const submissionLocked = useRef(false);
   const reviewQuery = useQuery({ queryKey: ["seller-review", propertyId], queryFn: () => customerApi.sellerReview(propertyId), enabled: !submission });
 
@@ -82,33 +84,60 @@ export function SellerReviewStep({ propertyId, onSubmitted }: { propertyId: stri
   const review = reviewQuery.data.data.review;
   const property = review.buyerPreview;
   const images = [...property.images].sort((first, second) => first.order - second.order);
+  const coverIndex = Math.max(0, images.findIndex((image) => image.isCover));
+  const selectedIndex = activeImageId ? images.findIndex((image) => image.id === activeImageId) : coverIndex;
+  const activeIndex = selectedIndex >= 0 ? selectedIndex : coverIndex;
+  const activeImage = images[activeIndex] ?? null;
+  const initialDeposit = formatInitialDeposit(property);
+  const moveImage = (direction: -1 | 1) => {
+    if (images.length < 2) return;
+    const nextIndex = (activeIndex + direction + images.length) % images.length;
+    setActiveImageId(images[nextIndex].id);
+  };
   return (
     <section className="seller-editor-card seller-review" aria-labelledby="review-title">
-      <div className="seller-editor-heading seller-review-heading"><p className="seller-kicker">Step 4</p><h2 id="review-title">Review your property listing</h2><p>This is how your property information will appear to buyers.</p></div>
+      <div className="seller-editor-heading seller-review-heading"><h2 id="review-title">Review your property listing</h2><p>Here is what we’ll show to buyers. Before you submit your listing, make sure to review the details.</p></div>
+      <nav className="seller-review-edit-nav" aria-label="Edit listing sections">
+        <span>Edit listing:</span>
+        <Link aria-label="Edit property information" href={sellerListingRouteForAction("CONTINUE_PROPERTY_INFORMATION", propertyId)}>Property info</Link>
+        <Link aria-label="Edit photos and documents" href={sellerListingRouteForAction("CONTINUE_PHOTOS_DOCUMENTS", propertyId)}>Photos &amp; documents</Link>
+        <Link aria-label="Edit Sales Mandate" href={sellerListingRouteForAction("CONTINUE_SALES_MANDATE", propertyId)}>Sales mandate</Link>
+      </nav>
       {error ? <div id="seller-review-validation" tabIndex={-1}><ApiAlert>{error}</ApiAlert></div> : null}
       {missingSections.length ? <div className="seller-review-missing"><h3>Needs attention</h3><ul>{missingSections.map((section) => <li key={section}>{incompleteSectionCopy[section] ?? "Complete this section before submitting."} <Link href={sectionRoute(section, propertyId)}>Edit</Link></li>)}</ul></div> : null}
-      <div className="seller-review-grid">
-        <article>
-          <div className="seller-review-section-heading"><h3>Property Information</h3><Link href={sellerListingRouteForAction("CONTINUE_PROPERTY_INFORMATION", propertyId)}>Edit</Link></div>
-          <p className="seller-reference">{property.referenceId}</p><h4>{property.title || "Untitled property"}</h4>
-          <p className="seller-review-price">{property.askingPrice === null ? "Price not provided" : formatNaira(property.askingPrice)}</p>
-          {property.publicLocation ? <p>{property.publicLocation}</p> : null}
-          <dl className="seller-review-facts">{factEntries(property).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
-          {property.description ? <p>{property.description}</p> : null}
-          {property.amenities.length ? <div className="seller-review-amenities">{property.amenities.map((amenity) => <span key={amenity}>{amenity}</span>)}</div> : null}
-        </article>
-        <article>
-          <div className="seller-review-section-heading"><h3>Photos &amp; Documents</h3><Link href={sellerListingRouteForAction("CONTINUE_PHOTOS_DOCUMENTS", propertyId)}>Edit</Link></div>
-          <p>{property.photoCount} {property.photoCount === 1 ? "photo" : "photos"}</p>
-          {images.length ? <div className="seller-review-gallery">{images.map((image, index) => <div key={image.id} className={image.isCover ? "is-cover" : ""}><Image src={image.url} alt={`${property.title || "Property"} photo ${index + 1}`} fill sizes="(max-width: 767px) 50vw, 220px" />{image.isCover ? <span>Cover</span> : null}</div>)}</div> : <p>No photos available.</p>}
-        </article>
-        <article>
-          <div className="seller-review-section-heading"><h3>Sales Mandate</h3><Link href={sellerListingRouteForAction("CONTINUE_SALES_MANDATE", propertyId)}>Edit</Link></div>
-          {review.mandate ? <dl className="seller-review-facts"><div><dt>Mandate type</dt><dd>{review.mandate.mandateType === "EXCLUSIVE" ? "Exclusive Sales Mandate" : "Open Sales Mandate"}</dd></div><div><dt>Seller</dt><dd>{review.mandate.sellerFullName}</dd></div><div><dt>Ownership confirmed</dt><dd>{review.mandate.ownershipConfirmed ? "Yes" : "No"}</dd></div><div><dt>Mandate accepted</dt><dd>{review.mandate.mandateAccepted ? "Yes" : "No"}</dd></div></dl> : <p>Sales Mandate not completed.</p>}
-        </article>
-        <article className="seller-review-private"><h3>Seller-private information</h3><p>This address is not included in the public listing preview.</p><strong>{review.sellerPrivate.fullAddress || "Full address not provided"}</strong></article>
-      </div>
-      <div className="seller-submit-panel"><p>By submitting, you’re sending this listing to Beryl Shelter for review.</p><button className="btn btn-primary" type="button" disabled={pending} onClick={() => void submit()}>{pending ? "Submitting…" : "Submit for Review"}</button></div>
+      <article className={`seller-buyer-preview${fullPreview ? " is-expanded" : ""}`} aria-label="Buyer listing preview">
+        <div className="seller-buyer-preview-image" data-cover-image={activeImage?.isCover ? "true" : "false"}>
+          {activeImage ? <Image src={activeImage.url} alt={`${property.title || "Property"}${activeImage.isCover ? " cover" : ""} photo`} fill priority sizes="(max-width: 767px) calc(100vw - 56px), 430px" /> : <div className="seller-review-image-empty"><Images aria-hidden="true" size={34} /><span>Property image unavailable</span></div>}
+          {activeImage?.isCover ? <span className="sr-only">Cover photo</span> : null}
+          {fullPreview && images.length > 1 ? <><button className="seller-review-image-arrow is-previous" type="button" aria-label="Previous property photo" onClick={() => moveImage(-1)}><ChevronLeft aria-hidden="true" size={20} /></button><button className="seller-review-image-arrow is-next" type="button" aria-label="Next property photo" onClick={() => moveImage(1)}><ChevronRight aria-hidden="true" size={20} /></button></> : null}
+          {activeImage && property.photoCount > 0 ? <span className="seller-review-photo-count"><Images aria-hidden="true" size={14} />{activeIndex + 1}/{property.photoCount}</span> : null}
+        </div>
+        <div className="seller-buyer-preview-body">
+          <div className="seller-buyer-preview-price"><strong>{property.askingPrice === null ? "Price not provided" : formatNaira(property.askingPrice)}</strong>{property.negotiable ? <span>Negotiable</span> : null}</div>
+          <h3>{property.title || "Untitled property"}</h3>
+          {property.propertyType ? <span className="seller-buyer-preview-type">{humanizeMarketplaceValue(property.propertyType)}</span> : null}
+          {property.publicLocation ? <p className="seller-buyer-preview-location"><MapPin aria-hidden="true" size={15} />{property.publicLocation}</p> : null}
+          <div className="seller-buyer-preview-facts" aria-label="Property facts">
+            {property.bedrooms !== null ? <span><BedDouble aria-hidden="true" size={15} />{countLabel(property.bedrooms, "Bed")}</span> : null}
+            {property.bathrooms !== null ? <span><Bath aria-hidden="true" size={15} />{countLabel(property.bathrooms, "Bath")}</span> : null}
+            {property.toilets !== null ? <span><Toilet aria-hidden="true" size={15} />{countLabel(property.toilets, "Toilet")}</span> : null}
+            {(property.parkingSpaces ?? property.parkingCapacity) !== null ? <span><Car aria-hidden="true" size={15} />{countLabel((property.parkingSpaces ?? property.parkingCapacity)!, "Parking space")}</span> : null}
+          </div>
+          {fullPreview ? <div className="seller-buyer-preview-expanded">
+            {property.description ? <section aria-labelledby="seller-preview-about"><h4 id="seller-preview-about">About this property</h4><p>{property.description}</p></section> : null}
+            <section aria-labelledby="seller-preview-details"><h4 id="seller-preview-details">Property details</h4><dl className="seller-buyer-preview-details">
+              {property.propertyType ? <div><dt>Type</dt><dd>{humanizeMarketplaceValue(property.propertyType)}</dd></div> : null}
+              {property.propertyCategory ? <div><dt>Category</dt><dd>{humanizeMarketplaceValue(property.propertyCategory)}</dd></div> : null}
+              {property.furnishing ? <div><dt>Furnishing</dt><dd>{humanizeMarketplaceValue(property.furnishing)}</dd></div> : null}
+              {initialDeposit ? <div><dt>Initial deposit</dt><dd>{initialDeposit}</dd></div> : null}
+              <div><dt>Reference ID</dt><dd>{property.referenceId}</dd></div>
+            </dl></section>
+            {property.amenities.length ? <section aria-labelledby="seller-preview-amenities"><h4 id="seller-preview-amenities">What’s included</h4><div className="seller-review-amenities">{property.amenities.map((amenity) => <span key={amenity}>{amenity}</span>)}</div></section> : null}
+          </div> : null}
+          <button className="seller-buyer-preview-toggle" type="button" aria-expanded={fullPreview} onClick={() => setFullPreview((current) => !current)}><Eye aria-hidden="true" size={16} />{fullPreview ? "Change view" : "See the full buyer view"}</button>
+        </div>
+      </article>
+      <div className="seller-editor-actions seller-editor-footer-actions seller-review-footer"><div><Link className="btn btn-secondary" href={sellerListingRouteForAction("CONTINUE_SALES_MANDATE", propertyId)}>Back</Link><button className="btn btn-primary" type="button" disabled={pending} onClick={() => void submit()}>{pending ? "Submitting…" : "Submit for Review"}</button></div></div>
     </section>
   );
 }
@@ -135,12 +164,12 @@ function sectionRoute(section: string, propertyId: string) {
   return sellerListingRouteForAction("CONTINUE_PROPERTY_INFORMATION", propertyId);
 }
 
-function factEntries(property: SellerPropertyReview["buyerPreview"]): Array<[string, string]> {
-  const facts: Array<[string, string | number | null]> = [
-    ["Property type", property.propertyType ? humanizeMarketplaceValue(property.propertyType) : null],
-    ["Condition", property.condition ? humanizeMarketplaceValue(property.condition) : null],
-    ["Bedrooms", property.bedrooms], ["Bathrooms", property.bathrooms], ["Toilets", property.toilets],
-    ["Parking", property.parkingSpaces ?? property.parkingCapacity], ["Floors", property.numberOfFloors]
-  ];
-  return facts.filter((entry): entry is [string, string | number] => entry[1] !== null).map(([label, value]) => [label, String(value)]);
+function countLabel(value: number, singular: string) {
+  return `${value} ${singular}${value === 1 ? "" : "s"}`;
+}
+
+function formatInitialDeposit(property: SellerPropertyReview["buyerPreview"]) {
+  const deposit = property.initialDeposit;
+  if (!deposit || deposit.value === null) return null;
+  return deposit.type === "PERCENTAGE" ? `${deposit.value}%` : formatNaira(deposit.value);
 }
