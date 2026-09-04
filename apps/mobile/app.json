@@ -8,7 +8,10 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "ios": {
-      "bundleIdentifier": "com.berylshelter.mobile"
+      "bundleIdentifier": "com.berylshelter.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.berylshelter.mobile",
