@@ -1,0 +1,33 @@
+{
+  "name": "beryl-shelter",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace=@beryl/web",
+    "dev:api": "npm run dev --workspace=@beryl/api",
+    "build:web": "npm run build --workspace=@beryl/web",
+    "build:api": "npm run build --workspace=@beryl/api",
+    "type-check:web": "npm run type-check --workspace=@beryl/web",
+    "type-check:api": "npm run type-check --workspace=@beryl/api",
+    "lint:web": "npm run lint --workspace=@beryl/web",
+    "lint:api": "npm run lint --workspace=@beryl/api",
+    "build:admin": "npm run build --workspace=@beryl/admin",
+    "type-check:admin": "npm run type-check --workspace=@beryl/admin",
+    "lint:admin": "npm run lint --workspace=@beryl/admin"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^17.4.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.66.0"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  }
+}
