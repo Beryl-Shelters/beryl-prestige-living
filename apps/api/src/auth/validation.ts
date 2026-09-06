@@ -4,7 +4,15 @@ import { AuthError } from "./errors.js";
 
 export const accountTypes = ["INVESTOR", "PROPERTY_DEVELOPER", "LANDLORD", "REGISTERED_AGENT", "FREELANCE_AGENT"] as const;
 export const profileTypes = ["PERSONAL", "BUSINESS"] as const;
-const password = z.string().min(12, "Use a password with at least 12 characters.").max(128, "Password must be at most 128 characters.");
+// Keep separate checks so every applicable client-facing failure is available.
+// Digits are optional; whitespace (or a Unicode letter/number) is not a symbol.
+const password = z.string()
+  .min(8, "The password field must be at least 8 characters.")
+  .max(128, "The password field must be at most 128 characters.")
+  .regex(/[A-Z]/, "The password field must contain at least one uppercase letter.")
+  .regex(/[a-z]/, "The password field must contain at least one lowercase letter.")
+  .regex(/[A-Za-z]/, "The password field must contain at least one letter.")
+  .regex(/[^\p{L}\p{N}\s]/u, "The password field must contain at least one symbol.");
 export const resetSchema = z.object({ password, confirmPassword: z.string() }).strict().refine((data) => data.password === data.confirmPassword, { message: "Passwords do not match.", path: ["confirmPassword"] });
 export const registerSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required.").max(100),

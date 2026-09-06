@@ -37,7 +37,7 @@ function providerFailure(error: { code?: string | undefined; status?: number | u
   if (!error) return;
   if (error.status === 429) throw new AuthError(429, "RATE_LIMITED", "Too many requests. Please wait before trying again.");
   if (error.code === "email_not_confirmed") throw new AuthError(403, "EMAIL_NOT_VERIFIED", "Verify your email before logging in.");
-  if (error.code === "weak_password") throw new AuthError(400, "WEAK_PASSWORD", "Choose a stronger password with at least 12 characters.");
+  if (error.code === "weak_password") throw new AuthError(400, "WEAK_PASSWORD", "The authentication provider rejected this password. Use at least 8 characters, including an uppercase letter, a lowercase letter and a symbol. Digits are optional; avoid known or compromised passwords.");
   if (error.code === "same_password") throw new AuthError(400, "SAME_PASSWORD", "Choose a password different from your current password.");
   if (error.code === "user_already_exists" || error.code === "email_exists") throw new AuthError(409, "ACCOUNT_EXISTS", "An account already uses those details. Log in or recover your password.");
   if (error.status && error.status >= 500) throw unavailable();

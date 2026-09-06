@@ -8,7 +8,7 @@ const config = authConfigSchema.parse({ webOrigin:"http://localhost:3000",apiOri
   supabaseUrl:"https://example.supabase.co",anonKey:"test-public-key",serviceKey:"test-private-key",
   encryptionKey:randomBytes(32).toString("base64"),cookieSecure:false,production:false,googleEnabled:true });
 const registration = { firstName:"Ada",lastName:"Okafor",email:"ada@example.com",countryCode:"+234",phoneNumber:"08031234567",
-  accountType:"INVESTOR" as const,profileType:"PERSONAL" as const,password:"long-test-password",confirmPassword:"long-test-password" };
+  accountType:"INVESTOR" as const,profileType:"PERSONAL" as const,password:"Abcdefg!",confirmPassword:"Abcdefg!" };
 const providerSession = {
   access_token:"test-access",refresh_token:"test-refresh",token_type:"bearer",expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,
   user:{id:"b0404b72-2167-4eb7-b864-1235431f9231",email:"ada@example.com",email_confirmed_at:new Date().toISOString(),
@@ -82,5 +82,14 @@ test("provider resend limits remain safe 429 responses",async()=>{
   const transport:typeof fetch=async()=>Response.json({code:"over_email_send_rate_limit",msg:"Private upstream details"},{status:429});
   await assert.rejects(()=>new SupabaseAuthGateway(config,transport).resend(registration.email),{
     code:"RATE_LIMITED",status:429,message:"Too many requests. Please wait before trying again.",
+  });
+});
+
+test("provider weak-password errors describe the current policy without demanding digits",async()=>{
+  const transport:typeof fetch=async()=>Response.json({code:"weak_password",msg:"Private upstream details"},
+    {status:422,headers:{"X-Supabase-Api-Version":"2024-01-01"}});
+  await assert.rejects(()=>new SupabaseAuthGateway(config,transport).login(registration.email,registration.password),{
+    code:"WEAK_PASSWORD",status:400,
+    message:"The authentication provider rejected this password. Use at least 8 characters, including an uppercase letter, a lowercase letter and a symbol. Digits are optional; avoid known or compromised passwords.",
   });
 });

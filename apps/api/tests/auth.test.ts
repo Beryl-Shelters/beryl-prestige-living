@@ -6,7 +6,8 @@ import { authConfigSchema, loadAuthConfig } from "../src/auth/config.js";
 import { AuthCipher, hashToken } from "../src/auth/crypto.js";
 import { AuthError, expired, invalidCode } from "../src/auth/errors.js";
 import type { AuthGateway, Customer, ProviderTokens, StoredSession } from "../src/auth/gateway.js";
-import { registerSchema, normalizePhone } from "../src/auth/validation.js";
+import { registerSchema, resetSchema, normalizePhone } from "../src/auth/validation.js";
+import { passwordValidationErrors, validateNewPassword } from "../../web/lib/password-policy.js";
 
 const config = authConfigSchema.parse({
   webOrigin: "http://localhost:3000", apiOrigin: "http://localhost:4000",
@@ -16,7 +17,7 @@ const config = authConfigSchema.parse({
 const registration = {
   firstName: "Ada", lastName: "Okafor", email: "ada@example.com", countryCode: "+234",
   phoneNumber: "08031234567", accountType: "INVESTOR", profileType: "PERSONAL",
-  password: "a-long-test-password", confirmPassword: "a-long-test-password",
+  password: "Abcdefg!", confirmPassword: "Abcdefg!",
 };
 const customer: Customer = {
   id: "b0404b72-2167-4eb7-b864-1235431f9231", first_name: "Ada", last_name: "Okafor", email: registration.email,
@@ -97,6 +98,76 @@ async function fixture(t: TestContext, overrides = {}) {
 }
 const loginBody={identifier:customer.email,password:registration.password};
 const resetBody={password:registration.password,confirmPassword:registration.password};
+
+const passwordCases = [
+  { name: "seven characters fail", value: "Abcdef!", valid: false },
+  { name: "eight characters without any digit pass", value: "Abcdefg!", valid: true },
+  { name: "longer passwords without digits pass", value: "Longer-Passphrase!", valid: true },
+  { name: "missing uppercase fails", value: "abcdefg!", valid: false },
+  { name: "missing lowercase fails", value: "ABCDEFG!", valid: false },
+  { name: "missing symbol fails", value: "Abcdefgh", valid: false },
+  { name: "missing all letters fails", value: "1234567!", valid: false },
+  { name: "whitespace alone is not a symbol", value: "Abcdefg \t", valid: false },
+  { name: "Unicode letters alone are not symbols", value: "Abcdefgé", valid: false },
+  { name: "128 characters pass", value: "Ab!" + "x".repeat(125), valid: true },
+  { name: "129 characters fail", value: "Ab!" + "x".repeat(126), valid: false },
+];
+for (const { name, value, valid } of passwordCases) {
+  test(`registration, reset and Web password policy: ${name}`, () => {
+    const body = { password: value, confirmPassword: value };
+    const signup = registerSchema.safeParse({ ...registration, ...body });
+    const reset = resetSchema.safeParse(body);
+    const webErrors = passwordValidationErrors(value, value);
+    assert.equal(signup.success, valid);
+    assert.equal(reset.success, valid);
+    assert.equal(webErrors.length === 0, valid);
+    assert.deepEqual(signup.error?.issues.map((issue) => issue.message) ?? [], webErrors);
+    assert.deepEqual(reset.error?.issues.map((issue) => issue.message) ?? [], webErrors);
+    if (valid) assert.doesNotThrow(() => validateNewPassword(value, value));
+    else assert.throws(() => validateNewPassword(value, value), { message: webErrors.join(" ") });
+  });
+}
+
+test("confirmation mismatch still fails in registration, reset and Web validation", () => {
+  const body = { password: registration.password, confirmPassword: "Another-Passphrase!" };
+  for (const result of [registerSchema.safeParse({ ...registration, ...body }), resetSchema.safeParse(body)]) {
+    assert.equal(result.success, false);
+    assert.deepEqual(result.error?.issues.map((issue) => issue.message), ["Passwords do not match."]);
+  }
+  assert.deepEqual(passwordValidationErrors(body.password, body.confirmPassword), ["Passwords do not match."]);
+});
+
+test("registration and reset return every failed password rule before provider mutation", async (t) => {
+  const { request, gateway } = await fixture(t);
+  gateway.profiles = [];
+  const invalid = { password: "123", confirmPassword: "123" };
+  const expected = [
+    "The password field must be at least 8 characters.",
+    "The password field must contain at least one uppercase letter.",
+    "The password field must contain at least one lowercase letter.",
+    "The password field must contain at least one letter.",
+    "The password field must contain at least one symbol.",
+  ].join(" ");
+  const signup = await request("/register", { ...registration, ...invalid });
+  assert.equal(signup.response.status, 400);
+  assert.equal(signup.body.error.message, expected);
+  assert.equal(gateway.calls.includes("signup"), false);
+  assert.equal((await request("/register", registration)).response.status, 201);
+  gateway.profiles = [{ ...customer }];
+  await request("/forgot-password", { identifier: customer.email });
+  await request("/verify-recovery", { code: "123456" });
+  const reset = await request("/reset-password", invalid);
+  assert.equal(reset.response.status, 400);
+  assert.equal(reset.body.error.message, expected);
+  assert.equal(gateway.calls.includes("password"), false);
+  assert.equal((await request("/recovery-context")).response.status, 200);
+  assert.equal((await request("/reset-password", resetBody)).response.status, 200);
+});
+
+test("login does not apply new-password composition rules to an existing password", async (t) => {
+  const { request } = await fixture(t);
+  assert.equal((await request("/login", { ...loginBody, password: "legacy-password" })).response.status, 200);
+});
 
 test("registration validates names, email, phone, approved enums and matching strong passwords",()=>{
   assert.equal(registerSchema.safeParse(registration).success,true);

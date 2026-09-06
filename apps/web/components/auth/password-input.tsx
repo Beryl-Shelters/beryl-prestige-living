@@ -15,7 +15,8 @@ export function PasswordInput({ id, label, autoComplete }: PasswordInputProps) {
     <div className="field-group">
       <label htmlFor={id}>{label}</label>
       <div className="password-control">
-        <input id={id} name={id} type={visible ? "text" : "password"} autoComplete={autoComplete} required minLength={autoComplete === "new-password" ? 12 : undefined} maxLength={128} />
+        {/* Form submission validates new passwords together, using the existing error/toast UI. */}
+        <input id={id} name={id} type={visible ? "text" : "password"} autoComplete={autoComplete} required maxLength={128} />
         <button
           aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
           className="password-toggle"

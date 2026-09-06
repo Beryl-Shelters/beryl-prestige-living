@@ -5,6 +5,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { AuthApiError, authRequest } from "../../lib/auth-api";
+import { validateNewPassword } from "../../lib/password-policy";
 import { useAuthAction } from "./use-auth-action";
 
 import { GoogleAuthButton } from "./google-auth-button";
@@ -80,6 +81,7 @@ export function RegisterForm() {
   function submit(event: FormEvent<HTMLFormElement>) {
     const data = values(event);
     void run(async () => {
+      validateNewPassword(String(data["register-password"] ?? ""), String(data["register-confirm-password"] ?? ""));
       await authRequest("/register", {
         firstName: data.firstName, lastName: data.lastName, email: data.email,
         countryCode: data.countryCode, phoneNumber: data.phone,
@@ -202,6 +204,7 @@ export function ResetPasswordForm() {
     <form className="auth-card compact-card" aria-busy={pending} onSubmit={(event) => {
       const data = values(event);
       void run(async () => {
+        validateNewPassword(String(data["new-password"] ?? ""), String(data["confirm-new-password"] ?? ""));
         await authRequest("/reset-password", { password: data["new-password"], confirmPassword: data["confirm-new-password"] });
         router.replace("/reset-password/success");
       });

@@ -86,7 +86,10 @@ Do not set trust proxy to an arbitrary/unbounded value. No CAPTCHA or SMS is add
    policies/functions and triggers on `auth.users`; it references no legacy tables.
    It assumes the V2 customer profile tables/functions do not already exist.
 2. Authentication > Providers/Sign In > Email: enable Email/password and **Confirm
-   email**, allow new signups, use a password minimum of at least 12 characters.
+   email**, allow new signups, and set the minimum password length to **8**.
+   Set Required characters to **No required characters** rather than a preset
+   requiring digits. The full Beryl policy below is enforced by Express; do not
+   claim this Supabase configuration enforces the character-composition rules.
    Signup checks `/auth/v1/settings` and refuses to create an identity if email
    autoconfirm is enabled. Enable leaked-password protection where available.
 3. Set email OTP length to **6** and expiry to **600 seconds** in the project's
@@ -121,6 +124,29 @@ Google signup triggers a profile insert in the same transaction as the Auth user
 Available given/family names are copied; phone, account type and profile type are
 nullable. Existing profiles retain their values when Google is linked. No profile
 completion screen is created. Manual signups require all approved fields.
+
+### Customer password policy
+
+Registration and password reset both require 8-128 characters, at least one
+ASCII uppercase letter, one ASCII lowercase letter, at least one letter, and
+one non-alphanumeric, non-whitespace symbol. Digits are **not required**.
+Whitespace alone and Unicode letters/numbers do not count as the required symbol.
+Confirmation must match exactly; passwords are never trimmed or normalized.
+The Web checks the same rules before submitting and uses the existing error/toast
+presentation. Express independently enforces them and returns all applicable
+password failures together. Login does not impose these new-password rules.
+
+Supabase supports a configurable minimum and required-character presets. Its
+documented strongest preset also requires digits, so it does not match this
+client policy. Use minimum **8** with **No required characters** for this setup.
+Only select a composition option if it explicitly supports uppercase, lowercase
+and symbols **without digits** and matches the accepted symbol set. Do not enable
+a digit-requiring preset to approximate the rule. The API remains the authority
+for the full client-visible policy; direct Supabase Auth requests are subject
+only to the configured provider subset (plus any enabled leaked-password check).
+No SQL password constraint or custom password storage is introduced.
+See [Supabase password security](https://supabase.com/docs/guides/auth/password-security)
+and [Auth configuration reference](https://supabase.com/docs/reference/api/v1-update-auth-service-config).
 
 The profile has unique normalized email and E.164 phone. Phone is an identifier,
 not independently verified ownership; no SMS verification is implemented.

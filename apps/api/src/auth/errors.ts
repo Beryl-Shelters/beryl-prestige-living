@@ -19,7 +19,11 @@ export const authErrorHandler: ErrorRequestHandler = (error: unknown, _request, 
     return;
   }
   if (error instanceof ZodError) {
-    response.status(400).json({ success: false, error: { code: "VALIDATION_ERROR", message: error.issues[0]?.message ?? "Check the supplied fields." } });
+    const passwordIssues = error.issues.filter((issue) => issue.path[0] === "password" || issue.path[0] === "confirmPassword");
+    const message = passwordIssues.length
+      ? [...new Set(passwordIssues.map((issue) => issue.message))].join(" ")
+      : error.issues[0]?.message ?? "Check the supplied fields.";
+    response.status(400).json({ success: false, error: { code: "VALIDATION_ERROR", message } });
     return;
   }
   const safe = error instanceof AuthError ? error : unavailable();
