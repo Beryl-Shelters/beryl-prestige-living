@@ -7,6 +7,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { dashboardFixture, checkDashboard } from "./dashboard-ui.checks.mjs";
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE
   ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : "playwright");
@@ -30,20 +31,20 @@ const pauseRequest = (endpoint) => {
 await context.route("**/*", async (route) => {
   const request = route.request();
   const url = new URL(request.url());
-  if (url.pathname.startsWith("/api/v1/auth/")) {
+  if (url.pathname.startsWith("/api/v1/auth/") || url.pathname === "/api/v1/dashboard/overview") {
     if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: {
       "access-control-allow-origin": origin, "access-control-allow-credentials": "true",
       "access-control-allow-headers": "content-type", "access-control-allow-methods": "GET, POST, OPTIONS",
     } });
-    const endpoint = url.pathname.replace("/api/v1/auth", "");
+    const endpoint = url.pathname.startsWith("/api/v1/dashboard/") ? "/dashboard/overview" : url.pathname.replace("/api/v1/auth", "");
     calls.push({ endpoint, body: request.postDataJSON(), method: request.method() });
     if (endpoint === pausedEndpoint) await new Promise((resolve) => {
       release = resolve; pauseObserved?.(); pauseObserved = undefined;
     });
     const error = failures.get(endpoint);
-    return route.fulfill({ status: error ? 400 : 200, contentType: "application/json",
+    return route.fulfill({ status: error ? error.status ?? 400 : 200, contentType: "application/json",
       headers: { "access-control-allow-origin": origin, "access-control-allow-credentials": "true" },
-      body: JSON.stringify(error ? { success: false, error } : { success: true, data: { maskedEmail: "t***@example.test" } }) });
+      body: JSON.stringify(error ? { success: false, error } : { success: true, data: endpoint === "/dashboard/overview" ? dashboardFixture : { maskedEmail: "t***@example.test" } }) });
   }
   if (url.origin === origin) return route.continue();
   return route.abort();
@@ -134,8 +135,8 @@ try {
   assert(await page.getByRole("button", { name: "Submit", exact: true }).isDisabled());
   assert(await page.getByLabel("Verification digit 6", { exact: true }).isDisabled());
   assert.equal(calls.filter((c) => c.endpoint === "/verify-email").at(-1).body.code, "123456");
-  assert(release); pausedEndpoint = undefined; release(); await page.waitForURL("**/account");
-  await page.getByRole("button", { name: "Log out", exact: true }).click(); await page.waitForURL("**/login");
+  assert(release); pausedEndpoint = undefined; release(); await page.waitForURL("**/dashboard");
+  await page.getByRole("button", { name: "Log Out", exact: true }).click(); await page.waitForURL("**/login");
   passed.push("Registration, six-box auto verification on final digit, pending lock, account and logout");
 
   await goto("/login");
@@ -155,7 +156,7 @@ try {
   assert(toastRect.y >= (await page.locator("header").boundingBox()).height);
   assert(toastRect.x >= 0 && toastRect.x + toastRect.width <= 1440);
   await screenshot("login-error-toast");
-  failures.delete("/login"); await submit(); await page.waitForURL("**/account");
+  failures.delete("/login"); await submit(); await page.waitForURL("**/dashboard");
   passed.push("Login, Show/Hide, disabled pending submit and toast-only errors below header");
 
   await goto("/forgot-password"); await page.locator("#recovery-identity").fill("test@example.test");
@@ -189,9 +190,9 @@ try {
   failures.delete("/verify-email");
   await page.getByLabel("Verification digit 6", { exact: true }).fill("");
   await page.getByLabel("Verification digit 6", { exact: true }).fill("1");
-  await page.waitForURL("**/account");
+  await page.waitForURL("**/dashboard");
   assert.equal(verificationCount(), beforeInvalid + 3);
-  await goto("/verify-email"); await pasteCode("12 34-56"); await page.waitForURL("**/account");
+  await goto("/verify-email"); await pasteCode("12 34-56"); await page.waitForURL("**/dashboard");
   passed.push("Pasted code auto-submit, no invalid-code retry loop, manual retry and edited-code retry");
   failures.delete("/verify-email");
   for (const width of [390, 320]) {
@@ -209,7 +210,7 @@ try {
   await page.setViewportSize({ width: 1440, height: 900 });
 
   for (const path of ["/verify-email", "/reset-password", "/account"]) {
-    pausedEndpoint = path === "/verify-email" ? "/verification-context" : path === "/reset-password" ? "/recovery-context" : "/me";
+    pausedEndpoint = path === "/verify-email" ? "/verification-context" : path === "/reset-password" ? "/recovery-context" : "/dashboard/overview";
     release = undefined;
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto(origin + path);
@@ -263,6 +264,8 @@ try {
   await toast("Google sign-in was cancelled or could not be completed.");
   assert.equal(await page.locator("main [role=alert]").count(), 0);
   passed.push("Brand favicon and friendly toast-only Google errors");
+  await checkDashboard({ page, origin, calls, failures, screenshot, passed, pauseRequest,
+    resume: () => { pausedEndpoint = undefined; release?.(); }, toast });
   assert.deepEqual(pageErrors, []);
   await writeFile(join(artifacts, "results.json"), JSON.stringify({ passed, authCalls: calls.length, pageErrors }, null, 2));
   console.log(JSON.stringify({ passed, artifacts, authCalls: calls.length, pageErrors }, null, 2));

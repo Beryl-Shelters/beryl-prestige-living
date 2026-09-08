@@ -5,11 +5,14 @@ import type { AuthConfig } from "./auth/config.js";
 import { authErrorHandler, unavailable } from "./auth/errors.js";
 import { SupabaseAuthGateway, type AuthGateway } from "./auth/gateway.js";
 import { authRouter } from "./auth/routes.js";
+import { dashboardRouter } from "./dashboard/routes.js";
+import type { DashboardRepository } from "./dashboard/repository.js";
 
 export interface AppConfig {
   webAppUrl: string | undefined;
   auth?: AuthConfig | undefined;
   gateway?: AuthGateway;
+  dashboardRepository?: DashboardRepository;
   trustProxyHops?: number;
 }
 
@@ -29,8 +32,11 @@ export function createApp(config: AppConfig): Express {
     });
   });
 
-  if (config.auth) app.use("/api/v1/auth", authRouter(config.auth, config.gateway ?? new SupabaseAuthGateway(config.auth)));
-  else app.use("/api/v1/auth", (_request, _response, next) => next(unavailable()));
+  if (config.auth) {
+    const gateway = config.gateway ?? new SupabaseAuthGateway(config.auth);
+    app.use("/api/v1/auth", authRouter(config.auth, gateway));
+    app.use("/api/v1/dashboard", dashboardRouter(config.auth, gateway, config.dashboardRepository));
+  } else app.use(["/api/v1/auth", "/api/v1/dashboard"], (_request, _response, next) => next(unavailable()));
   app.use(authErrorHandler);
   return app;
 }
