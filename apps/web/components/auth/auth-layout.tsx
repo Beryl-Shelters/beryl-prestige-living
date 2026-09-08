@@ -7,7 +7,7 @@ export function AuthLayout({ children, image = "login" }: { children: ReactNode;
   return (
     <div className="auth-page">
       <PublicHeader />
-      <main className="auth-main">
+      <main className={`auth-main${image === "register" ? " auth-main-register" : ""}`}>
         <section className="auth-form-column" aria-label="Account access">
           {children}
         </section>
@@ -17,7 +17,7 @@ export function AuthLayout({ children, image = "login" }: { children: ReactNode;
             className="auth-image"
             fill
             priority
-            sizes="(max-width: 900px) 100vw, 46vw"
+            sizes="(max-width: 700px) 100vw, 55vw"
             src={image === "register" ? "/auth/register-image.jpg" : "/auth/login-image.jpg"}
           />
         </aside>

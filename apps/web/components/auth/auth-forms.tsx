@@ -11,14 +11,12 @@ import { useAuthAction } from "./use-auth-action";
 import { GoogleAuthButton } from "./google-auth-button";
 import { OtpInput } from "./otp-input";
 import { PasswordInput } from "./password-input";
+import { BrandLoader } from "./brand-loader";
+import { showAuthError } from "./toast-provider";
 
 function values(event: FormEvent<HTMLFormElement>) {
   event.preventDefault();
   return Object.fromEntries(new FormData(event.currentTarget));
-}
-
-function FormError({ message }: { message: string }) {
-  return message ? <p role="alert" className="auth-copy">{message}</p> : null;
 }
 
 function AuthHeading({ title, children }: { title: string; children?: ReactNode }) {
@@ -31,7 +29,7 @@ function Divider({ children }: { children: ReactNode }) {
 
 export function LoginForm() {
   const router = useRouter();
-  const { pending, error, run } = useAuthAction();
+  const { pending, run } = useAuthAction();
   function submit(event: FormEvent<HTMLFormElement>) {
     const data = values(event);
     void run(async () => {
@@ -45,11 +43,10 @@ export function LoginForm() {
   }
   return (
     <form className="auth-card" onSubmit={submit} aria-busy={pending}>
-      <AuthHeading title="Welcome back">Log in to continue your property journey.</AuthHeading>
-      <FormError message={error} />
+      <AuthHeading title="Welcome Back">Ready to continue your journey in real estate? Sign in now to connect with top agents, agencies, and developers who can help you achieve your property goals.</AuthHeading>
       <div className="field-group">
         <label htmlFor="login-identity">Email Address / Phone Number <span aria-hidden="true">*</span></label>
-        <input autoComplete="username" id="login-identity" name="identity" required type="text" />
+        <input autoComplete="username" id="login-identity" name="identity" placeholder="Enter valid email / phone no." required type="text" />
       </div>
       <PasswordInput autoComplete="current-password" id="login-password" label="Password *" />
       <div className="auth-links split-links">
@@ -59,16 +56,15 @@ export function LoginForm() {
           if (!input?.reportValidity()) return;
           void run(async () => {
             await authRequest("/resend-verification", { identifier: input.value });
-            toast.info("If verification is needed, a code has been sent to your account email.");
+            toast.success("Verification code sent to your email");
             router.push("/verify-email");
           });
         }}>Verify Email</Link>
         <Link href="/forgot-password">Forgot Password</Link>
       </div>
-      <button className="button button-primary submit-button" type="submit" disabled={pending}>{pending ? "Logging in…" : "Login"}</button>
+      <button className="button button-primary submit-button" type="submit" disabled={pending}>Submit</button>
       <Divider>or sign in with</Divider>
       <GoogleAuthButton action="sign in" />
-      <p className="auth-footer">Don&apos;t have an account? <Link href="/register">Register</Link></p>
     </form>
   );
 }
@@ -77,7 +73,7 @@ const accountTypes = ["Investor", "Property Developer", "Landlord", "Registered 
 
 export function RegisterForm() {
   const router = useRouter();
-  const { pending, error, run } = useAuthAction();
+  const { pending, run } = useAuthAction();
   function submit(event: FormEvent<HTMLFormElement>) {
     const data = values(event);
     void run(async () => {
@@ -96,21 +92,22 @@ export function RegisterForm() {
   return (
     <form className="auth-card register-card" onSubmit={submit} aria-busy={pending}>
       <AuthHeading title="Create your account">Join Beryl Shelter and begin your property journey.</AuthHeading>
-      <FormError message={error} />
       <div className="two-column-fields">
-        <div className="field-group"><label htmlFor="first-name">First Name <span aria-hidden="true">*</span></label><input autoComplete="given-name" id="first-name" name="firstName" required /></div>
-        <div className="field-group"><label htmlFor="last-name">Last Name <span aria-hidden="true">*</span></label><input autoComplete="family-name" id="last-name" name="lastName" required /></div>
+        <div className="field-group"><label htmlFor="first-name">First Name <span aria-hidden="true">*</span></label><input autoComplete="given-name" id="first-name" name="firstName" placeholder="Enter First Name" required /></div>
+        <div className="field-group"><label htmlFor="last-name">Last Name <span aria-hidden="true">*</span></label><input autoComplete="family-name" id="last-name" name="lastName" placeholder="Enter Last Name" required /></div>
       </div>
-      <div className="field-group"><label htmlFor="register-email">Email Address <span aria-hidden="true">*</span></label><input autoComplete="email" id="register-email" name="email" required type="email" /></div>
+      <div className="field-group"><label htmlFor="register-email">Email Address <span aria-hidden="true">*</span></label><input autoComplete="email" id="register-email" name="email" placeholder="Enter a valid email address" required type="email" /></div>
       <div className="phone-fields">
-        <div className="field-group"><label htmlFor="country-code">Country Code</label><select defaultValue="+234" id="country-code" name="countryCode"><option>+234</option><option>+1</option><option>+44</option></select></div>
-        <div className="field-group phone-number"><label htmlFor="phone-number">Phone Number <span aria-hidden="true">*</span></label><input autoComplete="tel" id="phone-number" inputMode="numeric" name="phone" onInput={(event) => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, ""); }} pattern="[0-9]*" required type="tel" /></div>
+        <div className="field-group"><label htmlFor="country-code">Country Code</label><select defaultValue="+234" id="country-code" name="countryCode"><option value="+234">Nigeria (+234)</option><option value="+1">+1</option><option value="+44">+44</option></select></div>
+        <div className="field-group phone-number"><label htmlFor="phone-number">Phone Number <span aria-hidden="true">*</span></label><input autoComplete="tel" id="phone-number" inputMode="numeric" name="phone" placeholder="Enter a valid phone no." onInput={(event) => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, ""); }} pattern="[0-9]*" required type="tel" /></div>
       </div>
       <fieldset className="radio-fieldset"><legend>Account Type</legend><div className="radio-options account-options">{accountTypes.map((accountType) => <label className="radio-option" key={accountType}><input defaultChecked={accountType === "Investor"} name="accountType" type="radio" value={accountType} /><span>{accountType}</span></label>)}</div></fieldset>
       <fieldset className="radio-fieldset"><legend>Profile Type</legend><div className="radio-options"><label className="radio-option"><input defaultChecked name="profileType" type="radio" value="Personal" /><span>Personal</span></label><label className="radio-option"><input name="profileType" type="radio" value="Business" /><span>Business</span></label></div></fieldset>
-      <PasswordInput autoComplete="new-password" id="register-password" label="Create Password *" />
-      <PasswordInput autoComplete="new-password" id="register-confirm-password" label="Confirm Password *" />
-      <button className="button button-primary submit-button" type="submit" disabled={pending}>{pending ? "Creating account…" : "Create Account"}</button>
+      <div className="two-column-fields">
+        <PasswordInput autoComplete="new-password" id="register-password" label="Create Password *" />
+        <PasswordInput autoComplete="new-password" id="register-confirm-password" label="Confirm Password *" />
+      </div>
+      <button className="button button-primary submit-button" type="submit" disabled={pending}>Create Account</button>
       <Divider>or sign up with</Divider>
       <GoogleAuthButton action="sign up" />
       <p className="auth-footer">Already have an account? <Link href="/login">Login</Link></p>
@@ -120,27 +117,47 @@ export function RegisterForm() {
 
 export function VerifyEmailForm() {
   const router = useRouter();
-  const { pending, error, run } = useAuthAction();
+  const { pending, run } = useAuthAction();
   const [maskedEmail, setMaskedEmail] = useState("");
-  const [contextError, setContextError] = useState("");
+  const [contextLoading, setContextLoading] = useState(true);
+  function runVerification(action: () => Promise<void>) {
+    void run(async () => {
+      try { await action(); }
+      catch (failure) {
+        if (failure instanceof AuthApiError && failure.code === "EMAIL_ALREADY_VERIFIED") {
+          setMaskedEmail(""); router.replace("/login");
+        }
+        throw failure;
+      }
+    });
+  }
+  function verifyCode(code: string) {
+    runVerification(async () => { await authRequest("/verify-email", { code }); router.replace("/account"); });
+  }
   useEffect(() => {
     let active = true;
     void authRequest<{ maskedEmail: string }>("/verification-context")
       .then((data) => { if (active) setMaskedEmail(data.maskedEmail); })
-      .catch((failure: Error) => { if (active) setContextError(failure.message); });
+      .catch((failure: Error) => {
+        if (!active) return;
+        showAuthError(failure, "verification-context-error");
+        if (failure instanceof AuthApiError && ["EMAIL_ALREADY_VERIFIED", "VERIFICATION_REQUIRED"].includes(failure.code)) router.replace("/login");
+      })
+      .finally(() => { if (active) setContextLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [router]);
+  if (contextLoading) return <BrandLoader />;
   return (
     <form className="auth-card compact-card" aria-busy={pending} onSubmit={(event) => {
       const data = values(event);
-      void run(async () => { await authRequest("/verify-email", { code: data.code }); router.replace("/account"); });
+      verifyCode(String(data.code ?? ""));
     }}>
-      <AuthHeading title="Verify your Account">{maskedEmail ? <>Enter the verification code for <strong>{maskedEmail}</strong>.</> : "Loading verification details…"}</AuthHeading>
-      <FormError message={error || contextError} />
-      <div className="field-group"><label htmlFor="verify-code">Enter Code <span aria-hidden="true">*</span></label><input autoComplete="one-time-code" id="verify-code" inputMode="numeric" name="code" pattern="[0-9]{6}" maxLength={6} required type="text" /></div>
-      <button className="button button-primary submit-button" type="submit" disabled={pending || !maskedEmail}>{pending ? "Verifying…" : "Submit"}</button>
-      <button className="text-button" type="button" disabled={pending || !maskedEmail} onClick={() => void run(async () => {
-        await authRequest("/resend-verification", {}); toast.info("If verification is needed, a code has been sent to your account email.");
+      <AuthHeading title="Verify your Account">{maskedEmail && <>Enter the verification code for <strong>{maskedEmail}</strong>.</>}</AuthHeading>
+      <label className="otp-label" htmlFor="verify-code">Enter Code <span aria-hidden="true">*</span></label>
+      <OtpInput id="verify-code" disabled={pending || !maskedEmail} onComplete={verifyCode} />
+      <button className="button button-primary submit-button" type="submit" disabled={pending || !maskedEmail}>Submit</button>
+      <button className="text-button" type="button" disabled={pending || !maskedEmail} onClick={() => runVerification(async () => {
+        await authRequest("/resend-verification", {}); toast.success("Verification code sent to your email");
       })}>Resend Code</button>
       <p className="auth-footer"><Link href="/login">Back to log in</Link></p>
     </form>
@@ -149,20 +166,19 @@ export function VerifyEmailForm() {
 
 export function ForgotPasswordForm() {
   const router = useRouter();
-  const { pending, error, run } = useAuthAction();
+  const { pending, run } = useAuthAction();
   return (
     <form className="auth-card compact-card" aria-busy={pending} onSubmit={(event) => {
       const data = values(event);
       void run(async () => {
         await authRequest("/forgot-password", { identifier: data.identity });
-        toast.info("If an account matches those details, a code will be sent to its email.");
+        toast.info("Password reset code sent to your email.");
         router.push("/forgot-password/verify");
       });
     }}>
       <AuthHeading title="Forgot Password?">Enter your email address or phone number and we&apos;ll send you a code to reset your password.</AuthHeading>
-      <FormError message={error} />
-      <div className="field-group"><label htmlFor="recovery-identity">Email Address / Phone Number <span aria-hidden="true">*</span></label><input autoComplete="username" id="recovery-identity" name="identity" required type="text" /></div>
-      <button className="button button-primary submit-button" type="submit" disabled={pending}>{pending ? "Sending…" : "Submit"}</button>
+      <div className="field-group"><label htmlFor="recovery-identity">Email Address / Phone Number <span aria-hidden="true">*</span></label><input autoComplete="username" id="recovery-identity" name="identity" placeholder="Enter valid email / phone no." required type="text" /></div>
+      <button className="button button-primary submit-button" type="submit" disabled={pending}>Submit</button>
       <p className="auth-footer"><Link href="/login">Back to log in</Link></p>
     </form>
   );
@@ -170,19 +186,18 @@ export function ForgotPasswordForm() {
 
 export function ForgotPasswordVerifyForm() {
   const router = useRouter();
-  const { pending, error, run } = useAuthAction();
+  const { pending, run } = useAuthAction();
   return (
     <form className="auth-card compact-card" aria-busy={pending} onSubmit={(event) => {
       const data = values(event);
       void run(async () => { await authRequest("/verify-recovery", { code: data.code }); router.replace("/reset-password"); });
     }}>
       <AuthHeading title="Otp Verification">Enter the six-digit verification code sent to your email.</AuthHeading>
-      <FormError message={error} />
       <label className="otp-label">Enter Code <span aria-hidden="true">*</span></label>
       <OtpInput />
-      <button className="button button-primary submit-button" type="submit" disabled={pending}>{pending ? "Verifying…" : "Submit"}</button>
+      <button className="button button-primary submit-button" type="submit" disabled={pending}>Submit</button>
       <button className="text-button" type="button" disabled={pending} onClick={() => void run(async () => {
-        await authRequest("/resend-recovery", {}); toast.info("If an account matches those details, a code will be sent to its email.");
+        await authRequest("/resend-recovery", {}); toast.info("Password reset code sent to your email.");
       })}>Resend Code</button>
       <p className="auth-footer"><Link href="/login">Back to log in</Link></p>
     </form>
@@ -191,15 +206,17 @@ export function ForgotPasswordVerifyForm() {
 
 export function ResetPasswordForm() {
   const router = useRouter();
-  const { pending, error, run } = useAuthAction();
+  const { pending, run } = useAuthAction();
   const [ready, setReady] = useState(false);
-  const [contextError, setContextError] = useState("");
+  const [contextLoading, setContextLoading] = useState(true);
   useEffect(() => {
     let active = true;
     void authRequest("/recovery-context").then(() => { if (active) setReady(true); })
-      .catch((failure: Error) => { if (active) setContextError(failure.message); });
+      .catch((failure: Error) => { if (active) showAuthError(failure, "recovery-context-error"); })
+      .finally(() => { if (active) setContextLoading(false); });
     return () => { active = false; };
   }, []);
+  if (contextLoading) return <BrandLoader />;
   return (
     <form className="auth-card compact-card" aria-busy={pending} onSubmit={(event) => {
       const data = values(event);
@@ -210,11 +227,9 @@ export function ResetPasswordForm() {
       });
     }}>
       <AuthHeading title="Reset Password">Create a new password for your account.</AuthHeading>
-      <FormError message={error || contextError} />
-      {(contextError || error) && <Link href="/forgot-password">Request a new recovery code</Link>}
       <PasswordInput autoComplete="new-password" id="new-password" label="New Password *" />
       <PasswordInput autoComplete="new-password" id="confirm-new-password" label="Confirm Password *" />
-      <button className="button button-primary submit-button" type="submit" disabled={pending || !ready}>{pending ? "Resetting…" : "Submit"}</button>
+      <button className="button button-primary submit-button" type="submit" disabled={pending || !ready}>Submit</button>
       <p className="auth-footer"><Link href="/login">Back to log in</Link></p>
     </form>
   );

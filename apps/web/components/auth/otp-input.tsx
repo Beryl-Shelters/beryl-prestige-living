@@ -1,10 +1,30 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-export function OtpInput() {
+type OtpInputProps = {
+  id?: string;
+  disabled?: boolean;
+  onComplete?: (code: string) => void;
+};
+
+export function OtpInput({ id, disabled = false, onComplete }: OtpInputProps = {}) {
   const [digits, setDigits] = useState<string[]>(Array.from({ length: 6 }, () => ""));
   const inputs = useRef<Array<HTMLInputElement | null>>([]);
+  const lastCompletedCode = useRef<string | null>(null);
+  const code = digits.join("");
+
+  useEffect(() => {
+    if (code.length !== 6) {
+      lastCompletedCode.current = null;
+      return;
+    }
+    if (disabled || !onComplete || lastCompletedCode.current === code) return;
+    // Remember before calling: a failed request or parent rerender must not
+    // automatically retry the same completed code in a submission loop.
+    lastCompletedCode.current = code;
+    onComplete(code);
+  }, [code, disabled, onComplete]);
 
   function setDigit(index: number, rawValue: string) {
     const next = rawValue.replace(/\D/g, "").slice(-1);
@@ -19,6 +39,7 @@ export function OtpInput() {
   }
 
   function onPaste(text: string) {
+    if (disabled) return;
     const pasted = text.replace(/\D/g, "").slice(0, 6).split("");
     if (!pasted.length) return;
     setDigits(Array.from({ length: 6 }, (_, index) => pasted[index] ?? ""));
@@ -30,6 +51,8 @@ export function OtpInput() {
       <input type="hidden" name="code" value={digits.join("")} />
       {digits.map((digit, index) => (
         <input
+          id={index === 0 ? id : undefined}
+          disabled={disabled}
           aria-label={`Verification digit ${index + 1}`}
           inputMode="numeric"
           autoComplete={index === 0 ? "one-time-code" : "off"}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandLogo } from "./brand-logo";
 
 const navigation = [
   ["Home", "/"],
@@ -15,8 +16,7 @@ export function PublicHeader() {
   return (
     <header className="public-header">
       <Link className="brand" href="/" aria-label="Beryl Shelter home">
-        <span className="brand-mark" aria-hidden="true">B</span>
-        <span>Beryl Shelter</span>
+        <BrandLogo />
       </Link>
       <nav className="public-nav" aria-label="Public navigation">
         {navigation.map(([label, href]) => <Link href={href} key={label}>{label}</Link>)}

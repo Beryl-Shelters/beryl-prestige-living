@@ -13,10 +13,10 @@ export function PasswordInput({ id, label, autoComplete }: PasswordInputProps) {
 
   return (
     <div className="field-group">
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>{label.replace(/\s*\*$/, "")} <span aria-hidden="true">*</span></label>
       <div className="password-control">
         {/* Form submission validates new passwords together, using the existing error/toast UI. */}
-        <input id={id} name={id} type={visible ? "text" : "password"} autoComplete={autoComplete} required maxLength={128} />
+        <input id={id} name={id} type={visible ? "text" : "password"} autoComplete={autoComplete} placeholder="********" required maxLength={128} />
         <button
           aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
           className="password-toggle"

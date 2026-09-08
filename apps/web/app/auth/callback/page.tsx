@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authRequest } from "../../../lib/auth-api";
+import { BrandLoader } from "../../../components/auth/brand-loader";
+import { showAuthError } from "../../../components/auth/toast-provider";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
   const exchange = useRef<Promise<unknown> | null>(null);
-  const [error, setError] = useState("");
+  const [failed, setFailed] = useState(false);
   useEffect(() => {
     let active = true;
     if (!exchange.current) {
@@ -22,8 +24,10 @@ export default function AuthCallbackPage() {
         : Promise.reject(new Error("Google sign-in was cancelled or could not be completed."));
     }
     void exchange.current.then(() => { if (active) router.replace("/account"); })
-      .catch((failure: Error) => { if (active) setError(failure.message); });
+      .catch((failure: Error) => {
+        if (active) { setFailed(true); showAuthError(failure, "google-callback-error"); }
+      });
     return () => { active = false; };
   }, [router]);
-  return <main style={{ padding: "2rem" }}>{error ? <><p role="alert">{error}</p><Link href="/login">Back to log in</Link></> : <p>Completing Google sign-in…</p>}</main>;
+  return <main className="callback-entry">{failed ? <Link href="/login">Back to log in</Link> : <BrandLoader fullPage />}</main>;
 }
