@@ -38,7 +38,7 @@ class FakeGateway implements AuthGateway {
   async findCustomer(column: "email" | "phone_number_normalized" | "id", value: string) {
     this.calls.push(`lookup:${column}`); return this.profiles.find((profile) => profile[column] === value) ?? null;
   }
-  async signup() { this.calls.push("signup"); }
+  async signup() { this.calls.push("signup"); this.profiles.push({ ...customer, email_verified_at: null }); }
   async login(email: string) {
     this.calls.push(`login:${email}`);
     if (this.failLogin || email !== customer.email) throw new AuthError(401, "INVALID_CREDENTIALS", "Invalid credentials.");
@@ -47,7 +47,9 @@ class FakeGateway implements AuthGateway {
   }
   async verify(email: string, _code: string, type: "signup" | "recovery") {
     this.calls.push(`verify:${type}`);
-    if (this.failVerify || email !== customer.email) throw invalidCode(); return this.tokens();
+    if (this.failVerify || email !== customer.email) throw invalidCode();
+    if (type === "signup") this.profiles[0]!.email_verified_at = new Date().toISOString();
+    return this.tokens();
   }
   async resend() { this.calls.push("resend"); }
   async recover() { this.calls.push("recover"); if (this.failDelivery) throw new Error("private provider diagnostics"); }
@@ -279,6 +281,7 @@ test("encryption is purpose-bound and authenticated; production cookies fail clo
 
 test("email verification requires pending context, supports resend and establishes an account",async(t)=>{
   const {request,gateway,jar}=await fixture(t);
+  gateway.profiles[0]!.email_verified_at=null;
   assert.equal((await request("/verify-email",{code:"123456"})).response.status,400);
   await request("/resend-verification",{identifier:customer.email});
   assert.ok(jar.has("beryl_verify"));assert.ok(gateway.calls.includes("resend"));
@@ -286,6 +289,48 @@ test("email verification requires pending context, supports resend and establish
   assert.equal(jar.has("beryl_account"),false);gateway.failVerify=false;
   assert.equal((await request("/verify-email",{code:"123456"})).response.status,200);
   assert.ok(jar.has("beryl_account"));assert.equal(jar.has("beryl_verify"),false);
+});
+test("verified email and phone cannot resend or open a new verification challenge",async(t)=>{
+  const {request,gateway,jar}=await fixture(t);
+  for(const identifier of [customer.email,"ADA@example.com","08031234567","+2348031234567"]){
+    const result=await request("/resend-verification",{identifier});
+    assert.equal(result.response.status,409);
+    assert.equal(result.body.error.code,"EMAIL_ALREADY_VERIFIED");
+    assert.equal(result.body.error.message,"Your email is already verified. Please log in.");
+    assert.equal(jar.has("beryl_verify"),false);
+  }
+  assert.equal(gateway.calls.includes("resend"),false);
+  assert.equal(jar.has("beryl_account"),false);
+});
+test("unverified email and phone can request a code; unknown identities cannot open verification",async(t)=>{
+  const {request,gateway,jar}=await fixture(t);
+  gateway.profiles[0]!.email_verified_at=null;
+  for(const identifier of [customer.email,"08031234567"]){
+    assert.equal((await request("/resend-verification",{identifier})).response.status,200);
+    assert.ok(jar.has("beryl_verify"));
+    assert.equal((await request("/verification-context")).body.data.maskedEmail,"a***@example.com");
+  }
+  const count=gateway.calls.filter((call)=>call==="resend").length;
+  for(const identifier of ["unknown@example.com","08039999999"]){
+    assert.equal((await request("/resend-verification",{identifier})).body.error.code,"VERIFICATION_REQUIRED");
+    assert.equal(jar.has("beryl_verify"),false);
+  }
+  assert.equal(gateway.calls.filter((call)=>call==="resend").length,count);
+});
+test("verification in another tab invalidates stale context, resend and code submission",async(t)=>{
+  const {request,gateway,jar}=await fixture(t);
+  gateway.profiles[0]!.email_verified_at=null;
+  await request("/resend-verification",{identifier:customer.email});
+  const stale=jar.get("beryl_verify")!;
+  gateway.profiles[0]!.email_verified_at=new Date().toISOString();
+  for(const [path,body] of [["/verification-context",undefined],["/resend-verification",{}],["/verify-email",{code:"123456"}]] as const){
+    jar.set("beryl_verify",stale);
+    assert.equal((await request(path,body)).body.error.code,"EMAIL_ALREADY_VERIFIED");
+    assert.equal(jar.has("beryl_verify"),false);
+  }
+  assert.equal(gateway.calls.filter((call)=>call==="resend").length,1);
+  assert.equal(gateway.calls.includes("verify:signup"),false);
+  assert.equal(jar.has("beryl_account"),false);
 });
 test("concurrent password reset attempts only update once",async(t)=>{
   const {request,gateway}=await fixture(t);

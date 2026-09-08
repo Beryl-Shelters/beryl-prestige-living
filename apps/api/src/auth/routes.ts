@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { AuthConfig } from "./config.js";
 import { hashToken, randomToken } from "./crypto.js";
 import { AuthError, expired, invalidCode } from "./errors.js";
-import type { AuthGateway } from "./gateway.js";
+import type { AuthGateway, Customer } from "./gateway.js";
 import { AuthSessions } from "./sessions.js";
 import { codeSchema, identifierSchema, loginSchema, maskEmail, normalizeIdentifier, normalizePhone, registerSchema, resetSchema } from "./validation.js";
 
@@ -37,6 +37,18 @@ export function authRouter(config: AuthConfig, gateway: AuthGateway) {
     return gateway.findCustomer(lookup.column, lookup.value);
   }
   function ok(response: Response, data: unknown = {}) { response.json({ success: true, data }); }
+  function requireUnverified(response: Response, profile: Customer | null) {
+    // This field is synchronized from Supabase Auth's email_confirmed_at.
+    if (profile?.email_verified_at) {
+      sessions.clear(response, "VERIFY");
+      throw new AuthError(409, "EMAIL_ALREADY_VERIFIED", "Your email is already verified. Please log in.");
+    }
+    if (!profile) {
+      sessions.clear(response, "VERIFY");
+      throw new AuthError(400, "VERIFICATION_REQUIRED", "Unable to start verification. Check your details or create an account.");
+    }
+    return profile;
+  }
 
   router.post("/register", wrap(async (request, response) => {
     const data = registerSchema.parse(request.body);
@@ -79,12 +91,14 @@ export function authRouter(config: AuthConfig, gateway: AuthGateway) {
   router.get("/verification-context", wrap(async (request, response) => {
     const email = sessions.challenge(request, "VERIFY")?.email;
     if (!email) throw new AuthError(400, "VERIFICATION_REQUIRED", "Enter your email on the login page and choose Verify Email.");
+    requireUnverified(response, await gateway.findCustomer("email", email));
     ok(response, { maskedEmail: maskEmail(email) });
   }));
   router.post("/verify-email", wrap(async (request, response) => {
     const { code } = codeSchema.parse(request.body);
     const email = sessions.challenge(request, "VERIFY")?.email;
     if (!email) throw invalidCode();
+    requireUnverified(response, await gateway.findCustomer("email", email));
     const tokens = await gateway.verify(email, code, "signup");
     await sessions.establish(request, response, "ACCOUNT", tokens);
     sessions.clear(response, "VERIFY");
@@ -92,9 +106,12 @@ export function authRouter(config: AuthConfig, gateway: AuthGateway) {
   }));
   router.post("/resend-verification", wrap(async (request, response) => {
     const body = z.object({ identifier: z.string().trim().min(1).max(254).optional() }).strict().parse(request.body);
-    const profile = body.identifier ? await resolve(body.identifier) : null;
-    const email = body.identifier ? profile?.email ?? (body.identifier.includes("@") ? body.identifier.toLowerCase() : `${randomToken()}@invalid.example`) : sessions.challenge(request, "VERIFY")?.email;
-    if (!email) throw new AuthError(400, "VERIFICATION_REQUIRED", "Enter your email on the login page and choose Verify Email.");
+    const challengeEmail = sessions.challenge(request, "VERIFY")?.email;
+    if (!body.identifier && !challengeEmail) throw new AuthError(400, "VERIFICATION_REQUIRED", "Enter your email on the login page and choose Verify Email.");
+    const profile = requireUnverified(response, body.identifier
+      ? await resolve(body.identifier)
+      : await gateway.findCustomer("email", challengeEmail!));
+    const email = profile.email;
     await gateway.resend(email);
     sessions.setChallenge(response, "VERIFY", { email });
     ok(response, { message: "If verification is needed, a code has been sent to your account email." });
