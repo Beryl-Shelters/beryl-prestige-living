@@ -8,29 +8,46 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { dashboardFixture, checkDashboard } from "./dashboard-ui.checks.mjs";
+import { mockListings, checkListings, listingState } from "./listings-ui.checks.mjs";
 
+import { isMain, runSuites } from "./run-ui-suite.mjs";
+
+export async function runBrowserSuite(suite) {
+assert(["auth", "dashboard", "listings"].includes(suite));
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE
   ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : "playwright");
 const origin = process.env.AUTH_UI_ORIGIN || "http://localhost:3000";
 assert(["localhost", "127.0.0.1"].includes(new URL(origin).hostname), "Local server required");
 const artifacts = await mkdtemp(join(tmpdir(), "beryl-auth-ui-"));
 const browser = await chromium.launch({ executablePath: process.env.BROWSER_EXECUTABLE, headless: true });
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: "block" });
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: "block", reducedMotion: "no-preference" });
 const calls = [];
 const failures = new Map();
 let pausedEndpoint;
 let release;
 let pauseObserved;
-const pauseRequest = (endpoint) => {
+let pauseTimeout;
+const pendingReleases = new Set();
+const resume = () => {
+  pausedEndpoint = undefined;
+  for (const resolve of pendingReleases) resolve();
+  pendingReleases.clear();
+};
+let pauseGate = Promise.resolve();
+let allowInterception;
+const pauseRequest = (endpoint, gate = Promise.resolve()) => {
+  assert.equal(pausedEndpoint, undefined, "Previous request pause must be resumed");
+  pauseGate = gate;
   pausedEndpoint = endpoint; release = undefined;
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error(`No intercepted request for ${endpoint}`)), 15000);
-    pauseObserved = () => { clearTimeout(timeout); resolve(); };
+    pauseTimeout = setTimeout(() => reject(new Error(`No intercepted request for ${endpoint}`)), 15000);
+    pauseObserved = () => { clearTimeout(pauseTimeout); resolve(); };
   });
 };
 await context.route("**/*", async (route) => {
   const request = route.request();
   const url = new URL(request.url());
+  if (url.pathname.startsWith("/api/v1/listings")) return mockListings(route, origin);
   if (url.pathname.startsWith("/api/v1/auth/") || url.pathname === "/api/v1/dashboard/overview") {
     if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: {
       "access-control-allow-origin": origin, "access-control-allow-credentials": "true",
@@ -38,9 +55,13 @@ await context.route("**/*", async (route) => {
     } });
     const endpoint = url.pathname.startsWith("/api/v1/dashboard/") ? "/dashboard/overview" : url.pathname.replace("/api/v1/auth", "");
     calls.push({ endpoint, body: request.postDataJSON(), method: request.method() });
-    if (endpoint === pausedEndpoint) await new Promise((resolve) => {
-      release = resolve; pauseObserved?.(); pauseObserved = undefined;
-    });
+    if (endpoint === pausedEndpoint) {
+      await pauseGate;
+      if (endpoint === pausedEndpoint) await new Promise((resolve) => {
+        pendingReleases.add(resolve);
+        release = resume; pauseObserved?.(); pauseObserved = undefined;
+      });
+    }
     const error = failures.get(endpoint);
     return route.fulfill({ status: error ? error.status ?? 400 : 200, contentType: "application/json",
       headers: { "access-control-allow-origin": origin, "access-control-allow-credentials": "true" },
@@ -52,7 +73,17 @@ await context.route("**/*", async (route) => {
 const page = await context.newPage();
 page.setDefaultTimeout(15000);
 const pageErrors = [];
+const networkErrors = [];
+const requestPages = new WeakMap();
 page.on("pageerror", (error) => pageErrors.push(error.message));
+page.on("request", request => requestPages.set(request, page.url()));
+page.on("requestfailed", request => {
+  const url = new URL(request.url());
+  networkErrors.push({ path: url.pathname + url.search, error: request.failure()?.errorText,
+    resourceType: request.resourceType(), navigation: request.isNavigationRequest(), page: page.url(),
+    startedOn: requestPages.get(request),
+    mocked: url.pathname.startsWith("/api/v1/") });
+});
 const routes = ["/login", "/register", "/verify-email", "/forgot-password", "/forgot-password/verify", "/reset-password", "/reset-password/success"];
 const screenshot = (name) => page.screenshot({ path: join(artifacts, `${name}.png`), fullPage: true });
 const goto = async (path) => {
@@ -78,6 +109,10 @@ const toast = async (text) => {
 };
 const passed = [];
 try {
+  assert.equal(page.url(), "about:blank");
+  assert.equal(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches), false);
+  assert.deepEqual(listingState, { items: [], calls: [] });
+  if (suite === "auth") {
   for (const width of [1440, 1024, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 900 });
     for (const path of routes) {
@@ -145,8 +180,9 @@ try {
   assert.equal(await page.locator("#login-password").getAttribute("type"), "text");
   await page.getByRole("button", { name: "Hide password" }).click();
   failures.set("/login", { code: "INVALID_CREDENTIALS", message: "Invalid credentials." });
-  pausedEndpoint = "/login";
+  const loginPaused = pauseRequest("/login");
   await submit();
+  await loginPaused;
   assert(await page.getByRole("button", { name: "Submit", exact: true }).isDisabled());
   await page.waitForFunction(() => document.querySelector("form").getAttribute("aria-busy") === "true");
   assert(release); pausedEndpoint = undefined; release();
@@ -210,18 +246,42 @@ try {
   await page.setViewportSize({ width: 1440, height: 900 });
 
   for (const path of ["/verify-email", "/reset-password", "/account"]) {
-    pausedEndpoint = path === "/verify-email" ? "/verification-context" : path === "/reset-password" ? "/recovery-context" : "/dashboard/overview";
-    release = undefined;
+    const endpoint = path === "/verify-email" ? "/verification-context" : path === "/reset-password" ? "/recovery-context" : "/dashboard/overview";
+    // Exercise the race deterministically: render the loader before allowing
+    // the route handler to assign release. Seeing a loader is not an API latch.
+    const gate = new Promise(resolve => { allowInterception = resolve; });
+    const requestPaused = pauseRequest(endpoint, gate);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto(origin + path);
+    // /account intentionally redirects. A visible route loader can precede the
+    // destination's API request, so observe that request before releasing it.
     await page.locator(".brand-loader img").waitFor();
+    assert.equal(release, undefined, `Pre-interception loader coverage: ${path}`);
+    allowInterception(); allowInterception = undefined;
+    await requestPaused;
+    if (path === "/account") await page.waitForURL("**/dashboard");
     assert.equal(await page.locator(".brand-loader").innerText(), "Beryl Shelter");
     assert.equal(await page.locator(".brand-loader .brand-lockup").evaluate((el) => getComputedStyle(el).animationName), "none");
     await screenshot(`loader-${path.slice(1)}`);
-    assert(release); pausedEndpoint = undefined; release();
+    assert(release, `Loader visible before request interception: ${path} -> ${endpoint}; current URL ${page.url()}`); pausedEndpoint = undefined; release();
     await page.locator(".brand-loader").waitFor({ state: "detached" });
+    console.log(`Loader race coverage passed: ${path} -> ${endpoint}`);
   }
   passed.push("Logo-only initialization and reduced-motion support");
+  await goto("/login");
+  failures.set("/login", { code: "INVALID_CREDENTIALS", message: "Reduced-motion notification" });
+  await page.locator("#login-identity").fill("test@example.test");
+  await page.locator("#login-password").fill("TestingPass1!");
+  await page.mouse.move(0, 0);
+  await submit(); await toast("Reduced-motion notification");
+  const reducedToast = page.locator(".Toastify__toast").filter({ hasText: "Reduced-motion notification" });
+  assert.equal(await reducedToast.locator('[role="progressbar"]').evaluate(el => getComputedStyle(el).animationName), "toast-no-motion");
+  await reducedToast.waitFor({ state: "detached", timeout: 7000 });
+  await submit(); await toast("Reduced-motion notification");
+  await reducedToast.getByRole("button", { name: "close", exact: true }).click();
+  await reducedToast.waitFor({ state: "detached" });
+  failures.delete("/login");
+  passed.push("Reduced-motion toasts auto-dismiss and close manually without movement; logo remains motion-free");
   const alreadyVerified = { code: "EMAIL_ALREADY_VERIFIED", message: "Your email is already verified. Please log in." };
   failures.set("/resend-verification", alreadyVerified);
   for (const identifier of ["test@example.test", "08012345678"]) {
@@ -264,17 +324,48 @@ try {
   await toast("Google sign-in was cancelled or could not be completed.");
   assert.equal(await page.locator("main [role=alert]").count(), 0);
   passed.push("Brand favicon and friendly toast-only Google errors");
+  }
+  if (suite === "dashboard") {
   await checkDashboard({ page, origin, calls, failures, screenshot, passed, pauseRequest,
-    resume: () => { pausedEndpoint = undefined; release?.(); }, toast });
+    resume, toast });
+  }
+  if (suite === "listings") {
+  await checkListings({page,origin,screenshot,toast,passed,context});
+  }
   assert.deepEqual(pageErrors, []);
-  await writeFile(join(artifacts, "results.json"), JSON.stringify({ passed, authCalls: calls.length, pageErrors }, null, 2));
-  console.log(JSON.stringify({ passed, artifacts, authCalls: calls.length, pageErrors }, null, 2));
+  await writeFile(join(artifacts, "results.json"), JSON.stringify({ suite, passed, authCalls: calls.length, pageErrors, networkErrors }, null, 2));
+  // Keep complete request diagnostics in results.json, including expected
+  // navigation/unmount cancellations; cancellations alone are not page errors.
+  console.log(JSON.stringify({ suite, passed, artifacts, authCalls: calls.length, pageErrors,
+    abortedRequests: networkErrors.filter(request => request.error === "net::ERR_ABORTED").length,
+    otherRequestFailures: networkErrors.filter(request => request.error !== "net::ERR_ABORTED") }, null, 2));
 } catch (error) {
+  console.error(JSON.stringify({ url: page.url(), pageErrors, networkErrors, pausedEndpoint, failures: [...failures.keys()], recentCalls: calls.slice(-8).map(call => call.endpoint), body: await page.locator("body").innerText().catch(() => "unavailable"), artifacts }, null, 2));
+  await screenshot("failure").catch(() => {});
   console.error(error);
   throw error;
 } finally {
-  pausedEndpoint = undefined;
-  release?.();
-  await context.unrouteAll({ behavior: "ignoreErrors" });
-  await browser.close();
+  clearTimeout(pauseTimeout);
+  pauseObserved = undefined;
+  allowInterception?.();
+  resume();
+  try {
+    // Stop page timers/fetches before draining already-entered route handlers.
+    await page.close();
+    await context.unrouteAll({ behavior: "wait" });
+    await context.close();
+  } finally {
+    await browser.close();
+    failures.clear();
+    calls.length = 0;
+    listingState.items = [];
+    listingState.calls.length = 0;
+  }
+}
+}
+
+if (isMain(import.meta.url)) {
+  const suite = process.argv.find(arg => arg.startsWith("--suite="))?.slice(8) ?? "all";
+  if (suite === "all") process.exitCode = runSuites();
+  else await runBrowserSuite(suite);
 }

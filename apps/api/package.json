@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",
+    "busboy": "^1.6.0",
     "cookie": "^1.0.2",
     "cors": "^2.8.6",
     "dotenv": "^17.2.4",
@@ -23,6 +24,8 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@types/busboy": "^1.5.4",
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.25",
     "@types/node": "^22.20.0",

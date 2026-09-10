@@ -10,7 +10,7 @@ import { BrandLogo } from "../auth/brand-logo";
 import { showAuthError } from "../auth/toast-provider";
 import { useAuthAction } from "../auth/use-auth-action";
 
-const DashboardContext = createContext<{ overview: DashboardOverview; logout: () => void; loggingOut: boolean } | null>(null);
+const DashboardContext = createContext<{ overview: DashboardOverview; logout: () => void; loggingOut: boolean; refreshOverview: () => void } | null>(null);
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
@@ -51,7 +51,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       leaving.current = true; setOverview(null); router.replace("/login");
     });
   }
-  return <DashboardContext.Provider value={{ overview, logout, loggingOut: pending }}>{children}</DashboardContext.Provider>;
+  return <DashboardContext.Provider value={{ overview, logout, loggingOut: pending, refreshOverview: () => setAttempt(value => value + 1) }}>{children}</DashboardContext.Provider>;
 }
 export function useDashboard() {
   const value = useContext(DashboardContext);

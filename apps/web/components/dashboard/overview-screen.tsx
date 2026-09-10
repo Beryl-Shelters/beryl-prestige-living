@@ -17,7 +17,7 @@ function RecentMessages({ messages }: { messages: DashboardOverview["recent_mess
 function RecentListings({ listings }: { listings: DashboardOverview["recent_property_listings"] }) {
   return <section className="dashboard-card recent-listings" aria-labelledby="recent-listings-title">
     <h2 id="recent-listings-title" className="dashboard-section-label">Recent Property Listings</h2>
-    <div className="recent-listings-body">{listings.length ? <ul>{listings.map((listing) => <li key={listing.id}>{listing.title}</li>)}</ul> : <p>No properties listed</p>}</div>
+    <div className="recent-listings-body">{listings.length ? <ul>{listings.map((listing) => <li key={listing.id}><Link href={`/dashboard/listings/${listing.id}`}>{listing.title}</Link></li>)}</ul> : <p>No properties listed</p>}</div>
   </section>;
 }
 export function OverviewScreen() {

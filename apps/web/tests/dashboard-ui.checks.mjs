@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { runIfMain } from "./run-ui-suite.mjs";
+runIfMain(import.meta.url, "dashboard");
 
 // Synthetic browser-only customer. No test identity or metric is shipped in UI.
 export const dashboardFixture = {
@@ -63,9 +65,10 @@ export async function checkDashboard({ page, origin, calls, failures, screenshot
   await page.waitForURL("**/dashboard/messages");
   for (const name of sections.slice(1)) {
     await page.getByRole("link", { name, exact: true }).click();
-    await page.getByRole("heading", { name, exact: true }).waitFor();
+    await page.getByRole("heading", { name: name === "Listings" ? "My Listings" : name, exact: true }).waitFor();
     assert.equal(await page.locator('.dashboard-navigation [aria-current="page"]').innerText(), name);
-    assert.equal(await page.locator(".dashboard-placeholder p").innerText(), "Coming later in this rebuild");
+    if (name === "Listings") await page.getByText("No listings.", {exact:true}).waitFor();
+    else assert.equal(await page.locator(".dashboard-placeholder p").innerText(), "Coming later in this rebuild");
   }
   const logouts = () => calls.filter(call => call.endpoint === "/logout").length;
   const beforeHome = logouts();

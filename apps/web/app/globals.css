@@ -123,5 +123,11 @@ button:disabled { cursor: wait; opacity: .65; }
   .otp-input input:not([type="hidden"]) { height: 42px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
+  *, *::before, *::after { animation-name: none !important; transition: none !important; }
+  /* Toastify needs animationend for entry, exit and its auto-close timer.
+     Keep lifecycle events without motion, preserving the inline timer and
+     pause state so notifications neither stick nor disappear instantly. */
+  .Toastify__toast.Toastify--animate { animation-name: toast-no-motion !important; animation-duration: 1ms !important; }
+  .Toastify__progress-bar--animated { animation-name: toast-no-motion !important; }
 }
+@keyframes toast-no-motion { from { opacity: 1; } to { opacity: 1; } }
