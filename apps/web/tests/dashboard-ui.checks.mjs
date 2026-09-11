@@ -68,6 +68,7 @@ export async function checkDashboard({ page, origin, calls, failures, screenshot
     await page.getByRole("heading", { name: name === "Listings" ? "My Listings" : name, exact: true }).waitFor();
     assert.equal(await page.locator('.dashboard-navigation [aria-current="page"]').innerText(), name);
     if (name === "Listings") await page.getByText("No listings.", {exact:true}).waitFor();
+    else if (name === "Analytics") await page.getByRole("heading", {name:"Category Performance",exact:true}).waitFor();
     else assert.equal(await page.locator(".dashboard-placeholder p").innerText(), "Coming later in this rebuild");
   }
   const logouts = () => calls.filter(call => call.endpoint === "/logout").length;
@@ -77,7 +78,7 @@ export async function checkDashboard({ page, origin, calls, failures, screenshot
   await open("/account"); await page.waitForURL("**/dashboard");
   await page.getByRole("button", { name: "Log Out", exact: true }).click();
   await page.waitForURL("**/login"); assert.equal(logouts(), beforeHome + 1);
-  passed.push("Zero-safe Monthly/Yearly chart; all six placeholder routes and active states; View Messages; Back Home without logout; /account alias; real logout endpoint");
+  passed.push("Zero-safe Monthly/Yearly chart; Listings/Analytics and four placeholder routes with active states; View Messages; Back Home without logout; /account alias; real logout endpoint");
 
   const observed = pauseRequest(endpoint);
   await page.goto(origin + "/dashboard"); await observed;

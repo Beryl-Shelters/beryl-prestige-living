@@ -9,11 +9,12 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { dashboardFixture, checkDashboard } from "./dashboard-ui.checks.mjs";
 import { mockListings, checkListings, listingState } from "./listings-ui.checks.mjs";
+import { analyticsResponse, analyticsState, checkAnalytics } from "./analytics-ui.checks.mjs";
 
 import { isMain, runSuites } from "./run-ui-suite.mjs";
 
 export async function runBrowserSuite(suite) {
-assert(["auth", "dashboard", "listings"].includes(suite));
+assert(["auth", "dashboard", "listings", "analytics"].includes(suite));
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE
   ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : "playwright");
 const origin = process.env.AUTH_UI_ORIGIN || "http://localhost:3000";
@@ -48,13 +49,13 @@ await context.route("**/*", async (route) => {
   const request = route.request();
   const url = new URL(request.url());
   if (url.pathname.startsWith("/api/v1/listings")) return mockListings(route, origin);
-  if (url.pathname.startsWith("/api/v1/auth/") || url.pathname === "/api/v1/dashboard/overview") {
+  if (url.pathname.startsWith("/api/v1/auth/") || ["/api/v1/dashboard/overview", "/api/v1/dashboard/analytics"].includes(url.pathname)) {
     if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: {
       "access-control-allow-origin": origin, "access-control-allow-credentials": "true",
       "access-control-allow-headers": "content-type", "access-control-allow-methods": "GET, POST, OPTIONS",
     } });
-    const endpoint = url.pathname.startsWith("/api/v1/dashboard/") ? "/dashboard/overview" : url.pathname.replace("/api/v1/auth", "");
-    calls.push({ endpoint, body: request.postDataJSON(), method: request.method() });
+    const endpoint = url.pathname.startsWith("/api/v1/dashboard/") ? url.pathname.replace("/api/v1", "") : url.pathname.replace("/api/v1/auth", "");
+    calls.push({ endpoint, body: request.postDataJSON(), method: request.method(), url: url.href });
     if (endpoint === pausedEndpoint) {
       await pauseGate;
       if (endpoint === pausedEndpoint) await new Promise((resolve) => {
@@ -65,7 +66,7 @@ await context.route("**/*", async (route) => {
     const error = failures.get(endpoint);
     return route.fulfill({ status: error ? error.status ?? 400 : 200, contentType: "application/json",
       headers: { "access-control-allow-origin": origin, "access-control-allow-credentials": "true" },
-      body: JSON.stringify(error ? { success: false, error } : { success: true, data: endpoint === "/dashboard/overview" ? dashboardFixture : { maskedEmail: "t***@example.test" } }) });
+      body: JSON.stringify(error ? { success: false, error } : { success: true, data: endpoint === "/dashboard/analytics" ? analyticsResponse(url) : endpoint === "/dashboard/overview" ? dashboardFixture : { maskedEmail: "t***@example.test" } }) });
   }
   if (url.origin === origin) return route.continue();
   return route.abort();
@@ -332,6 +333,9 @@ try {
   if (suite === "listings") {
   await checkListings({page,origin,screenshot,toast,passed,context});
   }
+  if (suite === "analytics") {
+    await checkAnalytics({ page, origin, calls, failures, screenshot, passed, pauseRequest, resume, toast });
+  }
   assert.deepEqual(pageErrors, []);
   await writeFile(join(artifacts, "results.json"), JSON.stringify({ suite, passed, authCalls: calls.length, pageErrors, networkErrors }, null, 2));
   // Keep complete request diagnostics in results.json, including expected
@@ -360,6 +364,7 @@ try {
     calls.length = 0;
     listingState.items = [];
     listingState.calls.length = 0;
+    analyticsState.items = [];
   }
 }
 }
