@@ -6,7 +6,7 @@ const paths: Record<string, ReactNode> = {
   analytics: <><path d="M11 3a9 9 0 1 0 10 10H11Z" /><path d="M15 3v6h6a9 9 0 0 0-6-6Z" /></>,
   messages: <><path d="M3 4h18v14H8l-5 3Z" /><path d="M7 10h.01M12 10h.01M17 10h.01" strokeWidth="3" /></>,
   properties: <path d="m2 11 10-8 10 8M5 9v12h14V9M10 21v-7h4v7" />,
-  referrals: <><circle cx="7" cy="6" r="2" /><circle cx="18" cy="18" r="2" /><path d="M3 13v-2a4 4 0 0 1 8 0M14 11V5m0 0-3 3m3-3 3 3M10 15v6m0 0 3-3m-3 3-3-3M14 16a4 4 0 0 1 8 0" /></>,
+  referrals: <><circle cx="8" cy="7" r="3" /><path d="M3 21v-2a5 5 0 0 1 10 0v2M14 10h7m-3-3 3 3-3 3" /></>,
   settings: <><path d="m10 2-1 3-3 1-3-1-2 4 2 2v3l-2 2 2 4 3-1 3 1 1 3h4l1-3 3-1 3 1 2-4-2-2v-3l2-2-2-4-3 1-3-1-1-3Z" transform="translate(1 0) scale(.9)" /><circle cx="12" cy="11" r="3" /></>,
   logout: <path d="M10 3H4v18h6M10 12h11m-4-4 4 4-4 4" />,
   home: <path d="m11 4-8 8 8 8M3 12h18" />,
