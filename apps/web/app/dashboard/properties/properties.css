@@ -1,0 +1,29 @@
+.properties-page { min-width: 0; }
+.properties-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.properties-header h1 { margin: 0; font-size: 20px; line-height: 1.4; }
+.properties-header form { display: flex; align-items: center; gap: 7px; width: min(300px, 45%); min-height: 35px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.properties-header svg { width: 15px; height: 15px; flex: 0 0 auto; color: #75808e; }
+.properties-header input { width: 100%; min-width: 0; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: 11px; }
+.properties-header input::placeholder { color: #75808e; }
+.properties-rule { margin: 16px 0 28px; border-top: 1px solid #dfe1e5; }
+.properties-count { margin: 0 5px 8px 0; color: #465162; font-size: 11px; text-align: right; }
+.properties-table-scroll { max-width: 100%; overflow-x: auto; border-radius: 4px; }
+.properties-table { width: 100%; min-width: 850px; border-collapse: collapse; background: #f1f1f2; color: #17212e; font-size: 11px; }
+.properties-table th, .properties-table td { padding: 11px 14px; text-align: left; border-bottom: 1px solid #dedfe2; white-space: nowrap; }
+.properties-table th { height: 42px; background: #e7e7e9; font-weight: 600; }
+.properties-table td:first-child { min-width: 180px; white-space: normal; }
+.properties-table td strong, .properties-table td span { display: block; }
+.properties-table td span { margin-top: 3px; color: #75808e; font-size: 10px; }
+.properties-table .properties-empty { height: 155px; color: #505b69; text-align: center; }
+.properties-pagination { display: flex; justify-content: center; align-items: center; margin-top: 18px; }
+.properties-pagination button, .properties-pagination span { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 29px; border: 1px solid #d9dadd; font-size: 13px; }
+.properties-pagination button { background: #fff; color: #596372; }
+.properties-pagination span { border-color: var(--gold); background: var(--gold); color: #fff; }
+.properties-retry { display: none; justify-content: center; padding: 60px 0; }
+.properties-page:not(:has(.properties-table)) .properties-retry { display: flex; }
+.properties-page:has(.brand-loader) .properties-retry { display: none; }
+@media (max-width: 600px) {
+  .properties-header { align-items: stretch; flex-direction: column; gap: 12px; }
+  .properties-header form { width: 100%; }
+  .properties-rule { margin-block: 14px 22px; }
+}

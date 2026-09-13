@@ -10,11 +10,13 @@ import type { DashboardRepository } from "./dashboard/repository.js";
 import { listingsRouter } from "./listings/routes.js";
 import { SupabaseListingsRepository, type ListingsRepository } from "./listings/repository.js";
 import { CloudinaryStorage, type MediaStorage } from "./listings/media.js";
-import { ListingsDashboardRepository } from "./listings/dashboard-repository.js";
+import { MessagesDashboardRepository } from "./messages/dashboard-repository.js";
 import { analyticsRouter } from "./dashboard/analytics-routes.js";
 import { SupabaseAnalyticsRepository, type AnalyticsRepository, type CategoryPerformanceRepository } from "./dashboard/analytics-repository.js";
 import { messagesRouter } from "./messages/routes.js";
 import { SupabaseTicketsRepository, type TicketsRepository } from "./messages/repository.js";
+import { purchasedPropertiesRouter } from "./properties/routes.js";
+import type { PurchasedPropertiesRepository } from "./properties/repository.js";
 
 export interface AppConfig {
   webAppUrl: string | undefined;
@@ -26,6 +28,7 @@ export interface AppConfig {
   ticketsRepository?: TicketsRepository;
   listingsRepository?: ListingsRepository;
   mediaStorage?: MediaStorage;
+  purchasedPropertiesRepository?: PurchasedPropertiesRepository;
   trustProxyHops?: number;
 }
 
@@ -48,11 +51,14 @@ export function createApp(config: AppConfig): Express {
   if (config.auth) {
     const gateway = config.gateway ?? new SupabaseAuthGateway(config.auth);
     const listings = config.listingsRepository ?? new SupabaseListingsRepository(config.auth);
+    const tickets = config.ticketsRepository ?? new SupabaseTicketsRepository(config.auth);
+    const storage = config.mediaStorage ?? new CloudinaryStorage();
     app.use("/api/v1/auth", authRouter(config.auth, gateway));
-    app.use("/api/v1/dashboard", dashboardRouter(config.auth, gateway, config.dashboardRepository ?? new ListingsDashboardRepository(listings)));
+    app.use("/api/v1/dashboard", dashboardRouter(config.auth, gateway, config.dashboardRepository ?? new MessagesDashboardRepository(tickets,owner=>listings.recent(owner))));
     app.use("/api/v1/dashboard/analytics", analyticsRouter(config.auth, gateway, config.analyticsRepository ?? new SupabaseAnalyticsRepository(config.auth), config.categoryPerformanceRepository));
-    app.use("/api/v1/listings", listingsRouter(config.auth, gateway, listings, config.mediaStorage ?? new CloudinaryStorage()));
-    app.use("/api/v1/messages", messagesRouter(config.auth,gateway,config.ticketsRepository ?? new SupabaseTicketsRepository(config.auth)));
+    app.use("/api/v1/dashboard/properties", purchasedPropertiesRouter(config.auth, gateway, config.purchasedPropertiesRepository));
+    app.use("/api/v1/listings", listingsRouter(config.auth, gateway, listings, storage));
+    app.use("/api/v1/messages", messagesRouter(config.auth,gateway,tickets,storage));
   } else app.use(["/api/v1/auth", "/api/v1/dashboard", "/api/v1/listings", "/api/v1/messages"], (_request, _response, next) => next(unavailable()));
   app.use(authErrorHandler);
   return app;

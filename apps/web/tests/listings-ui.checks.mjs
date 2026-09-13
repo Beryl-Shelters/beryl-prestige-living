@@ -437,9 +437,12 @@ export async function checkListings({
       () => document.querySelectorAll(".customer-listing-card").length === 1,
     );
     assert.equal(await page.locator('.listings-pagination [aria-current="page"]').innerText(), "2");
+    const paginationPages = listingState.calls.slice(paginationStart).filter(call => call.path === "" && call.method === "GET")
+      .map(call => new URL(call.url).searchParams.get("page"));
+    // React's development checks may repeat the mount effect. Collapse only
+    // adjacent identical requests; a real late reset still produces [1,2,1].
     assert.deepEqual(
-      listingState.calls.slice(paginationStart).filter(call => call.path === "" && call.method === "GET")
-        .map(call => new URL(call.url).searchParams.get("page")),
+      paginationPages.filter((value, index) => index === 0 || value !== paginationPages[index - 1]),
       ["1", "2"],
       "The unchanged initial search must not reset pagination",
     );
