@@ -4,17 +4,30 @@ import { runIfMain } from "./run-ui-suite.mjs";
 runIfMain(import.meta.url,"messages");
 
 export const messagesState={items:[]};
+export function messagesRequestBody(request){
+  if(!request.headers()["content-type"]?.startsWith("multipart/form-data"))return request.postDataJSON();
+  const boundary=request.headers()["content-type"].split("boundary=")[1];assert(boundary);
+  const parts=request.postDataBuffer().toString("latin1").split(`--${boundary}`);
+  const data=parts.find(part=>part.includes('name="data"'));const file=parts.find(part=>part.includes('name="attachment"'));assert(data&&file);
+  const payload=JSON.parse(data.split("\r\n\r\n")[1].replace(/\r\n$/,""));
+  const headers=file.split("\r\n\r\n")[0],bytes=file.slice(file.indexOf("\r\n\r\n")+4).replace(/\r\n$/,"");
+  return {...payload,attachment:{filename:headers.match(/filename="([^"]+)"/)[1],mimeType:headers.match(/Content-Type: ([^\r\n]+)/i)[1],sizeBytes:Buffer.byteLength(bytes,"latin1")}};
+}
+export function messagesOverview(){
+  const sorted=messagesState.items.toSorted((a,b)=>b.lastActivityAt.localeCompare(a.lastActivityAt)||b.id.localeCompare(a.id));
+  return {recent:sorted.slice(0,5).map(t=>({id:t.id,subject:t.subject})),unread:sorted.flatMap(t=>t.messages).filter(m=>m.senderType==="SUPPORT"&&!m.readByCustomerAt).length};
+}
 const message=(body,senderType="CUSTOMER")=>({id:randomUUID(),body,senderType,createdAt:new Date().toISOString(),readByCustomerAt:null});
 const ticket=(subject,body,number="27")=>({id:randomUUID(),ticketNumber:number,subject,createdAt:"2026-09-11T08:00:00Z",lastActivityAt:"2026-09-11T08:00:00Z",messages:[message(body)]});
 export function messagesResponse(url,method,body) {
   const parts=url.pathname.split("/").slice(5),id=parts[0];
   if(!id&&method==="GET") {
     const q=(url.searchParams.get("q")??"").trim().toLowerCase();
-    return {items:messagesState.items.filter(t=>[t.subject,...t.messages.map(m=>m.body)].some(v=>v.toLowerCase().includes(q))).toSorted((a,b)=>b.lastActivityAt.localeCompare(a.lastActivityAt)||b.id.localeCompare(a.id)).map(t=>({id:t.id,ticketNumber:t.ticketNumber,subject:t.subject,lastActivityAt:t.lastActivityAt,latestMessagePreview:t.messages.at(-1).body.slice(0,160),unread:t.messages.some(m=>m.senderType==="SUPPORT"&&!m.readByCustomerAt)}))};
+    return {items:messagesState.items.filter(t=>[t.subject,...t.messages.map(m=>m.body)].some(v=>v.toLowerCase().includes(q))).toSorted((a,b)=>b.lastActivityAt.localeCompare(a.lastActivityAt)||b.id.localeCompare(a.id)).map(t=>({id:t.id,ticketNumber:t.ticketNumber,subject:t.subject,lastActivityAt:t.lastActivityAt,latestMessagePreview:t.messages.at(-1).body.slice(0,160)||t.messages.at(-1).attachments?.[0]?.filename,unread:t.messages.some(m=>m.senderType==="SUPPORT"&&!m.readByCustomerAt)}))};
   }
   if(!id&&method==="POST") {
-    assert.deepEqual(Object.keys(body).sort(),["message","subject"]);
-    const value=ticket(body.subject,body.message,String(messagesState.items.length+28));value.lastActivityAt=new Date().toISOString();messagesState.items.push(value);return value;
+    assert.deepEqual(Object.keys(body).filter(key=>key!=="attachment").sort(),["message","subject"]);
+    const value=ticket(body.subject,body.message,String(messagesState.items.length+28));value.lastActivityAt=new Date().toISOString();if(body.attachment)value.messages[0].attachments=[{id:randomUUID(),...body.attachment}];messagesState.items.push(value);return value;
   }
   const value=messagesState.items.find(t=>t.id===id);assert(value,`Unknown mock ticket ${id}`);
   if(parts[1]==="read") {
@@ -22,7 +35,7 @@ export function messagesResponse(url,method,body) {
     const index=value.messages.findIndex(m=>m.id===body.throughMessageId);assert(index>=0);
     value.messages.slice(0,index+1).forEach(m=>{if(m.senderType==="SUPPORT"&&!m.readByCustomerAt)m.readByCustomerAt=new Date().toISOString();});return {acknowledged:true};
   }
-  if(parts[1]==="messages") {assert.deepEqual(Object.keys(body),["message"]);value.messages.push(message(body.message));value.lastActivityAt=new Date().toISOString();}
+  if(parts[1]==="messages") {assert.deepEqual(Object.keys(body).filter(key=>key!=="attachment"),["message"]);const reply=message(body.message);if(body.attachment)reply.attachments=[{id:randomUUID(),...body.attachment}];value.messages.push(reply);value.lastActivityAt=new Date().toISOString();}
   return value;
 }
 
@@ -38,7 +51,8 @@ export async function checkMessages({page,origin,calls,failures,screenshot,passe
     messagesState.items=[ticket("Testing Message","Hello there")];await open();await page.locator(".ticket-row").waitFor();
     assert.equal(await page.locator(".ticket-unread").count(),0);await screenshot(`messages-list-${width}`);
     await page.getByRole("button",{name:"+ New Ticket",exact:true}).click();await page.getByRole("dialog",{name:"New Ticket",exact:true}).waitFor();
-    assert.equal(await page.getByRole("dialog").locator("input,textarea").count(),2);
+    assert.equal(await page.getByRole("dialog").locator("input:not([type=file]),textarea").count(),2);
+    assert.equal(await page.getByRole("dialog").getByRole("button",{name:"Attach a file",exact:true}).count(),1);
     const rect=await page.getByRole("dialog").boundingBox();assert(rect.x>=0&&rect.x+rect.width<=width);await overflow();await screenshot(`messages-modal-${width}`);
     await page.getByRole("button",{name:"Cancel",exact:true}).click();await selectFirst();await page.getByText("Ticket #27",{exact:true}).waitFor();
     assert.equal(await page.locator(".message-bubble.customer").evaluate(el=>getComputedStyle(el).backgroundColor),"rgb(217, 255, 209)");
@@ -98,4 +112,35 @@ export async function checkMessages({page,origin,calls,failures,screenshot,passe
   failures.delete(endpoint);await page.getByRole("button",{name:"Try again",exact:true}).click();await page.locator(".ticket-row").waitFor();
   failures.set(endpoint,{status:401,code:"SESSION_EXPIRED",message:"Please log in again."});await page.goto(origin+"/dashboard/messages");await page.waitForURL("**/login");failures.delete(endpoint);
   passed.push("Logo loading without fake empty data; conversation failure retains list; list error/retry; Messages session expiry redirects to Login");
+
+  await open();await selectFirst();
+  const pdf={name:"floor-plan.pdf",mimeType:"application/pdf",buffer:Buffer.from("%PDF-1.4\nbrowser attachment")};
+  const webp={name:"site-photo.webp",mimeType:"image/webp",buffer:Buffer.from([82,73,70,70,4,0,0,0,87,69,66,80,86,80,56,32])};
+  const picker=page.locator('.reply-composer input[type="file"]');
+  assert.match(await picker.getAttribute("accept"),/\.webp/);assert.match(await picker.getAttribute("accept"),/image\/webp/);
+  await picker.setInputFiles(pdf);await page.getByRole("button",{name:"Remove attachment",exact:true}).click();assert.equal(await page.locator(".selected-message-file").count(),0);
+  await picker.setInputFiles(webp);
+  failures.set(replyEndpoint,{status:503,code:"MESSAGES_UNAVAILABLE",message:"Attachment could not be sent."});
+  await page.getByRole("button",{name:"Send reply",exact:true}).click();await toast("Attachment could not be sent.");assert.match(await page.locator(".selected-message-file").innerText(),/site-photo.webp/);
+  failures.delete(replyEndpoint);
+  const attachmentPaused=pauseRequest(replyEndpoint);await page.getByRole("button",{name:"Send reply",exact:true}).click();await attachmentPaused;
+  assert(await page.getByRole("button",{name:"Attach a file",exact:true}).isDisabled());resume();
+  await page.getByRole("button",{name:"Download site-photo.webp",exact:true}).waitFor();assert.equal(await page.locator(".selected-message-file").count(),0);
+  const attachment=created.messages.at(-1).attachments[0];assert.equal(created.messages.at(-1).body,"");assert.equal(attachment.sizeBytes,webp.buffer.length);assert.equal(attachment.mimeType,"image/webp");
+  const download=page.waitForEvent("download");await page.getByRole("button",{name:"Download site-photo.webp",exact:true}).click();assert.equal((await download).suggestedFilename(),"site-photo.webp");
+  for(const width of [1440,1280,1024,768,390,320]){
+    await page.setViewportSize({width,height:900});await picker.setInputFiles({...pdf,name:"a-very-long-floor-plan-filename-for-a-property-attachment.pdf"});await overflow();await screenshot(`messages-attachments-${width}`);await page.getByRole("button",{name:"Remove attachment",exact:true}).click();
+  }
+  await page.setViewportSize({width:1440,height:900});
+  await page.getByRole("button",{name:"+ New Ticket",exact:true}).click();await page.getByLabel("Subject",{exact:true}).fill("Attached enquiry");
+  await page.getByRole("dialog").locator('input[type="file"]').setInputFiles(pdf);await page.getByRole("button",{name:"Send Message",exact:true}).click();await page.getByRole("dialog").waitFor({state:"detached"});
+  await page.getByRole("button",{name:"Download floor-plan.pdf",exact:true}).waitFor();const newId=messagesState.items.at(-1).id;
+  await page.getByRole("link",{name:"Overview",exact:true}).click();await page.locator(".recent-messages").getByRole("link",{name:"Attached enquiry",exact:true}).waitFor();
+  const recentLink=page.locator(".recent-message-link").filter({hasText:"Attached enquiry"});
+  const recentRect=await recentLink.boundingBox();assert(recentRect.width>200&&recentRect.height>=35,"The complete recent-message row must be clickable");
+  assert.equal(await page.locator('.dashboard-kpi[aria-label="New Messages"] p').innerText(),"0 messages");
+  await screenshot("overview-recent-ticket-conversations");
+  await page.locator(".recent-messages").getByRole("link",{name:"Attached enquiry",exact:true}).click();await page.locator(".conversation-header h2").filter({hasText:"Attached enquiry"}).waitFor();assert.equal(new URL(page.url()).searchParams.get("ticket"),newId);
+  assert.deepEqual(await page.locator(".message-download svg").evaluateAll(elements=>elements.map(element=>({width:element.getBoundingClientRect().width,height:element.getBoundingClientRect().height}))),[{width:20,height:20}]);
+  passed.push("Private PDF/WEBP attachment create/reply/download; WEBP picker contract; file-only messages; remove/retry/pending controls; six-width wrapping; Overview immediately shows customer threads and opens the selected conversation");
 }

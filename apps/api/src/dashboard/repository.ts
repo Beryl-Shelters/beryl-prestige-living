@@ -20,6 +20,6 @@ export class EmptyDashboardRepository implements DashboardRepository {
   }
   async propertiesOwned() { return 0; }
   async referralEarnings() { return 0; }
-  async messages() { return { unread: 0, recent: [] }; }
+  async messages():Promise<{unread:number;recent:RecentMessage[]}> { return { unread: 0, recent: [] }; }
   async recentListings(_customerId?: string): Promise<RecentListing[]> { void _customerId; return []; }
 }

@@ -1,6 +1,7 @@
 import { AuthApiError } from "./auth-api";
 
-export type TicketMessage = { id:string; senderType:"CUSTOMER"|"SUPPORT"; body:string; createdAt:string; readByCustomerAt:string|null };
+export type TicketAttachment={id:string;filename:string;mimeType:string;sizeBytes:number};
+export type TicketMessage = { id:string; senderType:"CUSTOMER"|"SUPPORT"; body:string; createdAt:string; readByCustomerAt:string|null; attachments?:TicketAttachment[] };
 export type TicketSummary = { id:string; ticketNumber:string; subject:string; latestMessagePreview:string; lastActivityAt:string; unread:boolean };
 export type TicketDetail = { id:string; ticketNumber:string; subject:string; createdAt:string; lastActivityAt:string; messages:TicketMessage[] };
 
@@ -10,7 +11,7 @@ export async function messagesRequest<T>(path:string, signal:AbortSignal, body?:
   let response:Response;
   try { response=await fetch(`${base.replace(/\/$/,"")}/api/v1/messages/tickets${path}`,{
     method:body?"POST":"GET",credentials:"include",cache:"no-store",signal,
-    ...(body?{headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}:{}),
+    ...(body?body instanceof FormData?{body}:{headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}:{}),
   }); } catch(error) {
     if(signal.aborted) throw error;
     throw new AuthApiError("NETWORK_ERROR","Could not connect to Messages. Please try again.");
@@ -25,4 +26,15 @@ export async function messagesRequest<T>(path:string, signal:AbortSignal, body?:
   }
   if(!response.ok || !payload.success) throw new AuthApiError(payload.error?.code??"MESSAGES_UNAVAILABLE",payload.error?.message??"Messages are temporarily unavailable. Please try again.",response.status);
   return payload.data;
+}
+
+export async function downloadTicketAttachment(ticketId:string,attachment:TicketAttachment,signal:AbortSignal){
+  const base=process.env.NEXT_PUBLIC_API_BASE_URL;
+  if(!base)throw new AuthApiError("CONFIGURATION_UNAVAILABLE","Messages are not configured.");
+  const response=await fetch(`${base.replace(/\/$/,"")}/api/v1/messages/tickets/${ticketId}/attachments/${attachment.id}`,{credentials:"include",cache:"no-store",signal});
+  if(!response.ok)throw new AuthApiError("ATTACHMENT_UNAVAILABLE","Could not download this attachment. Please try again.",response.status);
+  const blob=await response.blob();signal.throwIfAborted();
+  const url=URL.createObjectURL(blob),link=document.createElement("a");
+  link.href=url;link.download=attachment.filename;document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
