@@ -41,6 +41,13 @@
 .recent-messages p { color: #7e8691; font-size: 16px; text-align: center; margin: 18px 12px 26px; }
 .recent-messages > a { display: block; width: fit-content; margin: 0 40px 24px auto; color: #af8415; font-size: 13px; font-weight: 600; }
 .recent-messages ul, .recent-listings ul { padding: 12px 24px; overflow-wrap: anywhere; }
+.recent-messages ul { list-style: none; margin: 0; display: grid; gap: 7px; }
+.recent-message-link { display: grid; grid-template-columns: 17px minmax(0, 1fr) auto; align-items: center; gap: 9px; width: 100%; padding: 9px 10px; border: 1px solid #ece7df; border-radius: 5px; color: #17212e; text-decoration: none; font-size: 12px; }
+.recent-message-link:hover { border-color: var(--gold); background: #fcfaf7; color: var(--gold-dark); }
+.recent-message-link:focus-visible { outline: 2px solid var(--gold-dark); outline-offset: 2px; }
+.recent-message-link svg { width: 17px; height: 17px; color: var(--gold); }
+.recent-message-link span:first-of-type { min-width: 0; overflow-wrap: anywhere; }
+.recent-message-link span:last-child { color: var(--gold-dark); font-size: 20px; line-height: 1; }
 .recent-listings { margin-top: 40px; padding: 20px; }
 .recent-listings-body { background: #f0f0f0; border-radius: 8px; min-height: 520px; padding: 40px 20px; }
 .recent-listings-body > p { text-align: center; color: #788390; font-size: 13px; margin: 14px 0 0; }

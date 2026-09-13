@@ -10,7 +10,7 @@ import { RevenueChart } from "./revenue-chart";
 function RecentMessages({ messages }: { messages: DashboardOverview["recent_messages"] }) {
   return <section className="dashboard-card recent-messages" aria-labelledby="recent-messages-title">
     <h2 id="recent-messages-title"><span className="dashboard-icon-box"><DashboardIcon name="messages" /></span>Recent Messages</h2>
-    {messages.length ? <ul>{messages.map((message) => <li key={message.id}>{message.subject}</li>)}</ul> : <p>No messages</p>}
+    {messages.length ? <ul>{messages.map((message) => <li key={message.id}><Link className="recent-message-link" href={`/dashboard/messages?ticket=${encodeURIComponent(message.id)}`}><DashboardIcon name="messages" /><span>{message.subject}</span><span aria-hidden="true">›</span></Link></li>)}</ul> : <p>No messages</p>}
     <Link href="/dashboard/messages">View Messages</Link>
   </section>;
 }

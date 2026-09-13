@@ -6,14 +6,14 @@ export type UploadFile = { field: string; mime: string; bytes: Buffer };
 export const IMAGE_BYTES = 5*1024*1024;
 export const DOCUMENT_BYTES = 10*1024*1024;
 const invalid = () => new AuthError(400, "INVALID_UPLOAD", "Choose supported files within the upload limits.");
-export function validateFile(file: UploadFile, document: boolean) {
+export function validateFile(file: UploadFile, document: boolean, webpDocument = false) {
   const b = file.bytes;
   const png = b.length > 8 && b.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
   const jpeg = b.length > 3 && b[0] === 255 && b[1] === 216 && b[2] === 255;
   const webp = b.length > 12 && b.toString("ascii",0,4) === "RIFF" && b.toString("ascii",8,12) === "WEBP";
   const pdf = b.length > 5 && b.toString("ascii",0,5) === "%PDF-";
   if (!b.length || b.length > (document ? DOCUMENT_BYTES : IMAGE_BYTES)) throw invalid();
-  if (!(file.mime === "image/png" && png || file.mime === "image/jpeg" && jpeg || !document && file.mime === "image/webp" && webp || document && file.mime === "application/pdf" && pdf)) throw invalid();
+  if (!(file.mime === "image/png" && png || file.mime === "image/jpeg" && jpeg || (!document || webpDocument) && file.mime === "image/webp" && webp || document && file.mime === "application/pdf" && pdf)) throw invalid();
 }
 export function readUpload(request: Request, document = false): Promise<{ data: unknown; files: UploadFile[] }> {
   return new Promise((resolve, reject) => {
