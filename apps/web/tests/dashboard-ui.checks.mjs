@@ -65,12 +65,13 @@ export async function checkDashboard({ page, origin, calls, failures, screenshot
   await page.waitForURL("**/dashboard/messages");
   for (const name of sections.slice(1)) {
     await page.getByRole("link", { name, exact: true }).click();
-    await page.getByRole("heading", { name: name === "Listings" ? "My Listings" : name === "Messages" ? "My Tickets" : name === "Properties" ? "Purchased Properties" : name, exact: true }).waitFor();
+    await page.getByRole("heading", { name: name === "Listings" ? "My Listings" : name === "Messages" ? "My Tickets" : name === "Properties" ? "Purchased Properties" : name, exact: true, level: 1 }).waitFor();
     assert.equal(await page.locator('.dashboard-navigation [aria-current="page"]').innerText(), name);
     if (name === "Listings") await page.getByText("No listings.", {exact:true}).waitFor();
     else if (name === "Analytics") await page.getByRole("heading", {name:"Category Performance",exact:true}).waitFor();
     else if (name === "Messages") await page.getByText("No messages found.", {exact:true}).waitFor();
     else if (name === "Properties") await page.getByText("No purchases made yet.", {exact:true}).waitFor();
+    else if (name === "Referrals") await page.getByText("No Referrals Found", {exact:true}).waitFor();
     else assert.equal(await page.locator(".dashboard-placeholder p").innerText(), "Coming later in this rebuild");
   }
   const logouts = () => calls.filter(call => call.endpoint === "/logout").length;
@@ -80,7 +81,7 @@ export async function checkDashboard({ page, origin, calls, failures, screenshot
   await open("/account"); await page.waitForURL("**/dashboard");
   await page.getByRole("button", { name: "Log Out", exact: true }).click();
   await page.waitForURL("**/login"); assert.equal(logouts(), beforeHome + 1);
-  passed.push("Zero-safe Monthly/Yearly chart; Listings/Analytics/Messages/Properties and two placeholder routes with active states; View Messages; Back Home without logout; /account alias; real logout endpoint");
+  passed.push("Zero-safe Monthly/Yearly chart; Listings/Analytics/Messages/Properties/Referrals and Settings placeholder with active states; View Messages; Back Home without logout; /account alias; real logout endpoint");
 
   const observed = pauseRequest(endpoint);
   await page.goto(origin + "/dashboard"); await observed;

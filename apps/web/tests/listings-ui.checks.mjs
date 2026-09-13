@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { runIfMain } from "./run-ui-suite.mjs";
+import { referralsState } from "./referrals-ui.checks.mjs";
 runIfMain(import.meta.url, "listings");
 const id = "11111111-1111-4111-8111-111111111111";
 const image = {
@@ -336,10 +337,9 @@ export async function checkListings({
   await menu.getByRole("button", { name: /Refer Property/ }).click();
   await toast("Referral link copied to clipboard");
   assert((await menu.innerText()).includes("Link Copied"));
-  assert.equal(
-    await page.evaluate(() => navigator.clipboard.readText()),
-    created.referral_url,
-  );
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()),
+    `${origin}/properties/${created.listing_code}?ref=${referralsState.links[0].id}`);
+  assert.equal(referralsState.links[0].listingId,created.id);
   await menu.getByRole("button", { name: /Request Approval/ }).click();
   await toast("Application submitted");
   await page.getByRole("button", { name: "Unlist", exact: true }).waitFor();

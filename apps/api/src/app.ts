@@ -17,6 +17,8 @@ import { messagesRouter } from "./messages/routes.js";
 import { SupabaseTicketsRepository, type TicketsRepository } from "./messages/repository.js";
 import { purchasedPropertiesRouter } from "./properties/routes.js";
 import type { PurchasedPropertiesRepository } from "./properties/repository.js";
+import { referralsRouter } from "./referrals/routes.js";
+import { SupabaseReferralsRepository, type ReferralsRepository } from "./referrals/repository.js";
 
 export interface AppConfig {
   webAppUrl: string | undefined;
@@ -29,6 +31,7 @@ export interface AppConfig {
   listingsRepository?: ListingsRepository;
   mediaStorage?: MediaStorage;
   purchasedPropertiesRepository?: PurchasedPropertiesRepository;
+  referralsRepository?: ReferralsRepository;
   trustProxyHops?: number;
 }
 
@@ -57,6 +60,7 @@ export function createApp(config: AppConfig): Express {
     app.use("/api/v1/dashboard", dashboardRouter(config.auth, gateway, config.dashboardRepository ?? new MessagesDashboardRepository(tickets,owner=>listings.recent(owner))));
     app.use("/api/v1/dashboard/analytics", analyticsRouter(config.auth, gateway, config.analyticsRepository ?? new SupabaseAnalyticsRepository(config.auth), config.categoryPerformanceRepository));
     app.use("/api/v1/dashboard/properties", purchasedPropertiesRouter(config.auth, gateway, config.purchasedPropertiesRepository));
+    app.use("/api/v1/dashboard/referrals", referralsRouter(config.auth,gateway,config.referralsRepository??new SupabaseReferralsRepository(config.auth)));
     app.use("/api/v1/listings", listingsRouter(config.auth, gateway, listings, storage));
     app.use("/api/v1/messages", messagesRouter(config.auth,gateway,tickets,storage));
   } else app.use(["/api/v1/auth", "/api/v1/dashboard", "/api/v1/listings", "/api/v1/messages"], (_request, _response, next) => next(unavailable()));

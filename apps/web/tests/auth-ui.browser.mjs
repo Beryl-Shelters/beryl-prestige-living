@@ -12,11 +12,12 @@ import { mockListings, checkListings, listingState } from "./listings-ui.checks.
 import { analyticsResponse, analyticsState, checkAnalytics } from "./analytics-ui.checks.mjs";
 import { messagesResponse, messagesState, checkMessages, messagesRequestBody, messagesOverview } from "./messages-ui.checks.mjs";
 import { propertiesResponse, propertiesState, checkProperties } from "./properties-ui.checks.mjs";
+import { referralsResponse, referralsState, checkReferrals } from "./referrals-ui.checks.mjs";
 
 import { isMain, runSuites } from "./run-ui-suite.mjs";
 
 export async function runBrowserSuite(suite) {
-assert(["auth", "dashboard", "listings", "analytics", "messages", "properties"].includes(suite));
+assert(["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals"].includes(suite));
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE
   ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : "playwright");
 const origin = process.env.AUTH_UI_ORIGIN || "http://localhost:3000";
@@ -51,7 +52,7 @@ await context.route("**/*", async (route) => {
   const request = route.request();
   const url = new URL(request.url());
   if (url.pathname.startsWith("/api/v1/listings")) return mockListings(route, origin);
-  if (url.pathname.startsWith("/api/v1/auth/") || url.pathname.startsWith("/api/v1/messages/") || ["/api/v1/dashboard/overview", "/api/v1/dashboard/analytics", "/api/v1/dashboard/properties"].includes(url.pathname)) {
+  if (url.pathname.startsWith("/api/v1/auth/") || url.pathname.startsWith("/api/v1/messages/") || ["/api/v1/dashboard/overview", "/api/v1/dashboard/analytics", "/api/v1/dashboard/properties", "/api/v1/dashboard/referrals"].includes(url.pathname)) {
     if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: {
       "access-control-allow-origin": origin, "access-control-allow-credentials": "true",
       "access-control-allow-headers": "content-type", "access-control-allow-methods": "GET, POST, OPTIONS",
@@ -71,7 +72,7 @@ await context.route("**/*", async (route) => {
     const ticketOverview=messagesOverview();
     return route.fulfill({ status: error ? error.status ?? 400 : 200, contentType: "application/json",
       headers: { "access-control-allow-origin": origin, "access-control-allow-credentials": "true" },
-      body: JSON.stringify(error ? { success: false, error } : { success: true, data: endpoint.startsWith("/messages/") ? messagesResponse(url,request.method(),requestBody) : endpoint === "/dashboard/analytics" ? analyticsResponse(url) : endpoint === "/dashboard/properties" ? propertiesResponse(url) : endpoint === "/dashboard/overview" ? {...dashboardFixture,recent_messages:ticketOverview.recent,summary:{...dashboardFixture.summary,new_messages:ticketOverview.unread}} : { maskedEmail: "t***@example.test" } }) });
+      body: JSON.stringify(error ? { success: false, error } : { success: true, data: endpoint.startsWith("/messages/") ? messagesResponse(url,request.method(),requestBody) : endpoint === "/dashboard/analytics" ? analyticsResponse(url) : endpoint === "/dashboard/properties" ? propertiesResponse(url) : endpoint === "/dashboard/referrals" ? referralsResponse(url,request.method(),requestBody,listingState.items,origin) : endpoint === "/dashboard/overview" ? {...dashboardFixture,recent_messages:ticketOverview.recent,summary:{...dashboardFixture.summary,new_messages:ticketOverview.unread}} : { maskedEmail: "t***@example.test" } }) });
   }
   if (url.origin === origin) return route.continue();
   return route.abort();
@@ -347,6 +348,9 @@ try {
   if (suite === "properties") {
     await checkProperties({ page, origin, calls, failures, screenshot, passed, pauseRequest, resume, toast });
   }
+  if (suite === "referrals") {
+    await checkReferrals({ page, origin, calls, failures, screenshot, passed, pauseRequest, resume, toast, context });
+  }
   assert.deepEqual(pageErrors, []);
   await writeFile(join(artifacts, "results.json"), JSON.stringify({ suite, passed, authCalls: calls.length, pageErrors, networkErrors }, null, 2));
   // Keep complete request diagnostics in results.json, including expected
@@ -378,6 +382,8 @@ try {
     analyticsState.items = [];
     messagesState.items = [];
     propertiesState.items = [];
+    referralsState.links = [];
+    referralsState.next = 2;
   }
 }
 }
