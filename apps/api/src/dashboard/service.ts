@@ -12,7 +12,7 @@ export class DashboardService {
     ]);
     return {
       customer: { id: customer.id, first_name: customer.first_name, last_name: customer.last_name,
-        account_type: customer.account_type, profile_type: customer.profile_type },
+        account_type: customer.account_type, profile_type: customer.profile_type, profile_image_url: customer.profile_image_url ?? null },
       summary: { total_investments: investments.total, properties_owned: properties,
         referral_earnings: referrals, new_messages: messages.unread },
       revenue: { monthly: investments.monthly, yearly: investments.yearly },

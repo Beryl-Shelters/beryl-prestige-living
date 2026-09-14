@@ -15,7 +15,7 @@ const config = authConfigSchema.parse({ webOrigin: "http://localhost:3000", apiO
   encryptionKey: randomBytes(32).toString("base64"), cookieSecure: false, production: false });
 const customer: Customer = { id: "own-customer", first_name: "Ada", last_name: "Okafor", email: "ada@example.test",
   country_code: "+234", phone_number: "08031234567", phone_number_normalized: "+2348031234567",
-  account_type: "PROPERTY_DEVELOPER", profile_type: "PERSONAL", email_verified_at: new Date().toISOString() };
+  account_type: "PROPERTY_DEVELOPER", profile_type: "PERSONAL", email_verified_at: new Date().toISOString(), profile_image_url: "https://images.example.test/profile.webp" };
 async function fixture(t: TestContext, repository: DashboardRepository = new EmptyDashboardRepository()) {
   const raw = "opaque-dashboard-account-session";
   const profile = { ...customer };
@@ -60,13 +60,13 @@ test("dashboard returns own safe profile and explicit Phase 1 zero/empty read mo
   const { response, payload } = await request();
   assert.equal(response.status, 200); assert.equal(response.headers.get("cache-control"), "no-store");
   assert.match(response.headers.get("vary") ?? "", /Cookie/);
-  assert.deepEqual(payload.data.customer, { id: customer.id, first_name: "Ada", last_name: "Okafor", account_type: "PROPERTY_DEVELOPER", profile_type: "PERSONAL" });
+  assert.deepEqual(payload.data.customer, { id: customer.id, first_name: "Ada", last_name: "Okafor", account_type: "PROPERTY_DEVELOPER", profile_type: "PERSONAL", profile_image_url: "https://images.example.test/profile.webp" });
   assert.deepEqual(payload.data.summary, { total_investments: 0, properties_owned: 0, referral_earnings: 0, new_messages: 0 });
   assert.equal(payload.data.revenue.monthly.length, 12);
   assert.deepEqual(payload.data.revenue.monthly.map((point: { label: string }) => point.label), ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]);
   assert(payload.data.revenue.monthly.every((point: { amount: number }) => point.amount === 0));
   assert.deepEqual(payload.data.revenue.yearly, []); assert.deepEqual(payload.data.recent_messages, []); assert.deepEqual(payload.data.recent_property_listings, []);
-  for (const secret of ["private-access", "private-refresh", "email_verified_at", "ada@example", "phone_number"]) assert(!JSON.stringify(payload).includes(secret));
+  for (const secret of ["private-access", "private-refresh", "email_verified_at", "ada@example", "phone_number", "bank_account", "street_address", "brief_bio"]) assert(!JSON.stringify(payload).includes(secret));
 });
 test("dashboard cannot select another customer using query or headers", async (t) => {
   const { request } = await fixture(t);

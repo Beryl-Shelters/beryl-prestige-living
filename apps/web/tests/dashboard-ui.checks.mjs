@@ -4,7 +4,7 @@ runIfMain(import.meta.url, "dashboard");
 
 // Synthetic browser-only customer. No test identity or metric is shipped in UI.
 export const dashboardFixture = {
-  customer: { id: "browser-test-customer", first_name: "Ada", last_name: "Okafor", account_type: "PROPERTY_DEVELOPER", profile_type: "PERSONAL" },
+  customer: { id: "browser-test-customer", first_name: "Ada", last_name: "Okafor", account_type: "PROPERTY_DEVELOPER", profile_type: "PERSONAL", profile_image_url: null },
   summary: { total_investments: 0, properties_owned: 0, referral_earnings: 0, new_messages: 0 },
   revenue: { monthly: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map(label => ({ label, amount: 0 })), yearly: [] },
   recent_messages: [], recent_property_listings: [],
@@ -50,7 +50,8 @@ export async function checkDashboard({ page, origin, calls, failures, screenshot
     }
     console.log(`Dashboard layout checks passed at ${width}px`);
   }
-  passed.push("Dashboard reference structure, dynamic identity, four zero KPIs, exact empty states, sidebar and drawer at 1440/1280/1024/768/390/320px");
+  dashboardFixture.customer.profile_image_url="https://images.example.test/profile.webp";await open();assert.equal(await page.locator(".dashboard-avatar img").count(),1);assert.equal(await page.locator(".dashboard-avatar").evaluate(element=>getComputedStyle(element).backgroundColor),"rgba(0, 0, 0, 0)");assert.equal(await page.locator(".dashboard-avatar img").evaluate(element=>getComputedStyle(element).objectFit),"cover");dashboardFixture.customer.profile_image_url=null;await open();assert.equal(await page.locator(".dashboard-avatar img").count(),0);assert.equal(await page.locator(".dashboard-avatar").innerText(),"AO");
+  passed.push("Dashboard reference structure, dynamic identity, image/initials sidebar avatar, four zero KPIs, exact empty states, sidebar and drawer at 1440/1280/1024/768/390/320px");
   await page.setViewportSize({ width: 1440, height: 900 }); await open();
   assert.equal(await page.getByRole("button", { name: "Monthly", exact: true }).getAttribute("aria-pressed"), "true");
   assert.deepEqual(await page.locator(".revenue-labels span").allTextContents(), dashboardFixture.revenue.monthly.map(p => p.label.toUpperCase()));
@@ -65,14 +66,14 @@ export async function checkDashboard({ page, origin, calls, failures, screenshot
   await page.waitForURL("**/dashboard/messages");
   for (const name of sections.slice(1)) {
     await page.getByRole("link", { name, exact: true }).click();
-    await page.getByRole("heading", { name: name === "Listings" ? "My Listings" : name === "Messages" ? "My Tickets" : name === "Properties" ? "Purchased Properties" : name, exact: true, level: 1 }).waitFor();
+    await page.getByRole("heading", { name: name === "Listings" ? "My Listings" : name === "Messages" ? "My Tickets" : name === "Properties" ? "Purchased Properties" : name === "Settings" ? "Account Settings" : name, exact: true, level: 1 }).waitFor();
     assert.equal(await page.locator('.dashboard-navigation [aria-current="page"]').innerText(), name);
     if (name === "Listings") await page.getByText("No listings.", {exact:true}).waitFor();
     else if (name === "Analytics") await page.getByRole("heading", {name:"Category Performance",exact:true}).waitFor();
     else if (name === "Messages") await page.getByText("No messages found.", {exact:true}).waitFor();
     else if (name === "Properties") await page.getByText("No purchases made yet.", {exact:true}).waitFor();
     else if (name === "Referrals") await page.getByText("No Referrals Found", {exact:true}).waitFor();
-    else assert.equal(await page.locator(".dashboard-placeholder p").innerText(), "Coming later in this rebuild");
+    else if(name === "Settings") await page.getByRole("heading",{name:"Personal Information",exact:true}).waitFor();
   }
   const logouts = () => calls.filter(call => call.endpoint === "/logout").length;
   const beforeHome = logouts();
@@ -81,7 +82,7 @@ export async function checkDashboard({ page, origin, calls, failures, screenshot
   await open("/account"); await page.waitForURL("**/dashboard");
   await page.getByRole("button", { name: "Log Out", exact: true }).click();
   await page.waitForURL("**/login"); assert.equal(logouts(), beforeHome + 1);
-  passed.push("Zero-safe Monthly/Yearly chart; Listings/Analytics/Messages/Properties/Referrals and Settings placeholder with active states; View Messages; Back Home without logout; /account alias; real logout endpoint");
+  passed.push("Zero-safe Monthly/Yearly chart; Listings/Analytics/Messages/Properties/Referrals and Settings profile with active states; View Messages; Back Home without logout; /account alias; real logout endpoint");
 
   const observed = pauseRequest(endpoint);
   await page.goto(origin + "/dashboard"); await observed;

@@ -6,7 +6,7 @@ import type { Registration } from "./validation.js";
 export type Customer = {
   id: string; first_name: string | null; last_name: string | null; email: string;
   country_code: string | null; phone_number: string | null; phone_number_normalized: string | null;
-  account_type: string | null; profile_type: string | null; email_verified_at: string | null;
+  account_type: string | null; profile_type: string | null; email_verified_at: string | null; profile_image_url?: string | null;
 };
 export type ProviderTokens = { accessToken: string; refreshToken: string; expiresAt: number; userId: string };
 export type StoredSession = { token_hash: string; user_id: string; purpose: "ACCOUNT" | "RECOVERY"; encrypted_tokens: string; expires_at: string; refresh_lock: string | null };
@@ -64,7 +64,7 @@ export class SupabaseAuthGateway implements AuthGateway {
   }
   async findCustomer(column: "email" | "phone_number_normalized" | "id", value: string) {
     const { data, error } = await this.admin.from("customer_profiles")
-      .select("id,first_name,last_name,email,country_code,phone_number,phone_number_normalized,account_type,profile_type,email_verified_at")
+      .select("id,first_name,last_name,email,country_code,phone_number,phone_number_normalized,account_type,profile_type,email_verified_at,profile_image_url")
       .eq(column, value).maybeSingle();
     if (error) throw unavailable();
     return data as Customer | null;

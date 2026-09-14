@@ -1,4 +1,6 @@
 "use client";
+/* Customer profile images are validated HTTPS URLs and do not use image optimization. */
+/* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -24,7 +26,7 @@ function Sidebar({ close }: { close?: () => void }) {
       <Link href="/" onClick={() => close?.()}><DashboardIcon name="home" /><span>Back Home</span></Link>
     </nav>
     <div className="dashboard-identity">
-      <span className="dashboard-avatar" aria-hidden="true">{customerInitials(overview.customer)}</span>
+      <span className={`dashboard-avatar${overview.customer.profile_image_url ? " has-image" : ""}`} aria-hidden="true">{overview.customer.profile_image_url ? <img src={overview.customer.profile_image_url} alt="" /> : customerInitials(overview.customer)}</span>
       <div><strong>{customerName(overview.customer) || "—"}</strong><span>{accountTypeLabel(overview.customer.account_type) || "—"}</span></div>
     </div>
   </aside>;

@@ -1,0 +1,7 @@
+import { randomUUID } from "node:crypto";
+import { normalizePhone } from "../auth/validation.js";
+import type { MediaStorage } from "../listings/media.js";
+import type { UploadFile } from "../listings/uploads.js";
+import type { SettingsProfileInput } from "./model.js";
+import type { SettingsRepository } from "./repository.js";
+export class SettingsService{constructor(private readonly repository:SettingsRepository,private readonly storage:MediaStorage){}async cleanup(owner:string){for(const publicId of await this.repository.claimCleanup(owner)){try{await this.storage.remove({public_id:publicId,resource_type:"image",delivery_type:"upload"});await this.repository.releaseCleanup(owner,publicId,true);}catch{await this.repository.releaseCleanup(owner,publicId,false).catch(()=>{});console.warn(JSON.stringify({event:"profile_image_cleanup_pending"}));}}}async update(owner:string,countryCode:string|null,input:SettingsProfileInput,file?:UploadFile){const phoneNormalized=normalizePhone(input.phoneNumber,countryCode??undefined);if(!file)return this.repository.update(owner,{...input,phoneNormalized},null);await this.cleanup(owner);const asset={public_id:`beryl-v2/profiles/${owner}/${randomUUID()}`,resource_type:"image" as const,delivery_type:"upload" as const};await this.repository.journal(owner,asset.public_id);const image=await this.storage.upload(file,asset);await this.repository.reserve(owner,image);const result=await this.repository.update(owner,{...input,phoneNormalized},image.public_id);await this.cleanup(owner);return result;}}

@@ -2,7 +2,7 @@ import { AuthApiError } from "./auth-api";
 
 export type RevenuePoint = { label: string; amount: number };
 export type DashboardOverview = {
-  customer: { id: string; first_name: string | null; last_name: string | null; account_type: string | null; profile_type: string | null };
+  customer: { id: string; first_name: string | null; last_name: string | null; account_type: string | null; profile_type: string | null; profile_image_url: string | null };
   summary: { total_investments: number; properties_owned: number; referral_earnings: number; new_messages: number };
   revenue: { monthly: RevenuePoint[]; yearly: RevenuePoint[] };
   recent_messages: { id: string; subject: string }[];

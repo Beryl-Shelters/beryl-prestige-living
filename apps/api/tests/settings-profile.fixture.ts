@@ -1,0 +1,31 @@
+import { PGlite } from "@electric-sql/pglite";
+import { randomBytes,randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import type { TestContext } from "node:test";
+import { createApp } from "../src/app.js";
+import { authConfigSchema } from "../src/auth/config.js";
+import { AuthCipher,hashToken } from "../src/auth/crypto.js";
+import { AuthError } from "../src/auth/errors.js";
+import type { AuthGateway,Customer,StoredSession } from "../src/auth/gateway.js";
+import type { MediaStorage } from "../src/listings/media.js";
+import type { SettingsProfile,SettingsProfileInput } from "../src/settings/model.js";
+import type { SettingsRepository } from "../src/settings/repository.js";
+
+export async function settingsFixture(t:TestContext){
+  const db=new PGlite();t.after(()=>db.close());
+  await db.exec("create schema auth; create function auth.uid() returns uuid language sql stable as 'select null::uuid'; create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz,raw_app_meta_data jsonb default '{}',raw_user_meta_data jsonb default '{}'); create role anon; create role authenticated; create role service_role;");
+  await db.exec(await readFile(new URL("../supabase/migrations/202609060001_customer_auth_foundation.sql",import.meta.url),"utf8"));
+  await db.exec(await readFile(new URL("../supabase/migrations/202609140001_customer_settings_profile.sql",import.meta.url),"utf8"));
+  const owner=randomUUID(),other=randomUUID();
+  const metadata=(first_name:string,last_name:string,phone_number:string,phone_number_normalized:string)=>JSON.stringify({first_name,last_name,country_code:"+234",phone_number,phone_number_normalized,account_type:"INVESTOR",profile_type:"PERSONAL"});
+  for(const [id,email,data] of [[owner,"ada@example.test",metadata("Ada","Okafor","8012345678","+2348012345678")],[other,"other@example.test",metadata("Other","Customer","8098765432","+2348098765432")]])await db.query("insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) values($1,$2,clock_timestamp(),$3)",[id,email,data]);
+  async function rpc<T>(name:string,args:unknown[]){try{return (await db.query<{value:T}>(`select public.${name}(${args.map((_,i)=>`$${i+1}`).join(",")}) value`,args)).rows[0]!.value;}catch(error){const code=(error as {code?:string}).code;if(code==="23505")throw new AuthError(409,"PROFILE_CONFLICT","Those details are in use.");if(["23514","23502","22P02"].includes(code??""))throw new AuthError(400,"INVALID_PROFILE","Check the profile details.");throw error;}}
+  const repository:SettingsRepository={read:o=>rpc<SettingsProfile>("read_customer_settings_profile",[o]),update:(o,input,publicId)=>rpc<SettingsProfile>("update_customer_settings_profile",[o,JSON.stringify({first_name:input.firstName,last_name:input.lastName,phone_number:input.phoneNumber,phone_number_normalized:input.phoneNormalized,brief_bio:input.briefBio,bank_account_name:input.accountName,bank_name:input.bankName,bank_account_number:input.accountNumber,street_address:input.streetAddress,zip_code:input.zipCode,city:input.city,state:input.state,country:input.country}),publicId]),journal:async(o,id)=>{await rpc("journal_customer_profile_image_upload",[o,id]);},reserve:async(o,image)=>{await rpc("reserve_customer_profile_image",[o,JSON.stringify(image)]);},claimCleanup:async o=>(await db.query<{value:string}>("select public.claim_customer_profile_image_cleanup($1) value",[o])).rows.map(row=>row.value),releaseCleanup:async(o,id,remove)=>{await rpc("release_customer_profile_image_cleanup",[o,id,remove]);}};
+  const config=authConfigSchema.parse({webOrigin:"http://localhost:3000",apiOrigin:"http://localhost:4000",supabaseUrl:"https://example.supabase.co",anonKey:"test",serviceKey:"test",encryptionKey:randomBytes(32).toString("base64"),cookieSecure:false,production:false});
+  const profile:Customer={id:owner,first_name:"Ada",last_name:"Okafor",email:"ada@example.test",country_code:"+234",phone_number:"8012345678",phone_number_normalized:"+2348012345678",account_type:"INVESTOR",profile_type:"PERSONAL",email_verified_at:new Date().toISOString()},raw="settings-session",row:StoredSession={token_hash:hashToken(raw),user_id:owner,purpose:"ACCOUNT",refresh_lock:null,expires_at:new Date(Date.now()+3600000).toISOString(),encrypted_tokens:new AuthCipher(config.encryptionKey).seal({userId:owner,accessToken:"test",refreshToken:"test",expiresAt:Date.now()/1000+3600},"provider-tokens")};
+  const gateway={readSession:async(hash:string,purpose:string)=>hash===row.token_hash&&purpose===row.purpose?row:null,validate:async()=>{},findCustomer:async()=>profile} as unknown as AuthGateway;
+  const stored=new Map<string,Buffer>(),removed:string[]=[];const storage:MediaStorage={async upload(file,asset){stored.set(asset.public_id,file.bytes);return {...asset,url:`https://images.example.test/${randomUUID()}`,mime_type:file.mime,size_bytes:file.bytes.length};},async remove(asset){removed.push(asset.public_id);stored.delete(asset.public_id);},async download(){return new Uint8Array();}};
+  const server=createApp({webAppUrl:config.webOrigin,auth:config,gateway,settingsRepository:repository,mediaStorage:storage}).listen(0,"127.0.0.1");await new Promise<void>(resolve=>server.once("listening",resolve));t.after(()=>new Promise<void>(resolve=>{server.close(()=>resolve());server.closeAllConnections();}));const address=server.address();if(!address||typeof address==="string")throw new Error("server");
+  async function request(method="GET",body?:object|FormData,cookie=`beryl_account=${raw}`){const response=await fetch(`http://127.0.0.1:${address.port}/api/v1/dashboard/settings/profile`,{method,headers:{Cookie:cookie,Origin:config.webOrigin,...(body&&!(body instanceof FormData)?{"Content-Type":"application/json"}:{})},...(body?{body:body instanceof FormData?body:JSON.stringify(body)}:{})});return {response,payload:await response.json()};}
+  const valid:SettingsProfileInput={firstName:"Ada",lastName:"Okafor",phoneNumber:"8012345678",briefBio:"Investor",accountName:"Ada Okafor",bankName:"Safe Bank",accountNumber:"1234567890",streetAddress:"1 Beryl Road",zipCode:"100001",city:"Ikeja",state:"Lagos",country:"Nigeria"};return {db,owner,other,request,repository,valid,row,profile,stored,removed};
+}
