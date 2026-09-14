@@ -6,8 +6,10 @@ import { useRouter } from "next/navigation";
 import { useCallback,useEffect,useRef,useState } from "react";
 import { toast } from "react-toastify";
 import { AuthApiError } from "../../lib/auth-api";
-import { fetchSettingsProfile,saveSettingsProfile,type SettingsProfile } from "../../lib/settings-api";
+import { changeSettingsPassword,fetchSettingsProfile,saveSettingsProfile,type SettingsProfile } from "../../lib/settings-api";
+import { validateNewPassword } from "../../lib/password-policy";
 import { BrandLoader } from "../auth/brand-loader";
+import { PasswordVisibilityIcon } from "../auth/password-input";
 import { showAuthError } from "../auth/toast-provider";
 import { useDashboard } from "./dashboard-provider";
 
@@ -16,10 +18,11 @@ const label=(value:string|null)=>value?.split("_").map(word=>word[0]+word.slice(
 export function SettingsProfileScreen(){
   const router=useRouter(),{refreshOverview}=useDashboard(),[profile,setProfile]=useState<SettingsProfile|null>(null),
     [draft,setDraft]=useState<SettingsProfile|null>(null),[file,setFile]=useState<File>(),[failed,setFailed]=useState(false),
-    [revision,setRevision]=useState(0),[saving,setSaving]=useState(false),[fileKey,setFileKey]=useState(0),
+    [revision,setRevision]=useState(0),[saving,setSaving]=useState(false),[fileKey,setFileKey]=useState(0),[active,setActive]=useState<"profile"|"password">("profile"),
+    [passwords,setPasswords]=useState({oldPassword:"",newPassword:"",confirmNewPassword:""}),
     form=useRef<HTMLFormElement>(null);
   const failure=useCallback((error:unknown)=>{
-    if(error instanceof AuthApiError&&error.status===401)router.replace("/login");
+    if(error instanceof AuthApiError&&["SESSION_EXPIRED","AUTH_REQUIRED"].includes(error.code))router.replace("/login");
     else showAuthError(error,"settings-profile-error");
   },[router]);
   useEffect(()=>{
@@ -49,14 +52,16 @@ export function SettingsProfileScreen(){
     }catch(error){failure(error);}finally{setSaving(false);}
   }
   function cancel(){if(profile){setDraft(profile);setFile(undefined);setFileKey(value=>value+1);}}
+  const clearPasswords=()=>setPasswords({oldPassword:"",newPassword:"",confirmNewPassword:""});
+  async function savePassword(event:React.FormEvent){event.preventDefault();if(saving)return;setSaving(true);try{validateNewPassword(passwords.newPassword,passwords.confirmNewPassword);if(passwords.oldPassword===passwords.newPassword)throw new Error("Choose a password different from your current password.");await changeSettingsPassword(passwords.oldPassword,passwords.newPassword,passwords.confirmNewPassword);clearPasswords();toast.success("Password changed successfully. Please log in again.");router.replace("/login");}catch(error){failure(error);}finally{setSaving(false);}}
   return <section className="settings-page">
     <h1>Account Settings</h1>
     <div className="settings-tabs" role="tablist" aria-label="Account settings">
-      <button role="tab" aria-selected="true">Profile</button>
-      <button role="tab" aria-selected="false" disabled>Password</button>
+      <button type="button" role="tab" aria-selected={active==="profile"} onClick={()=>setActive("profile")}>Profile</button>
+      <button type="button" role="tab" aria-selected={active==="password"} onClick={()=>setActive("password")}>Password</button>
       <button role="tab" aria-selected="false" disabled>Business</button>
     </div>
-    <form ref={form} onSubmit={save} className="dashboard-card settings-card">
+    {active==="profile"?<form ref={form} onSubmit={save} className="dashboard-card settings-card">
       <header className="settings-identity">{avatar()}<strong>{label(draft.accountType)}</strong><Link href="/dashboard/kyc">Verify Account</Link></header>
       <SettingsSection title="Personal Information" copy="Manage and update your personal details to keep your account secure and up to date.">
         <div className="settings-fields two">
@@ -90,8 +95,19 @@ export function SettingsProfileScreen(){
         </div>
       </SettingsSection>
       <footer><button type="button" disabled={saving} onClick={cancel}>Cancel</button><button className="button button-primary" disabled={saving}>{saving?"Saving...":"Save Changes"}</button></footer>
-    </form>
+    </form>:<form onSubmit={savePassword} className="dashboard-card settings-card settings-password-card" aria-busy={saving}>
+      <header className="settings-identity">{avatar()}<strong>{label(draft.accountType)}</strong><Link href="/dashboard/kyc">Verify Account</Link></header>
+      <SettingsSection title="Password" copy="Manage your password here for enhanced security.">
+        <div className="settings-fields settings-password-fields">
+          <PasswordField label="Old Password" autoComplete="current-password" value={passwords.oldPassword} onChange={oldPassword=>setPasswords(value=>({...value,oldPassword}))}/>
+          <PasswordField label="New Password" autoComplete="new-password" value={passwords.newPassword} onChange={newPassword=>setPasswords(value=>({...value,newPassword}))}/>
+          <PasswordField label="Confirm New Password" autoComplete="new-password" value={passwords.confirmNewPassword} onChange={confirmNewPassword=>setPasswords(value=>({...value,confirmNewPassword}))}/>
+        </div>
+      </SettingsSection>
+      <footer><button type="button" disabled={saving} onClick={clearPasswords}>Cancel</button><button className="button button-primary" disabled={saving}>{saving?"Saving...":"Save Changes"}</button></footer>
+    </form>}
   </section>;
 }
 function SettingsSection({title,copy,children}:{title:string;copy:string;children:React.ReactNode}){return <section className="settings-section"><div><h2>{title}</h2><p>{copy}</p></div>{children}</section>;}
 function Field({label,value,onChange,required,readOnly,className,inputMode,pattern}:{label:string;value:string;onChange?:(value:string)=>void;required?:boolean;readOnly?:boolean;className?:string;inputMode?:"numeric";pattern?:string}){return <label className={className}>{label}{required&&" *"}<input value={value} required={required} readOnly={readOnly} inputMode={inputMode} pattern={pattern} onChange={event=>onChange?.(event.target.value)}/></label>;}
+function PasswordField({label,autoComplete,value,onChange}:{label:string;autoComplete:"current-password"|"new-password";value:string;onChange:(value:string)=>void}){const [visible,setVisible]=useState(false),id=`settings-${label.toLowerCase().replaceAll(" ","-")}`;return <div className="settings-password-field"><label htmlFor={id}>{label}</label><div className="password-control"><input id={id} required type={visible?"text":"password"} autoComplete={autoComplete} minLength={label==="Old Password"?1:8} maxLength={128} value={value} onChange={event=>onChange(event.target.value)}/><button type="button" className="password-toggle" aria-label={`${visible?"Hide":"Show"} ${label.toLowerCase()}`} onClick={()=>setVisible(current=>!current)}><PasswordVisibilityIcon visible={visible}/></button></div></div>;}

@@ -53,7 +53,7 @@ await context.route("**/*", async (route) => {
   const request = route.request();
   const url = new URL(request.url());
   if (url.pathname.startsWith("/api/v1/listings")) return mockListings(route, origin);
-  if (url.pathname.startsWith("/api/v1/auth/") || url.pathname.startsWith("/api/v1/messages/") || ["/api/v1/dashboard/overview", "/api/v1/dashboard/analytics", "/api/v1/dashboard/properties", "/api/v1/dashboard/referrals", "/api/v1/dashboard/settings/profile"].includes(url.pathname)) {
+  if (url.pathname.startsWith("/api/v1/auth/") || url.pathname.startsWith("/api/v1/messages/") || ["/api/v1/dashboard/overview", "/api/v1/dashboard/analytics", "/api/v1/dashboard/properties", "/api/v1/dashboard/referrals", "/api/v1/dashboard/settings/profile", "/api/v1/dashboard/settings/password"].includes(url.pathname)) {
     if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: {
       "access-control-allow-origin": origin, "access-control-allow-credentials": "true",
       "access-control-allow-headers": "content-type", "access-control-allow-methods": "GET, POST, OPTIONS",
@@ -73,7 +73,7 @@ await context.route("**/*", async (route) => {
     const ticketOverview=messagesOverview();
     return route.fulfill({ status: error ? error.status ?? 400 : 200, contentType: "application/json",
       headers: { "access-control-allow-origin": origin, "access-control-allow-credentials": "true" },
-      body: JSON.stringify(error ? { success: false, error } : { success: true, data: endpoint.startsWith("/messages/") ? messagesResponse(url,request.method(),requestBody) : endpoint === "/dashboard/analytics" ? analyticsResponse(url) : endpoint === "/dashboard/properties" ? propertiesResponse(url) : endpoint === "/dashboard/referrals" ? referralsResponse(url,request.method(),requestBody,listingState.items,origin) : endpoint === "/dashboard/settings/profile" ? settingsResponse(request.method(),requestBody) : endpoint === "/dashboard/overview" ? {...dashboardFixture,recent_messages:ticketOverview.recent,summary:{...dashboardFixture.summary,new_messages:ticketOverview.unread}} : { maskedEmail: "t***@example.test" } }) });
+      body: JSON.stringify(error ? { success: false, error } : { success: true, data: endpoint.startsWith("/messages/") ? messagesResponse(url,request.method(),requestBody) : endpoint === "/dashboard/analytics" ? analyticsResponse(url) : endpoint === "/dashboard/properties" ? propertiesResponse(url) : endpoint === "/dashboard/referrals" ? referralsResponse(url,request.method(),requestBody,listingState.items,origin) : endpoint === "/dashboard/settings/profile" ? settingsResponse(request.method(),requestBody) : endpoint === "/dashboard/settings/password" ? {reauthenticate:true} : endpoint === "/dashboard/overview" ? {...dashboardFixture,recent_messages:ticketOverview.recent,summary:{...dashboardFixture.summary,new_messages:ticketOverview.unread}} : { maskedEmail: "t***@example.test" } }) });
   }
   if (url.origin === origin) return route.continue();
   if (url.hostname === "images.example.test") return route.fulfill({status:200,contentType:"image/png",body:Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=","base64")});
@@ -158,6 +158,13 @@ try {
   await goto("/register");
   await page.locator("#first-name").fill("Test"); await page.locator("#last-name").fill("Customer");
   await page.locator("#register-email").fill("test@example.test"); await page.locator("#phone-number").fill("08012345678");
+  await page.getByRole("button", { name: "Show create password" }).click();
+  assert.equal(await page.locator("#register-password").getAttribute("type"), "text");
+  assert.equal(await page.getByRole("button", { name: "Hide create password" }).locator("svg").count(), 1);
+  await page.getByRole("button", { name: "Hide create password" }).click();
+  await page.getByRole("button", { name: "Show confirm password" }).click();
+  assert.equal(await page.locator("#register-confirm-password").getAttribute("type"), "text");
+  await page.getByRole("button", { name: "Hide confirm password" }).click();
   await page.locator("#register-password").fill("TestingPass1!"); await page.locator("#register-confirm-password").fill("TestingPass1!");
   await page.getByRole("button", { name: "Create Account", exact: true }).click();
   await page.waitForURL("**/verify-email"); await toast("Verification code sent to your email");
@@ -187,6 +194,7 @@ try {
   await page.locator("#login-identity").fill("test@example.test"); await page.locator("#login-password").fill("TestingPass1!");
   await page.getByRole("button", { name: "Show password" }).click();
   assert.equal(await page.locator("#login-password").getAttribute("type"), "text");
+  assert.equal(await page.getByRole("button", { name: "Hide password" }).locator("svg").count(), 1);
   await page.getByRole("button", { name: "Hide password" }).click();
   failures.set("/login", { code: "INVALID_CREDENTIALS", message: "Invalid credentials." });
   const loginPaused = pauseRequest("/login");

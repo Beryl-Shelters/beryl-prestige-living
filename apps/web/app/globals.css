@@ -54,7 +54,8 @@ button:disabled { cursor: wait; opacity: .65; }
 .field-group input:focus, .field-group select:focus { border-color: var(--gold); outline: 2px solid #b7864b33; outline-offset: 1px; }
 .password-control { min-width: 0; position: relative; }
 .password-control input { padding-right: 56px; }
-.password-toggle { background: transparent; border: 0; color: #697386; font-size: 11px; font-weight: 600; padding: 9px 10px; position: absolute; right: 1px; top: 50%; transform: translateY(-50%); }
+.password-toggle { align-items: center; background: transparent; border: 0; color: #697386; display: flex; height: calc(100% - 2px); justify-content: center; padding: 0; position: absolute; right: 1px; top: 50%; transform: translateY(-50%); width: 42px; }
+.password-toggle svg { height: 19px; width: 19px; }
 .auth-links, .auth-footer { font-size: 12px; }
 .auth-links { margin-top: 14px; }
 .split-links { display: flex; gap: 12px; justify-content: space-between; }

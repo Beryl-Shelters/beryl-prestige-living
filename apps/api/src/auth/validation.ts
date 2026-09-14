@@ -6,14 +6,17 @@ export const accountTypes = ["INVESTOR", "PROPERTY_DEVELOPER", "LANDLORD", "REGI
 export const profileTypes = ["PERSONAL", "BUSINESS"] as const;
 // Keep separate checks so every applicable client-facing failure is available.
 // Digits are optional; whitespace (or a Unicode letter/number) is not a symbol.
-const password = z.string()
+export const passwordSchema = z.string()
   .min(8, "The password field must be at least 8 characters.")
   .max(128, "The password field must be at most 128 characters.")
   .regex(/[A-Z]/, "The password field must contain at least one uppercase letter.")
   .regex(/[a-z]/, "The password field must contain at least one lowercase letter.")
   .regex(/[A-Za-z]/, "The password field must contain at least one letter.")
   .regex(/[^\p{L}\p{N}\s]/u, "The password field must contain at least one symbol.");
-export const resetSchema = z.object({ password, confirmPassword: z.string() }).strict().refine((data) => data.password === data.confirmPassword, { message: "Passwords do not match.", path: ["confirmPassword"] });
+export const resetSchema = z.object({ password:passwordSchema, confirmPassword: z.string() }).strict().refine((data) => data.password === data.confirmPassword, { message: "Passwords do not match.", path: ["confirmPassword"] });
+export const changePasswordSchema = z.object({oldPassword:z.string().min(1).max(128),newPassword:passwordSchema,confirmNewPassword:z.string()}).strict()
+  .refine(data=>data.newPassword===data.confirmNewPassword,{message:"Passwords do not match.",path:["confirmNewPassword"]})
+  .refine(data=>data.oldPassword!==data.newPassword,{message:"Choose a password different from your current password.",path:["newPassword"]});
 export const registerSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required.").max(100),
   lastName: z.string().trim().min(1, "Last name is required.").max(100),
@@ -21,7 +24,7 @@ export const registerSchema = z.object({
   countryCode: z.string().regex(/^\+[1-9]\d{0,2}$/, "Select a valid country code."),
   phoneNumber: z.string().regex(/^\d{5,15}$/, "Phone number must contain digits only."),
   accountType: z.enum(accountTypes), profileType: z.enum(profileTypes),
-  password, confirmPassword: z.string(),
+  password:passwordSchema, confirmPassword: z.string(),
 }).strict().refine((data) => data.password === data.confirmPassword, { message: "Passwords do not match.", path: ["confirmPassword"] });
 export type Registration = z.infer<typeof registerSchema>;
 export const identifierSchema = z.object({ identifier: z.string().trim().min(1).max(254) }).strict();
