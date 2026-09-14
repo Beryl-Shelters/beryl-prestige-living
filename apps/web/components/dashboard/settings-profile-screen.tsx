@@ -12,13 +12,14 @@ import { BrandLoader } from "../auth/brand-loader";
 import { PasswordVisibilityIcon } from "../auth/password-input";
 import { showAuthError } from "../auth/toast-provider";
 import { useDashboard } from "./dashboard-provider";
+import { SettingsBusinessScreen } from "./settings-business-screen";
 
 const label=(value:string|null)=>value?.split("_").map(word=>word[0]+word.slice(1).toLowerCase()).join(" ")??"Customer";
 
 export function SettingsProfileScreen(){
   const router=useRouter(),{refreshOverview}=useDashboard(),[profile,setProfile]=useState<SettingsProfile|null>(null),
     [draft,setDraft]=useState<SettingsProfile|null>(null),[file,setFile]=useState<File>(),[failed,setFailed]=useState(false),
-    [revision,setRevision]=useState(0),[saving,setSaving]=useState(false),[fileKey,setFileKey]=useState(0),[active,setActive]=useState<"profile"|"password">("profile"),
+    [revision,setRevision]=useState(0),[saving,setSaving]=useState(false),[fileKey,setFileKey]=useState(0),[active,setActive]=useState<"profile"|"password"|"business">("profile"),
     [passwords,setPasswords]=useState({oldPassword:"",newPassword:"",confirmNewPassword:""}),
     form=useRef<HTMLFormElement>(null);
   const failure=useCallback((error:unknown)=>{
@@ -59,7 +60,7 @@ export function SettingsProfileScreen(){
     <div className="settings-tabs" role="tablist" aria-label="Account settings">
       <button type="button" role="tab" aria-selected={active==="profile"} onClick={()=>setActive("profile")}>Profile</button>
       <button type="button" role="tab" aria-selected={active==="password"} onClick={()=>setActive("password")}>Password</button>
-      <button role="tab" aria-selected="false" disabled>Business</button>
+      <button type="button" role="tab" aria-selected={active==="business"} onClick={()=>setActive("business")}>Business</button>
     </div>
     {active==="profile"?<form ref={form} onSubmit={save} className="dashboard-card settings-card">
       <header className="settings-identity">{avatar()}<strong>{label(draft.accountType)}</strong><Link href="/dashboard/kyc">Verify Account</Link></header>
@@ -95,7 +96,7 @@ export function SettingsProfileScreen(){
         </div>
       </SettingsSection>
       <footer><button type="button" disabled={saving} onClick={cancel}>Cancel</button><button className="button button-primary" disabled={saving}>{saving?"Saving...":"Save Changes"}</button></footer>
-    </form>:<form onSubmit={savePassword} className="dashboard-card settings-card settings-password-card" aria-busy={saving}>
+    </form>:active==="password"?<form onSubmit={savePassword} className="dashboard-card settings-card settings-password-card" aria-busy={saving}>
       <header className="settings-identity">{avatar()}<strong>{label(draft.accountType)}</strong><Link href="/dashboard/kyc">Verify Account</Link></header>
       <SettingsSection title="Password" copy="Manage your password here for enhanced security.">
         <div className="settings-fields settings-password-fields">
@@ -105,7 +106,7 @@ export function SettingsProfileScreen(){
         </div>
       </SettingsSection>
       <footer><button type="button" disabled={saving} onClick={clearPasswords}>Cancel</button><button className="button button-primary" disabled={saving}>{saving?"Saving...":"Save Changes"}</button></footer>
-    </form>}
+    </form>:<SettingsBusinessScreen/>}
   </section>;
 }
 function SettingsSection({title,copy,children}:{title:string;copy:string;children:React.ReactNode}){return <section className="settings-section"><div><h2>{title}</h2><p>{copy}</p></div>{children}</section>;}

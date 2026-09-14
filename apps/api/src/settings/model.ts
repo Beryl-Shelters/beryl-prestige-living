@@ -4,3 +4,6 @@ export const settingsProfileInput=z.object({firstName:z.string().trim().min(1).m
 export type SettingsProfileInput=z.infer<typeof settingsProfileInput>;
 export type SettingsProfile=SettingsProfileInput&{email:string;countryCode:string|null;accountType:string|null;profileImageUrl:string|null};
 export type ProfileImage={public_id:string;url:string;mime_type:string;size_bytes:number};
+export const settingsBusinessInput=z.object({companyName:z.string().trim().min(1).max(160),companyEmail:z.string().trim().toLowerCase().max(254).pipe(z.email()),companyPhoneNumber:z.string().regex(/^\+?\d{5,15}$/),aboutCompany:optionalText(1000),streetAddress:z.string().trim().min(1).max(300),zipCode:z.string().trim().regex(/^[A-Za-z0-9 -]{2,20}$/),city:z.string().trim().min(1).max(100),state:z.string().trim().min(1).max(100),country:z.string().trim().min(1).max(100)}).strict();
+export type SettingsBusinessInput=z.infer<typeof settingsBusinessInput>;
+export type SettingsBusiness=SettingsBusinessInput&{companyId:string;companyLogoUrl:string|null};
