@@ -21,6 +21,8 @@ import { referralsRouter } from "./referrals/routes.js";
 import { SupabaseReferralsRepository, type ReferralsRepository } from "./referrals/repository.js";
 import { settingsRouter } from "./settings/routes.js";
 import { SupabaseSettingsRepository,type SettingsRepository } from "./settings/repository.js";
+import { kycRouter } from "./kyc/routes.js";
+import { SupabaseKycRepository,type KycRepository } from "./kyc/repository.js";
 
 export interface AppConfig {
   webAppUrl: string | undefined;
@@ -35,6 +37,7 @@ export interface AppConfig {
   purchasedPropertiesRepository?: PurchasedPropertiesRepository;
   referralsRepository?: ReferralsRepository;
   settingsRepository?: SettingsRepository;
+  kycRepository?: KycRepository;
   trustProxyHops?: number;
 }
 
@@ -65,6 +68,7 @@ export function createApp(config: AppConfig): Express {
     app.use("/api/v1/dashboard/properties", purchasedPropertiesRouter(config.auth, gateway, config.purchasedPropertiesRepository));
     app.use("/api/v1/dashboard/referrals", referralsRouter(config.auth,gateway,config.referralsRepository??new SupabaseReferralsRepository(config.auth)));
     app.use("/api/v1/dashboard/settings", settingsRouter(config.auth,gateway,config.settingsRepository??new SupabaseSettingsRepository(config.auth),storage));
+    app.use("/api/v1/dashboard/kyc",kycRouter(config.auth,gateway,config.kycRepository??new SupabaseKycRepository(config.auth),storage));
     app.use("/api/v1/listings", listingsRouter(config.auth, gateway, listings, storage));
     app.use("/api/v1/messages", messagesRouter(config.auth,gateway,tickets,storage));
   } else app.use(["/api/v1/auth", "/api/v1/dashboard", "/api/v1/listings", "/api/v1/messages"], (_request, _response, next) => next(unavailable()));

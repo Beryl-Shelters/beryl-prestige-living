@@ -11,6 +11,7 @@ const paths: Record<string, ReactNode> = {
   logout: <path d="M10 3H4v18h6M10 12h11m-4-4 4 4-4 4" />,
   home: <path d="m11 4-8 8 8 8M3 12h18" />,
   investments: <><path d="M3 16h4l4-3h5a2 2 0 0 1 0 4h-4m-5 0 6 4 8-5M3 14v7" /><circle cx="13" cy="6" r="3" /><path d="M13 3v6" /></>,
+  verification: <><path d="M12 3 20 6v5c0 5-3.4 8.7-8 10-4.6-1.3-8-5-8-10V6Z" /><path d="m8.5 12 2.2 2.2 4.8-5" /></>,
   menu: <path d="M3 6h18M3 12h18M3 18h18" />,
   close: <path d="m5 5 14 14M19 5 5 19" />,
 };
