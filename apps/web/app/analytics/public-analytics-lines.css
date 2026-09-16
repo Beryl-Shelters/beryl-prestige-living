@@ -1,0 +1,14 @@
+.public-mobile-line { display: none; }
+.public-analytics-page .public-chart-plot path,
+.public-analytics-page .public-search-plot path { stroke-width: 2; }
+.public-analytics-page .public-chart-plot circle { fill: #9c6f1d; }
+.public-chart-empty { color: #706b63; font-size: 14px; left: 50%; position: absolute; top: 50%; transform: translate(-50%, -50%); text-align: center; width: min(260px, 90%); }
+.public-analytics-state { align-items: center; color: #706b63; display: flex; font-size: 15px; gap: 8px; justify-content: center; min-height: 400px; padding: 20px; text-align: center; }
+.public-analytics-state button { background: #a57720; border: 0; border-radius: 4px; color: white; padding: 9px 14px; }
+.public-analytics-page .public-chart-axis { white-space: nowrap; }
+@media (max-width: 900px) { .public-analytics-page .public-chart-years span:nth-child(n+8) { display: initial; } }
+
+@media (max-width: 900px) {
+  .public-chart-plot .public-desktop-line { display: none; }
+  .public-chart-plot .public-mobile-line { display: block; width: 100%; }
+}

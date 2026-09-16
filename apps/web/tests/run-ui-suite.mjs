@@ -8,9 +8,9 @@ export function isMain(moduleUrl) {
 
 // Standalone and combined runs use exactly the same worker. Process isolation
 // also resets imported mock state, media preferences, permissions and listeners.
-export function runSuites(suites = ["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals", "settings", "kyc", "landing", "public-pages"]) {
+export function runSuites(suites = ["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals", "settings", "kyc", "landing", "public-pages", "public-analytics"]) {
   for (const suite of suites) {
-    if (!["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals", "settings", "kyc", "landing", "public-pages"].includes(suite)) throw new Error(`Unknown suite: ${suite}`);
+    if (!["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals", "settings", "kyc", "landing", "public-pages", "public-analytics"].includes(suite)) throw new Error(`Unknown suite: ${suite}`);
     console.log(`Running isolated ${suite} browser suite`);
     const result = spawnSync(process.execPath, [fileURLToPath(new URL("./auth-ui.browser.mjs", import.meta.url)), `--suite=${suite}`], { stdio: "inherit" });
     if (result.error) console.error(result.error);
