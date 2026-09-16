@@ -16,11 +16,12 @@ import { referralsResponse, referralsState, checkReferrals } from "./referrals-u
 import { settingsResponse,settingsState,settingsRequestBody,checkSettings } from "./settings-ui.checks.mjs";
 import { checkKyc,kycRequestBody,kycResponse } from "./kyc-ui.checks.mjs";
 import { checkLanding } from "./landing-ui.checks.mjs";
+import { checkPublicPages } from "./public-pages-ui.checks.mjs";
 
 import { isMain, runSuites } from "./run-ui-suite.mjs";
 
 export async function runBrowserSuite(suite) {
-assert(["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals", "settings", "kyc", "landing"].includes(suite));
+assert(["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals", "settings", "kyc", "landing", "public-pages"].includes(suite));
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE
   ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : "playwright");
 const origin = process.env.AUTH_UI_ORIGIN || "http://localhost:3000";
@@ -379,6 +380,7 @@ try {
   if (suite === "settings") await checkSettings({page,origin,calls,failures,screenshot,passed,pauseRequest,resume,toast});
   if (suite === "kyc") await checkKyc({page,origin,calls,failures,screenshot,passed,pauseRequest,resume,toast});
   if (suite === "landing") await checkLanding({page,origin,screenshot,passed});
+  if (suite === "public-pages") await checkPublicPages({page,origin,calls,screenshot,passed});
   assert.deepEqual(pageErrors, []);
   await writeFile(join(artifacts, "results.json"), JSON.stringify({ suite, passed, authCalls: calls.length, pageErrors, networkErrors }, null, 2));
   // Keep complete request diagnostics in results.json, including expected

@@ -26,6 +26,10 @@ button:disabled { cursor: wait; opacity: .65; }
 .brand-logo { display: block; height: auto; object-fit: contain; }
 .public-nav { align-items: center; display: flex; flex: 1; gap: clamp(16px, 1.8vw, 28px); justify-content: flex-end; min-width: 0; white-space: nowrap; }
 .public-nav a { color: #080b10; font-size: 12px; font-weight: 600; text-decoration: none; }
+.public-nav a.active { color: var(--gold-dark); }
+.public-site-menu { align-items: center; display: contents; }
+.public-menu-button { background: transparent; border: 0; display: none; margin-left: auto; padding: 8px; }
+.public-menu-button span { background: var(--ink); display: block; height: 2px; margin: 4px 0; width: 22px; }
 .public-nav a:hover, .auth-links a:hover, .auth-footer a:hover { color: var(--gold-dark); text-decoration: underline; }
 .header-actions { display: flex; flex: 0 0 auto; gap: 10px; }
 .button { align-items: center; border: 1px solid transparent; border-radius: 4px; display: inline-flex; font-size: 12px; font-weight: 700; gap: 7px; justify-content: center; min-height: 40px; padding: 9px 16px; text-decoration: none; transition: background .15s, border-color .15s; }
@@ -114,6 +118,16 @@ button:disabled { cursor: wait; opacity: .65; }
   .auth-card { padding: 24px; }
   .public-header { column-gap: 12px; padding-inline: 16px; }
   .public-nav { justify-content: flex-start; }
+  .public-site-header { flex-wrap: nowrap; height: 72px; }
+  .public-site-header .brand-logo { width: 34px; }
+  .public-site-header .brand-lockup { flex-direction: row; gap: 6px; }
+  .public-site-header .brand-name { font-size: 14px; }
+  .public-menu-button { display: block; }
+  .public-site-header .public-site-menu { align-items: stretch; background: #fff; border-top: 1px solid var(--line); box-shadow: 0 10px 18px #0002; display: none; left: 0; padding: 16px; position: absolute; right: 0; top: 72px; }
+  .public-site-header .public-site-menu.open { display: flex; flex-direction: column; }
+  .public-site-header .public-nav { align-items: stretch; display: flex; flex: none; flex-direction: column; gap: 0; order: initial; overflow: visible; padding: 0; }
+  .public-site-header .public-nav a { border-bottom: 1px solid #eee; font-size: 14px; padding: 11px 8px; }
+  .public-site-header .header-actions { justify-content: center; margin: 14px 0 0; }
   .field-group input, .field-group select { font-size: 16px; }
   .brand-loader .brand-logo { width: 64px; }
 }

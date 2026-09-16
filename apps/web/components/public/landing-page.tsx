@@ -13,7 +13,7 @@ const steps=[
 ] as const;
 
 export function LandingPage(){const [mode,setMode]=useState("refer");return <div className="landing-page">
-  <PublicHeader sessionAware/>
+  <PublicHeader sessionAware mobileMenu/>
   <main>
     <section className="landing-hero">
       <picture className="landing-hero-picture"><source media="(max-width: 700px)" srcSet="/landing/landingpagehero_mobile.png"/><img src="/landing/landingpagehero_desktop.png" alt="Customer receiving a Beryl Shelter referral notification"/></picture>
