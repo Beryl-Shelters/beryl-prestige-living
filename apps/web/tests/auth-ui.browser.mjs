@@ -15,11 +15,12 @@ import { propertiesResponse, propertiesState, checkProperties } from "./properti
 import { referralsResponse, referralsState, checkReferrals } from "./referrals-ui.checks.mjs";
 import { settingsResponse,settingsState,settingsRequestBody,checkSettings } from "./settings-ui.checks.mjs";
 import { checkKyc,kycRequestBody,kycResponse } from "./kyc-ui.checks.mjs";
+import { checkLanding } from "./landing-ui.checks.mjs";
 
 import { isMain, runSuites } from "./run-ui-suite.mjs";
 
 export async function runBrowserSuite(suite) {
-assert(["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals", "settings", "kyc"].includes(suite));
+assert(["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals", "settings", "kyc", "landing"].includes(suite));
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE
   ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : "playwright");
 const origin = process.env.AUTH_UI_ORIGIN || "http://localhost:3000";
@@ -213,6 +214,19 @@ try {
   failures.delete("/login"); await submit(); await page.waitForURL("**/dashboard");
   passed.push("Login, Show/Hide, disabled pending submit and toast-only errors below header");
 
+  const loginThrough = async (path) => {
+    await goto(path); await page.locator("#login-identity").fill("test@example.test");
+    await page.locator("#login-password").fill("TestingPass1!"); await submit();
+  };
+  const safeNext = "/dashboard/referrals?source=landing#share";
+  await loginThrough(`/login?next=${encodeURIComponent(safeNext)}`);
+  await page.waitForURL(url => `${url.pathname}${url.search}${url.hash}` === safeNext);
+  for (const unsafeNext of ["https://evil.example/steal","//evil.example/steal","javascript:alert(1)","data:text/html,evil","\\\\evil.example\\steal","/login","/%E0%A4%A"]) {
+    await loginThrough(`/login?next=${encodeURIComponent(unsafeNext)}`); await page.waitForURL("**/dashboard");
+    assert.equal(new URL(page.url()).origin,origin); assert.equal(new URL(page.url()).pathname,"/dashboard");
+  }
+  passed.push("Login honors allowlisted internal next paths and ignores absolute, protocol-relative, scheme, backslash, auth-loop and malformed redirects");
+
   await goto("/forgot-password"); await page.locator("#recovery-identity").fill("test@example.test");
   await submit(); await page.waitForURL("**/forgot-password/verify"); await toast("Password reset code sent to your email.");
   assert.equal(await page.locator('.otp-input input[type="text"]').count(), 6);
@@ -364,6 +378,7 @@ try {
   }
   if (suite === "settings") await checkSettings({page,origin,calls,failures,screenshot,passed,pauseRequest,resume,toast});
   if (suite === "kyc") await checkKyc({page,origin,calls,failures,screenshot,passed,pauseRequest,resume,toast});
+  if (suite === "landing") await checkLanding({page,origin,screenshot,passed});
   assert.deepEqual(pageErrors, []);
   await writeFile(join(artifacts, "results.json"), JSON.stringify({ suite, passed, authCalls: calls.length, pageErrors, networkErrors }, null, 2));
   // Keep complete request diagnostics in results.json, including expected

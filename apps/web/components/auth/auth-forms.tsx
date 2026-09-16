@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { AuthApiError, authRequest } from "../../lib/auth-api";
 import { validateNewPassword } from "../../lib/password-policy";
+import { loginDestination } from "../../lib/login-destination";
 import { useAuthAction } from "./use-auth-action";
 
 import { GoogleAuthButton } from "./google-auth-button";
@@ -38,7 +39,7 @@ export function LoginForm() {
         if (failure instanceof AuthApiError && failure.code === "EMAIL_NOT_VERIFIED") router.push("/verify-email");
         throw failure;
       }
-      router.replace("/account");
+      router.replace(loginDestination(new URLSearchParams(window.location.search).get("next")));
     });
   }
   return (

@@ -1,7 +1,6 @@
+import { LandingPage } from "../components/public/landing-page";
+import "./landing.css";
+
 export default function HomePage() {
-  return (
-    <main>
-      <h1>Beryl Shelter</h1>
-    </main>
-  );
+  return <LandingPage />;
 }
