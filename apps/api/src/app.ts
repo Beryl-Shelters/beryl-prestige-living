@@ -27,6 +27,8 @@ import { publicAnalyticsRouter } from "./public-analytics/routes.js";
 import { SupabasePublicAnalyticsRepository, type PublicAnalyticsRepository } from "./public-analytics/repository.js";
 import { publicSupportRouter } from "./public-support/routes.js";
 import { SupabasePublicSupportRepository, type PublicSupportRepository } from "./public-support/repository.js";
+import { publicPropertiesRouter } from "./public-properties/routes.js";
+import { SupabasePublicPropertiesRepository, type PublicPropertiesRepository } from "./public-properties/repository.js";
 
 export interface AppConfig {
   webAppUrl: string | undefined;
@@ -44,6 +46,7 @@ export interface AppConfig {
   kycRepository?: KycRepository;
   publicAnalyticsRepository?: PublicAnalyticsRepository;
   publicSupportRepository?: PublicSupportRepository;
+  publicPropertiesRepository?: PublicPropertiesRepository;
   trustProxyHops?: number;
 }
 
@@ -66,6 +69,7 @@ export function createApp(config: AppConfig): Express {
   if (config.auth) {
     app.use("/api/v1/public", publicAnalyticsRouter(config.auth, config.publicAnalyticsRepository ?? new SupabasePublicAnalyticsRepository(config.auth)));
     app.use("/api/v1/public/support", publicSupportRouter(config.auth, config.publicSupportRepository ?? new SupabasePublicSupportRepository(config.auth)));
+    app.use("/api/v1/public/properties", publicPropertiesRouter(config.publicPropertiesRepository ?? new SupabasePublicPropertiesRepository(config.auth)));
     const gateway = config.gateway ?? new SupabaseAuthGateway(config.auth);
     const listings = config.listingsRepository ?? new SupabaseListingsRepository(config.auth);
     const tickets = config.ticketsRepository ?? new SupabaseTicketsRepository(config.auth);
