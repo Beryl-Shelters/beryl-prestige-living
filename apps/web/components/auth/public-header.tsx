@@ -17,7 +17,7 @@ const navigation = [
   ["Support", "/support"],
 ] as const;
 
-export function PublicHeader({ sessionAware = false, mobileMenu = false, onSessionChange }: { sessionAware?: boolean; mobileMenu?: boolean; onSessionChange?: (customer: Customer | null) => void }) {
+export function PublicHeader({ sessionAware = false, mobileMenu = false, accountMenu = false, onSessionChange }: { sessionAware?: boolean; mobileMenu?: boolean; accountMenu?: boolean; onSessionChange?: (customer: Customer | null) => void }) {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -46,7 +46,13 @@ export function PublicHeader({ sessionAware = false, mobileMenu = false, onSessi
           {navigation.map(([label, href]) => <Link className={pathname === href ? "active" : undefined} href={href} key={label} onClick={() => setOpen(false)}>{label}</Link>)}
         </nav>
         <div className="header-actions">
-        {sessionAware && customer ? <>
+        {sessionAware && customer && accountMenu ? <details className="public-account-menu"><summary>{[customer.first_name, customer.last_name].filter(Boolean).join(" ") || "My Account"}<span aria-hidden="true">⌄</span></summary><div className="public-account-dropdown">
+          <Link href="/dashboard" onClick={() => setOpen(false)}>My Dashboard</Link>
+          <Link href="/dashboard/listings/new" onClick={() => setOpen(false)}>List Property</Link>
+          <Link href="/dashboard/referrals" onClick={() => setOpen(false)}>Referrals</Link>
+          <span aria-disabled="true">Saved Property — unavailable</span><span aria-disabled="true">Compare Property — unavailable</span><span aria-disabled="true">Mortgage Calculator — unavailable</span>
+          <button type="button" onClick={logout}>Log Out</button>
+        </div></details> : sessionAware && customer ? <>
           <Link className="button button-outline header-button" href="/dashboard" onClick={() => setOpen(false)}>Dashboard</Link>
           <button className="button button-primary header-button" type="button" onClick={logout}>Log Out</button>
         </> : <>
