@@ -18,11 +18,12 @@ import { checkKyc,kycRequestBody,kycResponse } from "./kyc-ui.checks.mjs";
 import { checkLanding } from "./landing-ui.checks.mjs";
 import { checkPublicPages } from "./public-pages-ui.checks.mjs";
 import { checkPublicAnalytics,publicAnalyticsState } from "./public-analytics-ui.checks.mjs";
+import { checkPublicReferrals } from "./public-referrals-ui.checks.mjs";
 
 import { isMain, runSuites } from "./run-ui-suite.mjs";
 
 export async function runBrowserSuite(suite) {
-assert(["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals", "settings", "kyc", "landing", "public-pages", "public-analytics"].includes(suite));
+assert(["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals", "settings", "kyc", "landing", "public-pages", "public-analytics", "public-referrals"].includes(suite));
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE
   ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : "playwright");
 const origin = process.env.AUTH_UI_ORIGIN || "http://localhost:3000";
@@ -85,7 +86,7 @@ await context.route("**/*", async (route) => {
     const ticketOverview=messagesOverview();
     return route.fulfill({ status: error ? error.status ?? 400 : 200, contentType: "application/json",
       headers: { "access-control-allow-origin": origin, "access-control-allow-credentials": "true" },
-      body: JSON.stringify(error ? { success: false, error } : { success: true, data: endpoint.startsWith("/messages/") ? messagesResponse(url,request.method(),requestBody) : endpoint === "/dashboard/kyc" ? kycResponse(request.method(),requestBody) : endpoint === "/dashboard/analytics" ? analyticsResponse(url) : endpoint === "/dashboard/properties" ? propertiesResponse(url) : endpoint === "/dashboard/referrals" ? referralsResponse(url,request.method(),requestBody,listingState.items,origin) : endpoint === "/dashboard/settings/profile" ? settingsResponse(request.method(),requestBody) : endpoint === "/dashboard/settings/business" ? settingsResponse(request.method(),requestBody,"business") : endpoint === "/dashboard/settings/password" ? {reauthenticate:true} : endpoint === "/dashboard/overview" ? {...dashboardFixture,recent_messages:ticketOverview.recent,summary:{...dashboardFixture.summary,new_messages:ticketOverview.unread}} : { maskedEmail: "t***@example.test" } }) });
+      body: JSON.stringify(error ? { success: false, error } : { success: true, data: endpoint === "/me" && suite === "public-referrals" ? {customer:dashboardFixture.customer} : endpoint.startsWith("/messages/") ? messagesResponse(url,request.method(),requestBody) : endpoint === "/dashboard/kyc" ? kycResponse(request.method(),requestBody) : endpoint === "/dashboard/analytics" ? analyticsResponse(url) : endpoint === "/dashboard/properties" ? propertiesResponse(url) : endpoint === "/dashboard/referrals" ? referralsResponse(url,request.method(),requestBody,listingState.items,origin) : endpoint === "/dashboard/settings/profile" ? settingsResponse(request.method(),requestBody) : endpoint === "/dashboard/settings/business" ? settingsResponse(request.method(),requestBody,"business") : endpoint === "/dashboard/settings/password" ? {reauthenticate:true} : endpoint === "/dashboard/overview" ? {...dashboardFixture,recent_messages:ticketOverview.recent,summary:{...dashboardFixture.summary,new_messages:ticketOverview.unread}} : { maskedEmail: "t***@example.test" } }) });
   }
   if (url.origin === origin) return route.continue();
   if (url.hostname === "images.example.test") return route.fulfill({status:200,contentType:"image/png",body:Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=","base64")});
@@ -391,6 +392,7 @@ try {
   if (suite === "landing") await checkLanding({page,origin,calls,screenshot,passed});
   if (suite === "public-pages") await checkPublicPages({page,origin,calls,screenshot,passed});
   if (suite === "public-analytics") await checkPublicAnalytics({page,origin,calls,failures,screenshot,passed});
+  if (suite === "public-referrals") await checkPublicReferrals({page,origin,calls,failures,screenshot,passed});
   assert.deepEqual(pageErrors, []);
   await writeFile(join(artifacts, "results.json"), JSON.stringify({ suite, passed, authCalls: calls.length, pageErrors, networkErrors }, null, 2));
   // Keep complete request diagnostics in results.json, including expected

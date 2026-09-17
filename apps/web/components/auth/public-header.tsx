@@ -17,7 +17,7 @@ const navigation = [
   ["Support", "/support"],
 ] as const;
 
-export function PublicHeader({ sessionAware = false, mobileMenu = false }: { sessionAware?: boolean; mobileMenu?: boolean }) {
+export function PublicHeader({ sessionAware = false, mobileMenu = false, onSessionChange }: { sessionAware?: boolean; mobileMenu?: boolean; onSessionChange?: (customer: Customer | null) => void }) {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -26,13 +26,13 @@ export function PublicHeader({ sessionAware = false, mobileMenu = false }: { ses
     if (!sessionAware) return;
     const controller = new AbortController();
     void authRequest<{ customer: Customer }>("/me")
-      .then((value) => { if (!controller.signal.aborted) setCustomer(value.customer); })
-      .catch(() => {});
+      .then((value) => { if (!controller.signal.aborted) { setCustomer(value.customer); onSessionChange?.(value.customer); } })
+      .catch(() => { if (!controller.signal.aborted) onSessionChange?.(null); });
     return () => controller.abort();
-  }, [sessionAware]);
+  }, [sessionAware, onSessionChange]);
 
   function logout() {
-    void authRequest("/logout", {}).then(() => setCustomer(null)).catch(() => {});
+    void authRequest("/logout", {}).then(() => { setCustomer(null); onSessionChange?.(null); }).catch(() => {});
   }
 
   return (
