@@ -1,0 +1,63 @@
+import assert from "node:assert/strict";
+import { runIfMain } from "./run-ui-suite.mjs";
+
+runIfMain(import.meta.url, "public-support");
+export const supportState = { submissions: [] };
+
+export async function checkPublicSupport({ page, origin, calls, failures, screenshot, passed, pauseRequest, resume }) {
+  for (const width of [1440, 1280, 768, 430, 390, 360]) {
+    await page.setViewportSize({ width, height: 950 });
+    await page.goto(origin + "/support");
+    await page.getByRole("heading", { name: "Welcome to Beryl Prestige Living Support" }).waitFor();
+    await page.evaluate(() => document.fonts.ready);
+    assert.equal(await page.locator(".public-nav a.active").innerText(), "Support");
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Support overflow at ${width}`);
+    assert.equal(await page.evaluate(() => Math.abs(document.querySelector(".support-hero").getBoundingClientRect().top - document.querySelector(".public-header").getBoundingClientRect().bottom) < 1), true);
+    assert.equal(await page.locator(".support-faq-item").count(), 5);
+    assert.equal(await page.locator(".support-contact a[href^='mailto:']").count(), 1);
+    assert.equal(await page.locator(".support-contact a[href^='tel:']").count(), 1);
+    assert.equal(await page.locator(".support-report select option").count(), 1);
+    assert.equal(await page.locator(".support-report select").inputValue(), "AGENT");
+    assert.equal((await page.request.get(`${origin}/support/support-bg.svg`)).ok(), true);
+    assert.equal(await page.locator(".support-report input[name=agentName]").getAttribute("required"), null);
+    if (width === 1440 || width === 390) await screenshot(`public-support-${width}`);
+  }
+  const first = page.locator(".support-faq-item").first();
+  assert.equal(await first.locator("button").getAttribute("aria-expanded"), "true");
+  await first.locator("button").click(); assert.equal(await first.locator("button").getAttribute("aria-expanded"), "false");
+  await first.locator("button").focus(); await page.keyboard.press("Enter");
+  assert.equal(await first.locator("button").getAttribute("aria-expanded"), "true");
+  await page.locator(".support-faq-item").nth(2).locator("button").click();
+  assert.equal(await page.locator(".support-faq-item").nth(2).locator("button").getAttribute("aria-expanded"), "true");
+  await page.getByRole("searchbox", { name: "Search support FAQs" }).fill("verification");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  assert.equal(await page.locator(".support-faq-item").count(), 1);
+  await page.getByRole("searchbox", { name: "Search support FAQs" }).fill("unlikely phrase");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await page.getByText("No matching FAQ found.", { exact: false }).waitFor();
+  await page.getByRole("searchbox", { name: "Search support FAQs" }).fill("");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  const form = page.locator(".support-report form");
+  await form.getByRole("button", { name: "Submit Report" }).click();
+  assert.equal(supportState.submissions.length, 0);
+  await form.getByPlaceholder("Enter Agent ID").fill("AG-101");
+  await form.getByPlaceholder("Describe what happened").fill("A suspicious agent asked for an advance fee.");
+  failures.set("/public/support/reports", { status: 503, code: "SUPPORT_UNAVAILABLE" });
+  await form.getByRole("button", { name: "Submit Report" }).click();
+  await page.getByRole("alert").filter({ hasText: "could not be submitted" }).waitFor();
+  assert.equal(await form.getByPlaceholder("Enter Agent ID").inputValue(), "AG-101");
+  assert.equal(supportState.submissions.length, 0);
+  failures.delete("/public/support/reports");
+  const paused = pauseRequest("/public/support/reports");
+  await form.getByRole("button", { name: "Submit Report" }).click(); await paused;
+  assert.equal(await form.getByRole("button", { name: "Submitting…" }).isDisabled(), true);
+  assert.equal(supportState.submissions.length, 0);
+  resume();
+  await page.getByRole("status").filter({ hasText: "submitted successfully" }).waitFor();
+  assert.equal(supportState.submissions.length, 1);
+  assert.deepEqual(supportState.submissions[0], { reportType: "AGENT", agentId: "AG-101", agentName: "", reason: "A suspicious agent asked for an advance fee." });
+  assert.equal(await form.getByPlaceholder("Enter Agent ID").inputValue(), "");
+  assert.equal(calls.filter(call => call.endpoint === "/public/support/reports" && call.method === "POST").length, 2);
+  passed.push("Support renders at six widths with active navigation, background, FAQ search/accordion, contact details, and no overflow");
+  passed.push("Agent-only public report validates required fields, preserves input on failure, prevents duplicate pending writes, and clears only after success");
+}

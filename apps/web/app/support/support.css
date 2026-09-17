@@ -1,0 +1,59 @@
+.support-page { background:#fff; color:#2b271f; }
+.support-page main { overflow:hidden; padding-top:var(--header-height); }
+.support-hero { background:#2f220b url('/support/support-bg.svg') center/cover no-repeat; color:#fff; min-height:448px; text-align:center; }
+.support-hero-inner { margin:auto; max-width:1100px; padding:88px 20px 100px; }
+.support-hero b { font-size:14px; }
+.support-hero h1 { font-size:39px; line-height:1.2; margin:18px 0 20px; }
+.support-hero p { font-size:17px; line-height:1.55; margin:0 auto; max-width:730px; }
+.support-hero form { background:#685a42; border-radius:10px; display:flex; margin:38px auto 0; max-width:750px; padding:7px; }
+.support-hero input { background:transparent; border:0; color:#fff; flex:1; font-size:16px; min-width:0; padding:10px 12px; }
+.support-hero input::placeholder { color:#eee9de; }
+.support-hero button,.support-contact-button,.support-report form>button { background:#90691f; border:0; color:#fff; font-size:15px; font-weight:700; }
+.support-hero button { border-radius:8px; padding:10px 22px; }
+.support-content { margin:auto; max-width:1270px; padding-inline:28px; }
+.support-faq { display:grid; gap:75px; grid-template-columns:410px minmax(0,1fr); padding-block:115px 170px; }
+.support-faq h2,.support-contact h2,.support-report h2 { font-size:43px; line-height:1.12; margin:0 0 22px; }
+.support-faq header p,.support-report header p { font-size:18px; line-height:1.6; margin:0; }
+.support-faq-list { display:grid; align-content:start; gap:18px; }
+.support-faq-item { background:#f2f0ed; border-radius:12px; overflow:hidden; }
+.support-faq-item h3 { margin:0; }
+.support-faq-item button { align-items:center; background:transparent; border:0; color:#292824; display:flex; font-size:17px; font-weight:700; justify-content:space-between; line-height:1.45; padding:18px; text-align:left; width:100%; }
+.support-faq-item button span { font-size:22px; font-weight:400; margin-left:12px; }
+.support-faq-item button[aria-expanded=true] span { transform:rotate(180deg); }
+.support-faq-item p,.support-no-results { font-size:16px; line-height:1.55; margin:0; padding:0 18px 22px; }
+.support-contact { background:#fff9ed; border-radius:17px; min-height:540px; padding:50px 40px 68px; text-align:center; }
+.support-contact h2 { font-size:37px; margin-bottom:12px; }
+.support-contact>p { font-size:17px; line-height:1.55; margin:0 auto; max-width:570px; }
+.support-contact-button { display:inline-block; margin-top:22px; padding:15px 38px; text-decoration:none; }
+.support-or { display:block; font-size:17px; margin:24px auto 40px; }
+.support-contact-grid { display:grid; gap:30px; grid-template-columns:repeat(3,minmax(0,1fr)); }
+.support-contact-grid>div { align-items:center; display:flex; flex-direction:column; gap:18px; }
+.support-contact-grid span { color:#70511a; font-size:35px; }
+.support-contact-grid p,.support-contact-grid a { color:#28241e; font-size:16px; font-weight:700; line-height:1.55; margin:0; text-decoration:none; }
+.support-report { display:grid; gap:70px; grid-template-columns:410px minmax(0,1fr); padding-block:170px 145px; }
+.support-report form { display:grid; gap:22px; }
+.support-report-fields { display:grid; gap:16px; grid-template-columns:1fr 1fr; }
+.support-report label { display:block; font-size:15px; font-weight:700; }
+.support-report label span { color:#b43e30; }
+.support-report label small { color:#736e66; font-size:13px; font-weight:400; }
+.support-report input,.support-report select,.support-report textarea { background:#f2f0ed; border:0; border-radius:11px; color:#28241e; display:block; font-size:16px; margin-top:10px; min-height:56px; padding:16px; width:100%; }
+.support-report textarea { min-height:200px; resize:vertical; }
+.support-report form>button { border-radius:11px; min-height:56px; }
+.support-feedback { font-size:15px; margin:0; }
+.support-feedback.success { color:#205c36; }.support-feedback.error { color:#a52828; }
+@media(max-width:900px) { .support-faq,.support-report { gap:35px; grid-template-columns:1fr 1.4fr; } }
+@media(max-width:700px) {
+  .support-page main { padding-top:72px; }
+  .support-hero { min-height:525px; }.support-hero-inner { padding:110px 16px 70px; }
+  .support-hero h1 { font-size:31px; margin:18px 0 20px; }.support-hero p { font-size:16px; }
+  .support-hero form { margin-top:35px; }.support-hero input { font-size:14px; }.support-hero button { font-size:14px; padding-inline:16px; }
+  .support-content { margin-inline:16px; padding-inline:0; }
+  .support-faq,.support-report { display:block; }.support-faq { padding-block:70px 120px; }
+  .support-faq header { text-align:center; }.support-faq h2 { font-size:31px; }.support-faq header p { font-size:16px; }
+  .support-faq-list { margin-top:48px; }.support-faq-item button { font-size:16px; padding:17px; }.support-faq-item p { font-size:15px; }
+  .support-contact { min-height:0; padding:50px 22px 65px; }.support-contact h2 { font-size:30px; }.support-contact>p { font-size:16px; }
+  .support-or { margin:24px auto 42px; }.support-contact-grid { display:flex; flex-direction:column; gap:38px; }.support-contact-grid p,.support-contact-grid a { font-size:15px; }
+  .support-report { padding-block:120px 80px; }.support-report header { text-align:center; }.support-report h2 { font-size:34px; }.support-report header p { font-size:16px; }
+  .support-report form { margin-top:55px; }.support-report-fields { grid-template-columns:1fr; }.support-report label { font-size:15px; }
+  .support-page .site-footer { display:none; }
+}
