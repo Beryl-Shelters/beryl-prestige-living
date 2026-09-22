@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { authRequest, type Customer } from "../../lib/auth-api";
 import { BrandLogo } from "./brand-logo";
 
@@ -17,9 +17,25 @@ const navigation = [
   ["Support", "/support"],
 ] as const;
 
-export function PublicHeader({ sessionAware = false, mobileMenu = false, accountMenu = false, onSessionChange }: { sessionAware?: boolean; mobileMenu?: boolean; accountMenu?: boolean; onSessionChange?: (customer: Customer | null) => void }) {
+type AccountIconName = "dashboard" | "listing" | "referrals" | "saved" | "compare" | "mortgage" | "logout";
+function AccountIcon({ name }: { name: AccountIconName }) {
+  const paths = {
+    dashboard: <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>,
+    listing: <path d="m3 11 9-7 9 7v9H3z"/>, referrals: <path d="M4 17c4-6 8-6 14-6m-4-4 4 4-4 4"/>,
+    saved: <path d="M12 20 4.5 12.5a5 5 0 0 1 7.5-6.6 5 5 0 0 1 7.5 6.6Z"/>,
+    compare: <><path d="M5 10a7 7 0 0 1 12-4l2 2M19 14a7 7 0 0 1-12 4l-2-2"/><path d="M19 3v5h-5M5 21v-5h5"/></>,
+    mortgage: <><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M7 8h10M8 13h2m4 0h2M8 17h2m4 0h2"/></>,
+    logout: <><path d="M10 3H4v18h6M10 12h11m-4-4 4 4-4 4"/></>,
+  };
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
+}
+
+export function PublicHeader({ sessionAware = false, mobileMenu = false, onSessionChange }: { sessionAware?: boolean; mobileMenu?: boolean; onSessionChange?: (customer: Customer | null) => void }) {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [open, setOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
+  const accountTrigger = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -31,7 +47,17 @@ export function PublicHeader({ sessionAware = false, mobileMenu = false, account
     return () => controller.abort();
   }, [sessionAware, onSessionChange]);
 
+  useEffect(() => {
+    if (!accountOpen) return;
+    const outside = (event: PointerEvent) => { if (!accountRef.current?.contains(event.target as Node)) setAccountOpen(false); };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") { setAccountOpen(false); accountTrigger.current?.focus(); } };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", escape); };
+  }, [accountOpen]);
+
   function logout() {
+    setAccountOpen(false); setOpen(false);
     void authRequest("/logout", {}).then(() => { setCustomer(null); onSessionChange?.(null); }).catch(() => {});
   }
 
@@ -43,19 +69,28 @@ export function PublicHeader({ sessionAware = false, mobileMenu = false, account
       {mobileMenu && <button className="public-menu-button" type="button" aria-label="Toggle navigation" aria-expanded={open} onClick={() => setOpen(value => !value)}><span/><span/><span/></button>}
       <div className={`public-site-menu${open ? " open" : ""}`}>
         <nav className="public-nav" aria-label="Public navigation">
-          {navigation.map(([label, href]) => <Link className={pathname === href ? "active" : undefined} href={href} key={label} onClick={() => setOpen(false)}>{label}</Link>)}
+          {navigation.map(([label, href]) => {
+            const destination = label === "Sell / List a Property" && sessionAware && customer ? "/dashboard/listings/new" : href;
+            return <Link className={pathname === destination ? "active" : undefined} href={destination} key={label} onClick={() => setOpen(false)}>{label}</Link>;
+          })}
         </nav>
         <div className="header-actions">
-        {sessionAware && customer && accountMenu ? <details className="public-account-menu"><summary>{[customer.first_name, customer.last_name].filter(Boolean).join(" ") || "My Account"}<span aria-hidden="true">⌄</span></summary><div className="public-account-dropdown">
-          <Link href="/dashboard" onClick={() => setOpen(false)}>My Dashboard</Link>
-          <Link href="/dashboard/listings/new" onClick={() => setOpen(false)}>List Property</Link>
-          <Link href="/dashboard/referrals" onClick={() => setOpen(false)}>Referrals</Link>
-          <span aria-disabled="true">Saved Property — unavailable</span><span aria-disabled="true">Compare Property — unavailable</span><span aria-disabled="true">Mortgage Calculator — unavailable</span>
-          <button type="button" onClick={logout}>Log Out</button>
-        </div></details> : sessionAware && customer ? <>
-          <Link className="button button-outline header-button" href="/dashboard" onClick={() => setOpen(false)}>Dashboard</Link>
-          <button className="button button-primary header-button" type="button" onClick={logout}>Log Out</button>
-        </> : <>
+        {sessionAware && customer ? <div className="public-account-menu" ref={accountRef}>
+          <button ref={accountTrigger} className="public-account-trigger" type="button" aria-haspopup="true" aria-expanded={accountOpen} aria-controls="public-account-dropdown" onClick={() => setAccountOpen(value => !value)}>
+            <span className="public-account-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="3.5"/><path d="M5 19a7 7 0 0 1 14 0Z"/></svg></span>
+            <span className="public-account-name">{[customer.first_name, customer.last_name].filter(Boolean).join(" ") || "My Account"}</span>
+            <svg className="public-account-chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="m3 7 7 6 7-6"/></svg>
+          </button>
+          {accountOpen && <nav id="public-account-dropdown" className="public-account-dropdown" aria-label="Account navigation">
+            <Link href="/dashboard" onClick={() => { setAccountOpen(false); setOpen(false); }}><AccountIcon name="dashboard"/>My Dashboard</Link>
+            <Link href="/dashboard/listings/new" onClick={() => { setAccountOpen(false); setOpen(false); }}><AccountIcon name="listing"/>List Property</Link>
+            <Link href="/dashboard/referrals" onClick={() => { setAccountOpen(false); setOpen(false); }}><AccountIcon name="referrals"/>Referrals</Link>
+            <button type="button" aria-disabled="true"><AccountIcon name="saved"/>Saved Property</button>
+            <button type="button" aria-disabled="true"><AccountIcon name="compare"/>Compare Property</button>
+            <button type="button" aria-disabled="true"><AccountIcon name="mortgage"/>Mortgage Calculator</button>
+            <button type="button" onClick={logout}><AccountIcon name="logout"/>Log Out</button>
+          </nav>}
+        </div> : <>
           <Link className="button button-outline header-button" href="/login" onClick={() => setOpen(false)}>Login</Link>
           <Link className="button button-primary header-button" href="/register" onClick={() => setOpen(false)}>Register</Link>
         </>}

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
 import {randomUUID} from "node:crypto";
-import {completeness,minorUnits,parseContent} from "../src/listings/model.js";
+import {completeness,listingOptions,minorUnits,parseContent} from "../src/listings/model.js";
 import {ListingsService} from "../src/listings/service.js";
 import {validateFile} from "../src/listings/uploads.js";
 import {imageBytes,listingFixture,listingForm,validContent} from "./listings.fixture.js";
@@ -22,3 +22,22 @@ test("Listings API and actual local migration transactions",async t=>{
 
 test("listing completeness and exact money are deterministic, bounded and not browser-authoritative",()=>{assert.equal(minorUnits("9999999999999.99"),999999999999999);assert.equal(minorUnits("0.01"),1);assert.throws(()=>minorUnits("1.001"));const listing={...parseContent(validContent),images:[{}],facilities:[]} as Parameters<typeof completeness>[0];assert.equal(completeness(listing),80);assert.equal(completeness({...listing,units:2,land_area:100,year_built:2020,longitude:0,latitude:0,facilities:["CCTV"]}),100);});
 test("image/document MIME magic, file-size and executable restrictions",()=>{validateFile({field:"images",mime:"image/png",bytes:imageBytes},false);for(const [mime,bytes,document] of [["image/png",Buffer.from("MZ executable"),false],["application/pdf",Buffer.from("%PDF-1.4"),false],["image/webp",imageBytes,true],["image/png",Buffer.alloc(5242881),false],["application/pdf",Buffer.alloc(10485761),true]] as const)assert.throws(()=>validateFile({field:"x",mime,bytes},document));});
+test("expanded listing taxonomy accepts all states, subtypes and conveniences while rejecting unsupported values",async t=>{
+  assert.equal(listingOptions.state.length,37);
+  assert.equal(new Set(listingOptions.state).size,37);
+  for(const state of listingOptions.state) assert.equal(parseContent({...validContent,state}).state,state);
+  for(const subtype of listingOptions.property_subtype) assert.equal(parseContent({...validContent,property_subtype:subtype}).property_subtype,subtype);
+  for(const facility of listingOptions.facilities) assert.deepEqual(parseContent({...validContent,facilities:[facility]}).facilities,[facility]);
+  for(const invalid of [{state:"Atlantis"},{property_subtype:"Villa"},{facilities:["Pool"]},{bedrooms:101},{bathrooms:101},{bedrooms:-1},{bathrooms:1.5}])assert.throws(()=>parseContent({...validContent,...invalid}));
+  const f=await listingFixture(t);
+  const created=await f.request("","POST",listingForm({...validContent,state:"Rivers",property_subtype:"Detached Duplexes",bedrooms:7,bathrooms:12,facilities:["Children Play Area","Tennis Court","Basketball Court"]}));
+  assert.equal(created.response.status,201,JSON.stringify(created.payload));
+  assert.equal(created.payload.data.listing_status,"UNLISTED");
+  assert.deepEqual(created.payload.data.facilities,["Children Play Area","Tennis Court","Basketball Court"]);
+  const edited=await f.request(`/${created.payload.data.id}`,"PATCH",listingForm({...validContent,state:"Federal Capital Territory (FCT)",property_subtype:"Block of flats",bedrooms:8,bathrooms:9,facilities:["Swimming Pool","Air Conditioning"]},[],{version:created.payload.data.version}));
+  assert.equal(edited.response.status,200,JSON.stringify(edited.payload));
+  assert.equal(edited.payload.data.property_subtype,"Block of flats");
+  assert.equal(edited.payload.data.state,"Federal Capital Territory (FCT)");
+  assert.equal(edited.payload.data.bedrooms,8);
+  assert.deepEqual(edited.payload.data.facilities,["Swimming Pool","Air Conditioning"]);
+});

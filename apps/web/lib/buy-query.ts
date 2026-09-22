@@ -18,7 +18,8 @@ export function formatNaira(priceMinor: number): string {
 
 export function apiQueryFromBuyUrl(url: URLSearchParams): { query: URLSearchParams; error: string | null; locationNotice: string | null } {
   const query = new URLSearchParams();
-  for (const key of allowed) { const value = url.get(key)?.trim(); if (value) query.set(key, value); }
+  for (const key of allowed) { const value = url.get(key)?.trim(); if (value) query.set(key === "bedrooms" && value === "7+" ? "bedroomsMin" : key === "bathrooms" && value === "7+" ? "bathroomsMin" : key, value === "7+" && (key === "bedrooms" || key === "bathrooms") ? "7" : value); }
+  const sort = url.get("sort")?.trim(); if (sort) query.set("sort", sort);
   const code = url.get("code")?.trim();
   if (code && query.has("q")) return { query, error: "Use either Search properties or Property Code, not both.", locationNotice: null };
   if (code) query.set("q", code);

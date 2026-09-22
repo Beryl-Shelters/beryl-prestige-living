@@ -43,10 +43,15 @@ export class SupabasePublicPropertiesRepository implements PublicPropertiesRepos
     if (query.maxPrice !== undefined) request = request.lte("property_cost_minor", query.maxPrice);
     if (query.bedrooms !== undefined) request = request.eq("bedrooms", query.bedrooms);
     if (query.bathrooms !== undefined) request = request.eq("bathrooms", query.bathrooms);
+    if (query.bedroomsMin !== undefined) request = request.gte("bedrooms", query.bedroomsMin);
+    if (query.bathroomsMin !== undefined) request = request.gte("bathrooms", query.bathroomsMin);
     if (query.facility) request = request.contains("facilities", [query.facility]);
     const offset = (query.page - 1) * query.pageSize;
-    const { data, count, error } = await request.order("listed_at", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false }).order("id", { ascending: false }).range(offset, offset + query.pageSize - 1);
+    if (query.sort === "price_asc" || query.sort === "price_desc")
+      request = request.order("property_cost_minor", { ascending: query.sort === "price_asc" });
+    const oldest = query.sort === "oldest";
+    const { data, count, error } = await request.order("listed_at", { ascending: oldest, nullsFirst: false })
+      .order("created_at", { ascending: oldest }).order("id", { ascending: oldest }).range(offset, offset + query.pageSize - 1);
     if (error) throw new Error("Public properties unavailable");
     const items: PublicProperty[] = ((data ?? []) as PropertyRow[]).map(row => ({
       code: row.listing_code, title: row.title, description: row.description,

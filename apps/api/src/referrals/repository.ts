@@ -4,7 +4,7 @@ import { AuthError } from "../auth/errors.js";
 import type { CreatedReferral, ReferralPage } from "./model.js";
 
 type CreatedRow=Omit<CreatedReferral,"referralUrl">;
-export interface ReferralsRepository { list(owner:string,page:number,pageSize:number):Promise<Omit<ReferralPage,"program">>; create(owner:string,type:"PROPERTY"|"SELLER",listingId:string|null):Promise<CreatedRow>; }
+export interface ReferralsRepository { list(owner:string,page:number,pageSize:number):Promise<Omit<ReferralPage,"program">>; create(owner:string,type:"PROPERTY"|"SELLER",listingId:string|null):Promise<CreatedRow>; createPublicProperty(owner:string,propertyCode:string):Promise<CreatedRow>; }
 function check(error:{code?:string;message?:string}|null){
   if(!error)return;
   if(error.code==="P0002")throw new AuthError(404,"LISTING_NOT_FOUND","Listing not found.");
@@ -19,6 +19,14 @@ export class SupabaseReferralsRepository implements ReferralsRepository {
   async create(owner:string,type:"PROPERTY"|"SELLER",listingId:string|null){
     for(let attempt=0;attempt<3;attempt++){
       const {data,error}=await this.db.rpc("create_customer_referral_link",{p_owner:owner,p_type:type,p_listing:listingId});
+      if(error?.code==="23505"&&error.message.includes("customer_referral_links_referral_code_key")&&attempt<2)continue;
+      check(error);return data as CreatedRow;
+    }
+    throw new AuthError(503,"REFERRALS_UNAVAILABLE","Referrals are temporarily unavailable. Please try again.");
+  }
+  async createPublicProperty(owner:string,propertyCode:string){
+    for(let attempt=0;attempt<3;attempt++){
+      const {data,error}=await this.db.rpc("create_listed_property_referral_link",{p_referrer:owner,p_property_code:propertyCode});
       if(error?.code==="23505"&&error.message.includes("customer_referral_links_referral_code_key")&&attempt<2)continue;
       check(error);return data as CreatedRow;
     }

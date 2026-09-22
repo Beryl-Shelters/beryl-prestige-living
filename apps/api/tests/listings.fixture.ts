@@ -29,6 +29,7 @@ export class LocalRepository implements ListingsRepository {
 export async function listingFixture(t:TestContext,shortCodes=true){
   const db=new PGlite();await db.exec("create schema auth; create table auth.users(id uuid primary key); create role anon; create role authenticated; create role service_role;");
   await db.exec(await readFile(new URL("../supabase/migrations/202609080001_customer_listings.sql",import.meta.url),"utf8"));
+  await db.exec(await readFile(new URL("../supabase/migrations/202609180002_listing_taxonomy.sql",import.meta.url),"utf8"));
   if(shortCodes) await db.exec(await readFile(new URL("../supabase/migrations/202609100001_short_display_codes.sql",import.meta.url),"utf8"));
   await db.exec(await readFile(new URL("../supabase/migrations/202609100002_single_document_upload.sql",import.meta.url),"utf8"));
   const owner=randomUUID(),other=randomUUID();await db.query("insert into auth.users values($1),($2)",[owner,other]);

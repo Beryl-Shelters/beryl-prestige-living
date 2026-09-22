@@ -161,9 +161,9 @@ export async function checkReferrals({
   await browserPage
     .getByRole("link", { name: "View Properties", exact: true })
     .click();
-  await browserPage.waitForURL("**/dashboard/listings");
+  await browserPage.waitForURL("**/buy");
   passed.push(
-    "Seller link creation is server-shaped, copyable and idempotent; no purchase, balance or earnings are invented; View Properties uses the existing Listings route",
+    "Seller link creation is server-shaped, copyable and idempotent; no purchase, balance or earnings are invented; View Properties uses public Buy",
   );
   referralsState.links = [];
   const observed = pauseRequest(endpoint);

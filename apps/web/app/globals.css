@@ -10,6 +10,7 @@
   --gold-dark: #966b37;
   --focus: #966b37;
   --header-height: 88px;
+  --form-control-radius: 6px;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; }
@@ -32,7 +33,19 @@ button:disabled { cursor: wait; opacity: .65; }
 .public-menu-button span { background: var(--ink); display: block; height: 2px; margin: 4px 0; width: 22px; }
 .public-nav a:hover, .auth-links a:hover, .auth-footer a:hover { color: var(--gold-dark); text-decoration: underline; }
 .header-actions { display: flex; flex: 0 0 auto; gap: 10px; }
-.button { align-items: center; border: 1px solid transparent; border-radius: 4px; display: inline-flex; font-size: 12px; font-weight: 700; gap: 7px; justify-content: center; min-height: 40px; padding: 9px 16px; text-decoration: none; transition: background .15s, border-color .15s; }
+.public-account-menu { position: relative; }
+.public-account-trigger { align-items: center; background: #fff; border: 1px solid #e6ded2; border-radius: 12px; color: #171717; display: flex; font-size: 12px; font-weight: 700; gap: 9px; min-height: 42px; padding: 6px 10px; white-space: nowrap; }
+.public-account-avatar { align-items: center; background: #f7edd2; border-radius: 50%; color: #796443; display: inline-flex; flex: 0 0 25px; height: 25px; justify-content: center; }
+.public-account-avatar svg { height: 16px; width: 16px; }
+.public-account-name { max-width: 156px; overflow: hidden; text-overflow: ellipsis; }
+.public-account-chevron { height: 16px; width: 16px; }
+.public-account-dropdown { background: #fff; border: 1px solid #e8e1d7; border-radius: 12px; box-shadow: 0 7px 15px #00000017; display: grid; min-width: 194px; padding: 5px 0; position: absolute; right: 0; top: calc(100% + 5px); z-index: 1001; }
+.public-account-dropdown > * { align-items: center; background: transparent; border: 0; color: #282828; display: flex; font-size: 13px; font-weight: 500; gap: 12px; min-height: 39px; padding: 8px 14px; text-align: left; text-decoration: none; white-space: nowrap; }
+.public-account-dropdown svg { color: #79776f; flex: 0 0 16px; height: 16px; width: 16px; }
+.public-account-dropdown a:hover, .public-account-dropdown button:not([aria-disabled]):hover { background: #faf5eb; }
+.public-account-dropdown [aria-disabled] { cursor: not-allowed; }
+.public-account-trigger:focus-visible, .public-account-dropdown > *:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.button { align-items: center; border: 1px solid transparent; border-radius: var(--form-control-radius); display: inline-flex; font-size: 12px; font-weight: 700; gap: 7px; justify-content: center; min-height: 40px; padding: 9px 16px; text-decoration: none; transition: background .15s, border-color .15s; }
 .button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible, .text-button:focus-visible, .google-button:focus-visible, .password-toggle:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 .button-primary { background: var(--gold); color: #fff; }
 .button-primary:hover { background: var(--gold-dark); }
@@ -52,7 +65,7 @@ button:disabled { cursor: wait; opacity: .65; }
 .field-group { display: grid; gap: 6px; margin-top: 17px; min-width: 0; }
 .field-group label, .radio-fieldset legend, .otp-label { color: var(--ink); font-size: 12px; font-weight: 600; }
 .field-group label > span, .otp-label > span { color: #dc3545; }
-.field-group input, .field-group select { background: #ffffff; border: 1px solid var(--line); border-radius: 4px; color: var(--ink); font-size: 12px; min-height: 40px; min-width: 0; padding: 9px 11px; width: 100%; }
+.field-group input, .field-group select { background: #ffffff; border: 1px solid var(--line); border-radius: var(--form-control-radius); color: var(--ink); font-size: 12px; min-height: 40px; min-width: 0; padding: 9px 11px; width: 100%; }
 .field-group input::placeholder { color: #8b94a3; opacity: 1; }
 .field-group input:hover, .field-group select:hover { border-color: #bfc5cf; }
 .field-group input:focus, .field-group select:focus { border-color: var(--gold); outline: 2px solid #b7864b33; outline-offset: 1px; }
@@ -128,6 +141,9 @@ button:disabled { cursor: wait; opacity: .65; }
   .public-site-header .public-nav { align-items: stretch; display: flex; flex: none; flex-direction: column; gap: 0; order: initial; overflow: visible; padding: 0; }
   .public-site-header .public-nav a { border-bottom: 1px solid #eee; font-size: 14px; padding: 11px 8px; }
   .public-site-header .header-actions { justify-content: center; margin: 14px 0 0; }
+  .public-site-header .public-account-menu { max-width: 100%; width: 100%; }
+  .public-site-header .public-account-trigger { justify-content: center; width: 100%; }
+  .public-site-header .public-account-dropdown { box-shadow: none; margin-top: 6px; position: static; width: 100%; }
   .field-group input, .field-group select { font-size: 16px; }
   .brand-loader .brand-logo { width: 64px; }
 }

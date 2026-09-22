@@ -57,12 +57,15 @@ export const listingOptions = {
   occupancy_type: ["Residential", "Commercial"],
   ownership_type: ["Personal", "Family"],
   property_type: ["Residential", "Commercial"],
-  property_subtype: ["Bungalow", "Semi-Detached House"],
+  property_subtype: ["Bungalow", "Semi-Detached House", "Block of flats", "Terraced Duplexes", "Terraced Bungalows", "Semi-Detached Bungalows", "Detached Bungalows", "Detached Duplexes"],
   facilities: [
     "Swimming Pool",
     "Gym/Fitness Center",
     "CCTV",
     "Balcony/Terrace",
+    "Children Play Area",
+    "Tennis Court",
+    "Basketball Court",
     "Air Conditioning",
     "Laundry",
     "Garden",
@@ -72,7 +75,7 @@ export const listingOptions = {
     "24Hrs Security",
   ],
   document_type: ["Ownership", "Survey", "Other"],
-  state: ["Lagos"],
+  state: ["Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara", "Federal Capital Territory (FCT)"],
 };
 export const listingState = { items: [], calls: [] };
 export async function mockListings(route, origin) {
@@ -235,7 +238,7 @@ export async function checkListings({
     );
     assert.equal(
       await page.locator('.listing-facilities input[type="checkbox"]').count(),
-      11,
+      14,
     );
     assert.equal(await page.locator('[name="toilet_count"]').count(), 0);
     await noOverflow(width);
@@ -461,6 +464,19 @@ export async function checkListings({
   assert(listingState.calls.some((call) => call.url.includes("q=Property+0")));
   await page.getByLabel("Status", { exact: true }).selectOption("PENDING");
   await page.getByText("No listings.", { exact: true }).waitFor();
+  for (const path of ["/dashboard/listings/new", `/dashboard/listings/${listingState.items[0].id}/edit`]) {
+    await open(path); await page.locator('[name="property_subtype"]').waitFor();
+    assert.deepEqual(await page.locator('[name="property_subtype"] option').allTextContents(), ["Select an Option", ...listingOptions.property_subtype]);
+    assert.deepEqual(await page.locator('#listing-state-options option').evaluateAll(options => options.map(option => option.value)), listingOptions.state);
+    for (const name of ["bedrooms", "bathrooms"]) {
+      assert.equal(await page.locator(`[name="${name}"] option`).filter({ hasText: /^7$/ }).count(), 1);
+      assert.equal(await page.locator(`[name="${name}"] option`).filter({ hasText: /^100$/ }).count(), 1);
+    }
+    for (const facility of ["Children Play Area", "Tennis Court", "Basketball Court"]) await page.getByLabel(facility, { exact: true }).check();
+    assert.equal(await page.getByLabel("Children Play Area", { exact: true }).isChecked(), true);
+    assert.equal(await page.getByLabel("Tennis Court", { exact: true }).isChecked(), true);
+    assert.equal(await page.getByLabel("Basketball Court", { exact: true }).isChecked(), true);
+  }
   passed.push(
     "Listings: six responsive widths; empty/populated/Create/View/Edit layouts; Quick Preview and image selection; native required validation; full create/edit/delete lifecycle; single-description/single-file document drawer; exact referral/approval toasts; Pending/Unlist; server query search/filter/pagination",
   );

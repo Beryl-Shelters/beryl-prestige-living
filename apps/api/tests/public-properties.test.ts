@@ -3,12 +3,20 @@ import { randomBytes } from "node:crypto";
 import { test } from "node:test";
 import { createApp } from "../src/app.js";
 import { authConfigSchema } from "../src/auth/config.js";
+import { listingOptions } from "../src/listings/model.js";
 import { publicPropertyQuery, type PublicPropertyPage, type PublicPropertyQuery } from "../src/public-properties/model.js";
 import { SupabasePublicPropertiesRepository, type PublicPropertiesRepository } from "../src/public-properties/repository.js";
 
 const config = authConfigSchema.parse({ webOrigin: "http://localhost:3000", apiOrigin: "http://localhost:4000",
   supabaseUrl: "https://example.supabase.co", anonKey: "test", serviceKey: "test",
   encryptionKey: randomBytes(32).toString("base64"), cookieSecure: false, production: false });
+
+test("public filter taxonomy mirrors authoritative listing options", () => {
+  for (const propertySubtype of listingOptions.property_subtype) assert.equal(publicPropertyQuery.parse({ propertySubtype }).propertySubtype, propertySubtype);
+  for (const facility of listingOptions.facilities) assert.equal(publicPropertyQuery.parse({ facility }).facility, facility);
+  for (const state of listingOptions.state) assert.equal(publicPropertyQuery.parse({ state }).state, state);
+  for (const sort of ["latest", "oldest", "price_asc", "price_desc"]) assert.equal(publicPropertyQuery.parse({ sort }).sort, sort);
+});
 
 test("public properties are read-only, unauthenticated, validated and never record search events", async t => {
   const queries: PublicPropertyQuery[] = [];
@@ -29,13 +37,16 @@ test("public properties are read-only, unauthenticated, validated and never reco
   const filtered = await fetch(base + "?q=  RES-ABC  &propertyType=Residential&propertySubtype=Bungalow&state=Lagos&city=Ikeja&minPrice=0&maxPrice=999999999999999&bedrooms=0&bathrooms=2&facility=Wi-Fi&page=2&pageSize=50");
   assert.equal(filtered.status, 200);
   assert.deepEqual(queries.at(-1), { q: "RES-ABC", propertyType: "Residential", propertySubtype: "Bungalow", state: "Lagos", city: "Ikeja",
-    minPrice: 0, maxPrice: 999999999999999, bedrooms: 0, bathrooms: 2, facility: "Wi-Fi", page: 2, pageSize: 50 });
+    minPrice: 0, maxPrice: 999999999999999, bedrooms: 0, bathrooms: 2, facility: "Wi-Fi", sort: "latest", page: 2, pageSize: 50 });
   for (const query of ["q=" + "x".repeat(101), "page=0", "page=100001", "page=1.5", "page=1e2", "pageSize=51", "pageSize=0",
     "minPrice=-1", "minPrice=1.25", "maxPrice=9999999999999999", "minPrice=3&maxPrice=2", "bedrooms=1.5", "bathrooms=-1",
-    "propertyType=Land", "propertySubtype=Villa", "facility=Pool", "state=", "city=", "sort=price", "owner=secret", "q=a&q=b", "page[]=1"]) {
+    "propertyType=Land", "propertySubtype=Villa", "facility=Pool", "state=Atlantis", "state=", "city=", "sort=price", "bedroomsMin=8", "bedrooms=2&bedroomsMin=7", "owner=secret", "q=a&q=b", "page[]=1"]) {
     assert.equal((await fetch(base + "?" + query)).status, 400, query);
   }
   assert.equal(queries.length, 2);
+  const expanded = await fetch(base + "?state=Abia&propertySubtype=Detached%20Duplexes&facility=Tennis%20Court&bedroomsMin=7&bathroomsMin=7&sort=price_desc");
+  assert.equal(expanded.status, 200);
+  assert.deepEqual(queries.at(-1), publicPropertyQuery.parse({ state: "Abia", propertySubtype: "Detached Duplexes", facility: "Tennis Court", bedroomsMin: "7", bathroomsMin: "7", sort: "price_desc" }));
   assert.equal((await fetch(base, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })).status, 404);
   assert.equal(searchEvents, 0);
   fail = true;
@@ -80,6 +91,16 @@ test("repository projects only LISTED public fields, includes legacy null dates 
   assert(url.searchParams.get("facilities")?.includes("Wi-Fi"));
   assert(url.searchParams.get("or")?.includes("100\\%\\_\\*"));
   assert.equal(url.searchParams.get("order"), "listed_at.desc.nullslast,created_at.desc,id.desc");
+  for (const [sort, order] of [["latest","listed_at.desc.nullslast,created_at.desc,id.desc"],["oldest","listed_at.asc.nullslast,created_at.asc,id.asc"],["price_asc","property_cost_minor.asc,listed_at.desc.nullslast,created_at.desc,id.desc"],["price_desc","property_cost_minor.desc,listed_at.desc.nullslast,created_at.desc,id.desc"]] as const) {
+    await repository.list(publicPropertyQuery.parse({ sort, page: "2", pageSize: "10", bedroomsMin: "7", bathroomsMin: "7", state: "Rivers", facility: "Basketball Court" }));
+    const sorted = requests.at(-1)!;
+    assert.equal(sorted.searchParams.get("order"), order);
+    assert.equal(sorted.searchParams.get("bedrooms"), "gte.7");
+    assert.equal(sorted.searchParams.get("bathrooms"), "gte.7");
+    assert.equal(sorted.searchParams.get("state"), "eq.Rivers");
+    assert(sorted.searchParams.get("facilities")?.includes("Basketball Court"));
+    assert.equal(sorted.searchParams.get("offset"), "10");
+  }
   const projection = url.searchParams.get("select")!;
   for (const privateField of ["user_id", "email", "phone", "documents", "public_id", "requested_at", "version", "minimum_down_payment_minor"])
     assert(!projection.includes(privateField), privateField);

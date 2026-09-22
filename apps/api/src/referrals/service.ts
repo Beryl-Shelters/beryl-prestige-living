@@ -7,7 +7,11 @@ export class ReferralsService {
   async list(owner:string,page:number):Promise<ReferralPage>{return {program:{commissionRateBasisPoints:referralCommissionBasisPoints},...await this.repository.list(owner,page,referralPageSize)};}
   async create(owner:string,type:"PROPERTY"|"SELLER",listingId:string|null):Promise<CreatedReferral>{
     const row=await this.repository.create(owner,type,listingId);
-    const path=type==="PROPERTY"?`/properties/${encodeURIComponent(row.propertyCode!)}`:"/register";
-    return {...row,referralUrl:`${this.config.webOrigin}${path}?ref=${encodeURIComponent(row.id)}`};
+    const path=type==="PROPERTY"?`/buy?code=${encodeURIComponent(row.propertyCode!)}&ref=${encodeURIComponent(row.id)}`:`/register?ref=${encodeURIComponent(row.id)}`;
+    return {...row,referralUrl:`${this.config.webOrigin}${path}`};
+  }
+  async createPublicProperty(referrer:string,propertyCode:string):Promise<CreatedReferral>{
+    const row=await this.repository.createPublicProperty(referrer,propertyCode);
+    return {...row,referralUrl:`${this.config.webOrigin}/buy?code=${encodeURIComponent(row.propertyCode!)}&ref=${encodeURIComponent(row.id)}`};
   }
 }

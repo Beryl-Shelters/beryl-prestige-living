@@ -1,0 +1,5 @@
+// Mirrors the public choices served by the Listings /options API. The API is
+// authoritative for persistence; keep these browser-only labels synchronized.
+export const nigerianStates = ["Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara", "Federal Capital Territory (FCT)"] as const;
+export const propertySubtypes = ["Bungalow", "Semi-Detached House", "Block of flats", "Terraced Duplexes", "Terraced Bungalows", "Semi-Detached Bungalows", "Detached Bungalows", "Detached Duplexes"] as const;
+export const propertyFacilities = ["Swimming Pool", "Balcony/Terrace", "Children Play Area", "Tennis Court", "Basketball Court", "Gym/Fitness Center", "CCTV", "Air Conditioning", "Laundry", "Garden", "Wi-Fi", "Housekeeping Services", "Car Park", "24Hrs Security"] as const;

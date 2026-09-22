@@ -21,11 +21,12 @@ import { checkPublicAnalytics,publicAnalyticsState } from "./public-analytics-ui
 import { checkPublicReferrals } from "./public-referrals-ui.checks.mjs";
 import { checkPublicSupport, supportState } from "./public-support-ui.checks.mjs";
 import { checkPublicBuy, buyResponse, buyState } from "./public-buy-ui.checks.mjs";
+import { checkPublicHeader } from "./public-header-ui.checks.mjs";
 
 import { isMain, runSuites } from "./run-ui-suite.mjs";
 
 export async function runBrowserSuite(suite) {
-assert(["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals", "settings", "kyc", "landing", "public-pages", "public-analytics", "public-referrals", "public-support", "public-buy"].includes(suite));
+assert(["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals", "settings", "kyc", "landing", "public-pages", "public-analytics", "public-referrals", "public-support", "public-buy", "public-header"].includes(suite));
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE
   ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : "playwright");
 const origin = process.env.AUTH_UI_ORIGIN || "http://localhost:3000";
@@ -61,7 +62,12 @@ await context.route("**/*", async (route) => {
   const url = new URL(request.url());
   if(url.pathname.startsWith("/api/v1/public/")){
     if(request.method()==="OPTIONS")return route.fulfill({status:204,headers:{"access-control-allow-origin":origin,"access-control-allow-methods":"GET,POST","access-control-allow-headers":"content-type"}});
-    const endpoint=url.pathname.replace("/api/v1","");calls.push({endpoint,method:request.method(),body:request.postDataJSON(),url:url.href});
+    const endpoint=url.pathname.replace("/api/v1","");calls.push({endpoint,method:request.method(),body:endpoint==="/public/careers/applications"?request.postDataBuffer():request.postDataJSON(),url:url.href});
+    if(endpoint==="/public/careers/applications"){
+      if(endpoint===pausedEndpoint){await pauseGate;if(endpoint===pausedEndpoint)await new Promise(resolve=>{pendingReleases.add(resolve);release=resume;pauseObserved?.();pauseObserved=undefined;});}
+      const error=failures.get(endpoint);
+      return route.fulfill({status:error?error.status??503:201,contentType:"application/json",headers:{"access-control-allow-origin":origin},body:JSON.stringify(error?{success:false,error}:{success:true,data:{recorded:true}})});
+    }
     if(endpoint==="/public/support/reports"){
       if(endpoint===pausedEndpoint){await pauseGate;if(endpoint===pausedEndpoint)await new Promise(resolve=>{pendingReleases.add(resolve);release=resume;pauseObserved?.();pauseObserved=undefined;});}
       const error=failures.get(endpoint);
@@ -79,7 +85,7 @@ await context.route("**/*", async (route) => {
     return route.fulfill({status:error?error.status??503:endpoint==="/public/property-searches"?201:200,contentType:"application/json",headers:{"access-control-allow-origin":origin},body:JSON.stringify(error?{success:false,error}:{success:true,data})});
   }
   if (url.pathname.startsWith("/api/v1/listings")) return mockListings(route, origin);
-  if (url.pathname.startsWith("/api/v1/auth/") || url.pathname.startsWith("/api/v1/messages/") || url.pathname.startsWith("/api/v1/dashboard/kyc") || ["/api/v1/dashboard/overview", "/api/v1/dashboard/analytics", "/api/v1/dashboard/properties", "/api/v1/dashboard/referrals", "/api/v1/dashboard/settings/profile", "/api/v1/dashboard/settings/password", "/api/v1/dashboard/settings/business"].includes(url.pathname)) {
+  if (url.pathname.startsWith("/api/v1/auth/") || url.pathname.startsWith("/api/v1/messages/") || url.pathname.startsWith("/api/v1/dashboard/kyc") || ["/api/v1/dashboard/overview", "/api/v1/dashboard/analytics", "/api/v1/dashboard/properties", "/api/v1/dashboard/referrals", "/api/v1/dashboard/referrals/public-property", "/api/v1/dashboard/settings/profile", "/api/v1/dashboard/settings/password", "/api/v1/dashboard/settings/business"].includes(url.pathname)) {
     if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: {
       "access-control-allow-origin": origin, "access-control-allow-credentials": "true",
       "access-control-allow-headers": "content-type", "access-control-allow-methods": "GET, POST, OPTIONS",
@@ -97,11 +103,13 @@ await context.route("**/*", async (route) => {
     const error = failures.get(endpoint);
     if(!error&&endpoint.startsWith("/messages/")&&endpoint.includes("/attachments/"))return route.fulfill({status:200,contentType:"application/pdf",headers:{"access-control-allow-origin":origin,"access-control-allow-credentials":"true","content-disposition":"attachment"},body:"%PDF-1.4\nbrowser attachment"});
     const ticketOverview=messagesOverview();
-    return route.fulfill({ status: error ? error.status ?? 400 : 200, contentType: "application/json",
+    const publicReferral = endpoint === "/dashboard/referrals/public-property" ? {id:"REF-N4K7P9",referralType:"PROPERTY",propertyCode:requestBody.propertyCode,referralUrl:`${origin}/buy?code=${requestBody.propertyCode}&ref=REF-N4K7P9`} : null;
+    return route.fulfill({ status: error ? error.status ?? 400 : publicReferral ? 201 : 200, contentType: "application/json",
       headers: { "access-control-allow-origin": origin, "access-control-allow-credentials": "true" },
-      body: JSON.stringify(error ? { success: false, error } : { success: true, data: endpoint === "/me" && (suite === "public-referrals" || suite === "public-buy" && buyState.authenticated) ? {customer:dashboardFixture.customer} : endpoint.startsWith("/messages/") ? messagesResponse(url,request.method(),requestBody) : endpoint === "/dashboard/kyc" ? kycResponse(request.method(),requestBody) : endpoint === "/dashboard/analytics" ? analyticsResponse(url) : endpoint === "/dashboard/properties" ? propertiesResponse(url) : endpoint === "/dashboard/referrals" ? referralsResponse(url,request.method(),requestBody,listingState.items,origin) : endpoint === "/dashboard/settings/profile" ? settingsResponse(request.method(),requestBody) : endpoint === "/dashboard/settings/business" ? settingsResponse(request.method(),requestBody,"business") : endpoint === "/dashboard/settings/password" ? {reauthenticate:true} : endpoint === "/dashboard/overview" ? {...dashboardFixture,recent_messages:ticketOverview.recent,summary:{...dashboardFixture.summary,new_messages:ticketOverview.unread}} : { maskedEmail: "t***@example.test" } }) });
+      body: JSON.stringify(error ? { success: false, error } : { success: true, data: publicReferral ?? (endpoint === "/me" && (suite === "public-header" || suite === "public-referrals" || suite === "public-buy" && buyState.authenticated) ? {customer:dashboardFixture.customer} : endpoint.startsWith("/messages/") ? messagesResponse(url,request.method(),requestBody) : endpoint === "/dashboard/kyc" ? kycResponse(request.method(),requestBody) : endpoint === "/dashboard/analytics" ? analyticsResponse(url) : endpoint === "/dashboard/properties" ? propertiesResponse(url) : endpoint === "/dashboard/referrals" ? referralsResponse(url,request.method(),requestBody,listingState.items,origin) : endpoint === "/dashboard/settings/profile" ? settingsResponse(request.method(),requestBody) : endpoint === "/dashboard/settings/business" ? settingsResponse(request.method(),requestBody,"business") : endpoint === "/dashboard/settings/password" ? {reauthenticate:true} : endpoint === "/dashboard/overview" ? {...dashboardFixture,recent_messages:ticketOverview.recent,summary:{...dashboardFixture.summary,new_messages:ticketOverview.unread}} : { maskedEmail: "t***@example.test" }) }) });
   }
   if (url.origin === origin) return route.continue();
+  if (url.hostname === "www.google.com" && url.pathname === "/maps") return route.fulfill({status:200,contentType:"text/html",body:"<!doctype html><title>Map embed test stub</title>"});
   if (url.hostname === "images.example.test") return route.fulfill({status:200,contentType:"image/png",body:Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=","base64")});
   return route.abort();
 });
@@ -245,6 +253,11 @@ try {
   const safeNext = "/dashboard/referrals?source=landing#share";
   await loginThrough(`/login?next=${encodeURIComponent(safeNext)}`);
   await page.waitForURL(url => `${url.pathname}${url.search}${url.hash}` === safeNext);
+  for (const buyNext of ["/buy", "/buy?code=RES-ABC234"]) {
+    await loginThrough(`/login?next=${encodeURIComponent(buyNext)}`);
+    await page.waitForURL(url => `${url.pathname}${url.search}` === buyNext);
+  }
+  await loginThrough("/login?next=%2Fbuying"); await page.waitForURL("**/dashboard");
   for (const unsafeNext of ["https://evil.example/steal","//evil.example/steal","javascript:alert(1)","data:text/html,evil","\\\\evil.example\\steal","/login","/%E0%A4%A"]) {
     await loginThrough(`/login?next=${encodeURIComponent(unsafeNext)}`); await page.waitForURL("**/dashboard");
     assert.equal(new URL(page.url()).origin,origin); assert.equal(new URL(page.url()).pathname,"/dashboard");
@@ -379,6 +392,10 @@ try {
   await page.goto(origin + "/auth/callback");
   await toast("Google sign-in was cancelled or could not be completed.");
   assert.equal(await page.locator("main [role=alert]").count(), 0);
+  await page.evaluate(() => sessionStorage.setItem("beryl-google-next", "/buy"));
+  await page.goto(origin + "/auth/callback?code=test-code&state=test-state");
+  await page.waitForURL(url => url.pathname === "/buy");
+  assert.equal(await page.evaluate(() => sessionStorage.getItem("beryl-google-next")), null);
   passed.push("Brand favicon and friendly toast-only Google errors");
   }
   if (suite === "dashboard") {
@@ -403,11 +420,12 @@ try {
   if (suite === "settings") await checkSettings({page,origin,calls,failures,screenshot,passed,pauseRequest,resume,toast});
   if (suite === "kyc") await checkKyc({page,origin,calls,failures,screenshot,passed,pauseRequest,resume,toast});
   if (suite === "landing") await checkLanding({page,origin,calls,screenshot,passed});
-  if (suite === "public-pages") await checkPublicPages({page,origin,calls,screenshot,passed});
+  if (suite === "public-pages") await checkPublicPages({page,origin,calls,failures,screenshot,passed,pauseRequest,resume});
   if (suite === "public-analytics") await checkPublicAnalytics({page,origin,calls,failures,screenshot,passed});
   if (suite === "public-referrals") await checkPublicReferrals({page,origin,calls,failures,screenshot,passed});
   if (suite === "public-support") await checkPublicSupport({page,origin,calls,failures,screenshot,passed,pauseRequest,resume});
   if (suite === "public-buy") await checkPublicBuy({page,origin,calls,failures,screenshot,passed,pauseRequest,resume});
+  if (suite === "public-header") await checkPublicHeader({page,origin,calls,failures,screenshot,passed});
   assert.deepEqual(pageErrors, []);
   await writeFile(join(artifacts, "results.json"), JSON.stringify({ suite, passed, authCalls: calls.length, pageErrors, networkErrors }, null, 2));
   // Keep complete request diagnostics in results.json, including expected

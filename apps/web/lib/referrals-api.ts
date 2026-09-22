@@ -14,3 +14,6 @@ export async function fetchReferrals(page:number,signal:AbortSignal,refreshAttem
 export async function createReferral(input:{type:"SELLER"}|{type:"PROPERTY";listingId:string},signal?:AbortSignal):Promise<CreatedReferral>{
   let response:Response;try{response=await fetch(`${base()}/api/v1/dashboard/referrals`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify(input),...(signal?{signal}:{})});}catch(error){if(signal?.aborted)throw error;throw new AuthApiError("NETWORK_ERROR","Could not connect to referral services. Please try again.");}return parse<CreatedReferral>(response);
 }
+export async function createPublicPropertyReferral(propertyCode:string,signal?:AbortSignal):Promise<CreatedReferral>{
+  let response:Response;try{response=await fetch(`${base()}/api/v1/dashboard/referrals/public-property`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify({propertyCode}),...(signal?{signal}:{})});}catch(error){if(signal?.aborted)throw error;throw new AuthApiError("NETWORK_ERROR","Could not connect to referral services. Please try again.");}return parse<CreatedReferral>(response);
+}

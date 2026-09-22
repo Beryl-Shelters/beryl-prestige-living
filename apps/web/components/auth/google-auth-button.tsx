@@ -1,6 +1,7 @@
 "use client";
 
 import { authRequest } from "../../lib/auth-api";
+import { loginDestination } from "../../lib/login-destination";
 import { useAuthAction } from "./use-auth-action";
 
 export function GoogleAuthButton({ action }: { action: "sign in" | "sign up" }) {
@@ -8,6 +9,8 @@ export function GoogleAuthButton({ action }: { action: "sign in" | "sign up" }) 
   return (
     <button className="google-button" aria-label={`Continue to ${action} with Google`} type="button" disabled={pending} onClick={() => void run(async () => {
       const { url } = await authRequest<{ url: string }>("/google", {});
+      const next = action === "sign in" ? loginDestination(new URLSearchParams(window.location.search).get("next")) : "/account";
+      window.sessionStorage.setItem("beryl-google-next", next);
       window.location.assign(url);
     })}>
       <svg className="google-mark" viewBox="0 0 24 24" aria-hidden="true">

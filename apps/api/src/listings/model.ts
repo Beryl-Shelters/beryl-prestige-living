@@ -3,17 +3,17 @@ import { AuthError } from "../auth/errors.js";
 
 export const listingOptions = {
   occupancy_type: ["Residential", "Commercial"], ownership_type: ["Personal", "Family"],
-  property_type: ["Residential", "Commercial"], property_subtype: ["Bungalow", "Semi-Detached House"],
-  facilities: ["Swimming Pool", "Gym/Fitness Center", "CCTV", "Balcony/Terrace", "Air Conditioning", "Laundry", "Garden", "Wi-Fi", "Housekeeping Services", "Car Park", "24Hrs Security"],
+  property_type: ["Residential", "Commercial"], property_subtype: ["Bungalow", "Semi-Detached House", "Block of flats", "Terraced Duplexes", "Terraced Bungalows", "Semi-Detached Bungalows", "Detached Bungalows", "Detached Duplexes"],
+  facilities: ["Swimming Pool", "Balcony/Terrace", "Children Play Area", "Tennis Court", "Basketball Court", "Gym/Fitness Center", "CCTV", "Air Conditioning", "Laundry", "Garden", "Wi-Fi", "Housekeeping Services", "Car Park", "24Hrs Security"],
   document_type: ["Ownership", "Survey", "Other"],
-  state: ["Lagos"],
+  state: ["Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara", "Federal Capital Territory (FCT)"],
 } as const;
 export const statuses = ["UNLISTED", "PENDING", "LISTED", "REJECTED"] as const;
 export type ListingStatus = typeof statuses[number];
 export const MAX_IMAGES = 24;
 export const PAGE_SIZE = 10;
 const text = (max: number) => z.string().trim().min(1).max(max);
-const count = z.number().int().min(0).max(10000);
+const count = z.number().int().min(0).max(100);
 const optionalNumber = z.number().finite().nonnegative().max(1e9).nullable();
 // Integer kobo remains exact in Postgres and JSON, bounded below MAX_SAFE_INTEGER.
 export function minorUnits(value: string) {
@@ -28,8 +28,8 @@ export const listingInput = z.object({
   property_subtype: z.enum(listingOptions.property_subtype), has_lien: z.boolean(),
   bedrooms: count, bathrooms: count, parking_spaces: count, units: count.nullable(), land_area: optionalNumber,
   year_built: z.number().int().min(1000).max(new Date().getFullYear() + 1).nullable(),
-  facilities: z.array(z.enum(listingOptions.facilities)).max(11).refine(v => new Set(v).size === v.length),
-  property_cost: money, minimum_down_payment: money, location: text(300), state: text(80), city: text(100),
+  facilities: z.array(z.enum(listingOptions.facilities)).max(listingOptions.facilities.length).refine(v => new Set(v).size === v.length),
+  property_cost: money, minimum_down_payment: money, location: text(300), state: z.enum(listingOptions.state), city: text(100),
   longitude: z.number().finite().min(-180).max(180).nullable(), latitude: z.number().finite().min(-90).max(90).nullable(),
 }).strict().refine(v => v.property_cost > 0 && v.minimum_down_payment <= v.property_cost, { message: "Check Property Cost and Minimum Down Payment", path: ["minimum_down_payment"] });
 export type ListingContent = Omit<z.output<typeof listingInput>, "property_cost" | "minimum_down_payment"> & { property_cost_minor: number; minimum_down_payment_minor: number };

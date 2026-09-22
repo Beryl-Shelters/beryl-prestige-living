@@ -5,11 +5,11 @@
 .support-hero b { font-size:14px; }
 .support-hero h1 { font-size:39px; line-height:1.2; margin:18px 0 20px; }
 .support-hero p { font-size:17px; line-height:1.55; margin:0 auto; max-width:730px; }
-.support-hero form { background:#685a42; border-radius:10px; display:flex; margin:38px auto 0; max-width:750px; padding:7px; }
-.support-hero input { background:transparent; border:0; color:#fff; flex:1; font-size:16px; min-width:0; padding:10px 12px; }
+.support-hero form { background:#685a42; border-radius:var(--form-control-radius); display:flex; margin:38px auto 0; max-width:750px; padding:7px; }
+.support-hero input { background:transparent; border:0; border-radius:var(--form-control-radius); color:#fff; flex:1; font-size:16px; min-width:0; padding:10px 12px; }
 .support-hero input::placeholder { color:#eee9de; }
 .support-hero button,.support-contact-button,.support-report form>button { background:#90691f; border:0; color:#fff; font-size:15px; font-weight:700; }
-.support-hero button { border-radius:8px; padding:10px 22px; }
+.support-hero button { border-radius:var(--form-control-radius); padding:10px 22px; }
 .support-content { margin:auto; max-width:1270px; padding-inline:28px; }
 .support-faq { display:grid; gap:75px; grid-template-columns:410px minmax(0,1fr); padding-block:115px 170px; }
 .support-faq h2,.support-contact h2,.support-report h2 { font-size:43px; line-height:1.12; margin:0 0 22px; }
@@ -18,17 +18,18 @@
 .support-faq-item { background:#f2f0ed; border-radius:12px; overflow:hidden; }
 .support-faq-item h3 { margin:0; }
 .support-faq-item button { align-items:center; background:transparent; border:0; color:#292824; display:flex; font-size:17px; font-weight:700; justify-content:space-between; line-height:1.45; padding:18px; text-align:left; width:100%; }
-.support-faq-item button span { font-size:22px; font-weight:400; margin-left:12px; }
-.support-faq-item button[aria-expanded=true] span { transform:rotate(180deg); }
+.support-faq-chevron { flex:none; height:20px; margin-left:12px; transition:transform .15s; width:20px; }
+.support-faq-item button[aria-expanded=true] .support-faq-chevron { transform:rotate(180deg); }
 .support-faq-item p,.support-no-results { font-size:16px; line-height:1.55; margin:0; padding:0 18px 22px; }
 .support-contact { background:#fff9ed; border-radius:17px; min-height:540px; padding:50px 40px 68px; text-align:center; }
 .support-contact h2 { font-size:37px; margin-bottom:12px; }
 .support-contact>p { font-size:17px; line-height:1.55; margin:0 auto; max-width:570px; }
-.support-contact-button { display:inline-block; margin-top:22px; padding:15px 38px; text-decoration:none; }
+.support-contact-button { border-radius:var(--form-control-radius); display:inline-block; margin-top:22px; padding:15px 38px; text-decoration:none; }
 .support-or { display:block; font-size:17px; margin:24px auto 40px; }
 .support-contact-grid { display:grid; gap:30px; grid-template-columns:repeat(3,minmax(0,1fr)); }
 .support-contact-grid>div { align-items:center; display:flex; flex-direction:column; gap:18px; }
 .support-contact-grid span { color:#70511a; font-size:35px; }
+.support-location-icon { color:#70511a; height:35px; width:35px; }
 .support-contact-grid p,.support-contact-grid a { color:#28241e; font-size:16px; font-weight:700; line-height:1.55; margin:0; text-decoration:none; }
 .support-report { display:grid; gap:70px; grid-template-columns:410px minmax(0,1fr); padding-block:170px 145px; }
 .support-report form { display:grid; gap:22px; }
@@ -36,9 +37,9 @@
 .support-report label { display:block; font-size:15px; font-weight:700; }
 .support-report label span { color:#b43e30; }
 .support-report label small { color:#736e66; font-size:13px; font-weight:400; }
-.support-report input,.support-report select,.support-report textarea { background:#f2f0ed; border:0; border-radius:11px; color:#28241e; display:block; font-size:16px; margin-top:10px; min-height:56px; padding:16px; width:100%; }
+.support-report input,.support-report select,.support-report textarea { background:#f2f0ed; border:0; border-radius:var(--form-control-radius); color:#28241e; display:block; font-size:16px; margin-top:10px; min-height:56px; padding:16px; width:100%; }
 .support-report textarea { min-height:200px; resize:vertical; }
-.support-report form>button { border-radius:11px; min-height:56px; }
+.support-report form>button { border-radius:var(--form-control-radius); min-height:56px; }
 .support-feedback { font-size:15px; margin:0; }
 .support-feedback.success { color:#205c36; }.support-feedback.error { color:#a52828; }
 @media(max-width:900px) { .support-faq,.support-report { gap:35px; grid-template-columns:1fr 1.4fr; } }

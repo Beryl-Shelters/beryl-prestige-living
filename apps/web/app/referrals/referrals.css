@@ -6,7 +6,7 @@
 .public-referrals-heading h1 { font-size: 26px; font-weight: 750; line-height: 1.25; margin: 0; }
 .public-referrals-cards { display: grid; gap: 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 56px; }
 .public-referrals-card { align-items: center; background: #fff; border: 1px solid #eeeeee; border-radius: 18px; box-shadow: 0 8px 24px #0000000d; display: flex; flex-direction: column; min-height: 364px; padding: 60px 28px 40px; text-align: center; }
-.public-referrals-card img { display: block; height: 49px; object-fit: contain; width: 52px; }
+.public-referral-icon { display: block; height: 49px; width: 52px; color: #90691f; flex: none; }
 .public-referrals-card h2 { font-size: 22px; font-weight: 750; line-height: 1.3; margin: 28px 0 10px; }
 .public-referrals-card p { font-size: 18px; line-height: 1.45; margin: 0; max-width: 330px; }
 .public-referrals-card a { align-items: center; background: #90691f; border-radius: 12px; color: #fff; display: inline-flex; font-size: 16px; font-weight: 700; gap: 12px; justify-content: center; margin-top: 26px; min-height: 48px; padding: 12px 24px; text-decoration: none; }
@@ -17,7 +17,7 @@
   .public-referrals-heading h1 { font-size: 23px; }
   .public-referrals-cards { grid-template-columns: 1fr; gap: 20px; margin-top: 36px; }
   .public-referrals-card { min-height: 300px; padding: 30px 30px 31px; }
-  .public-referrals-card img { height: 38px; width: 41px; }
+  .public-referral-icon { height: 38px; width: 41px; }
   .public-referrals-card h2 { font-size: 19px; line-height: 1.22; margin: 26px 0 12px; max-width: 225px; }
   .public-referrals-card p { font-size: 16px; max-width: 245px; }
   .public-referrals-card a { margin-top: auto; min-height: 48px; width: 100%; }

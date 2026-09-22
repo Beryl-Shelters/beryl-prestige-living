@@ -9,7 +9,9 @@
     "start": "node dist/server.js",
     "type-check": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "test:careers": "tsx --test tests/public-careers.test.ts",
+    "test:support": "tsx --test tests/public-support.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",

@@ -7,12 +7,19 @@ import type { PublicSupportRepository } from "./repository.js";
 
 const noControls = (value: string) => [...value].every(char => { const point = char.codePointAt(0)!; return point > 31 && point !== 127; });
 const reasonControls = (value: string) => [...value].every(char => { const point = char.codePointAt(0)!; return (point > 31 && point !== 127) || point === 10 || point === 13; });
-const reportSchema = z.strictObject({
+const agentReportSchema = z.strictObject({
   reportType: z.literal("AGENT"),
   agentId: z.string().trim().min(1).max(80).refine(noControls, "Agent ID contains invalid characters."),
   agentName: z.string().trim().max(120).refine(noControls, "Agent name contains invalid characters.").optional(),
   reason: z.string().trim().min(1).max(3000).refine(reasonControls, "Reason contains invalid characters."),
 });
+const propertyReportSchema = z.strictObject({
+  reportType: z.literal("PROPERTY"),
+  propertyCode: z.string().trim().min(1).max(80).refine(noControls, "Property code contains invalid characters."),
+  propertyName: z.string().trim().max(120).refine(noControls, "Property name contains invalid characters.").optional(),
+  reason: z.string().trim().min(1).max(3000).refine(reasonControls, "Reason contains invalid characters."),
+});
+const reportSchema = z.discriminatedUnion("reportType", [agentReportSchema, propertyReportSchema]);
 const wrap = (fn: (request: Request, response: Response) => Promise<void>) => (request: Request, response: Response, next: NextFunction) => { void fn(request, response).catch(next); };
 
 export function publicSupportRouter(config: AuthConfig, repository: PublicSupportRepository) {
@@ -24,8 +31,9 @@ export function publicSupportRouter(config: AuthConfig, repository: PublicSuppor
     if (!req.is("application/json")) throw new AuthError(415, "JSON_REQUIRED", "Submit the report as JSON.");
     if (Object.keys(req.query).length) throw new AuthError(400, "INVALID_REPORT", "Check the supplied report fields.");
     const report = reportSchema.parse(req.body);
-    try { await repository.submit({ reportType: report.reportType, agentId: report.agentId,
-      agentName: report.agentName || null, reason: report.reason }); }
+    try { await repository.submit(report.reportType === "AGENT"
+      ? { reportType: "AGENT", agentId: report.agentId, agentName: report.agentName || null, reason: report.reason }
+      : { reportType: "PROPERTY", propertyCode: report.propertyCode, propertyName: report.propertyName || null, reason: report.reason }); }
     catch { throw new AuthError(503, "SUPPORT_UNAVAILABLE", "Your report could not be submitted. Please try again."); }
     res.status(201).json({ success: true, data: { recorded: true } });
   }));

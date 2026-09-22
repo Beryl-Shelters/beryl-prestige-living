@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authRequest } from "../../../lib/auth-api";
+import { loginDestination } from "../../../lib/login-destination";
 import { BrandLoader } from "../../../components/auth/brand-loader";
 import { showAuthError } from "../../../components/auth/toast-provider";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const exchange = useRef<Promise<unknown> | null>(null);
+  const exchange = useRef<Promise<string> | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     let active = true;
@@ -17,13 +18,15 @@ export default function AuthCallbackPage() {
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
       const state = params.get("state");
+      const next = window.sessionStorage.getItem("beryl-google-next");
+      window.sessionStorage.removeItem("beryl-google-next");
       // Do not leave one-time codes in browser history or forward provider error text.
       window.history.replaceState(null, "", "/auth/callback");
       exchange.current = code && state && !params.has("error")
-        ? authRequest("/google/callback", { code, state })
+        ? authRequest("/google/callback", { code, state }).then(() => loginDestination(next))
         : Promise.reject(new Error("Google sign-in was cancelled or could not be completed."));
     }
-    void exchange.current.then(() => { if (active) router.replace("/account"); })
+    void exchange.current.then((destination) => { if (active) router.replace(destination); })
       .catch((failure: Error) => {
         if (active) { setFailed(true); showAuthError(failure, "google-callback-error"); }
       });
