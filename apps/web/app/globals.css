@@ -126,6 +126,7 @@ button:disabled { cursor: wait; opacity: .65; }
   .auth-main-register .auth-image-column { min-height: 100%; }
 }
 @media (max-width: 700px) {
+  :root { --header-height: 72px; }
   .auth-main { gap: 28px; grid-template-columns: minmax(0, 1fr); max-width: 560px; padding: 24px 16px 40px; }
   .auth-image-column, .auth-main-register .auth-image-column { aspect-ratio: 1.42; min-height: 0; }
   .auth-card { padding: 24px; }

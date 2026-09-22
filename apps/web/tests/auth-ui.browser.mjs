@@ -180,8 +180,11 @@ try {
       const brand = await page.locator(".brand-lockup").boundingBox();
       const mark = await page.locator(".brand-logo").boundingBox();
       const name = await page.locator(".brand-name").boundingBox();
-      assert(name.y >= mark.y + mark.height && Math.abs(name.x + name.width / 2 - (mark.x + mark.width / 2)) < 1);
+      assert(width > 700 ? (name.y >= mark.y + mark.height && Math.abs(name.x + name.width / 2 - (mark.x + mark.width / 2)) < 1) : name.x >= mark.x);
       assert(brand.y >= 0 && brand.y + brand.height <= (await page.locator("header").boundingBox()).height);
+      if (width <= 700) {
+        assert.equal(await page.getByRole("button", { name: "Toggle navigation" }).isVisible(), true, `${path} mobile menu button at ${width}`);
+      }
       assert(width > 700 ? layout.right : layout.stacked, `${path} column layout at ${width}`);
       if (width === 1440 || width === 320) await screenshot(`${width}-${path.replaceAll("/", "-")}`);
     }

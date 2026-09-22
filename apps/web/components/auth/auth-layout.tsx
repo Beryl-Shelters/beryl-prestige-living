@@ -6,7 +6,7 @@ import { PublicHeader } from "./public-header";
 export function AuthLayout({ children, image = "login" }: { children: ReactNode; image?: "login" | "register" }) {
   return (
     <div className="auth-page">
-      <PublicHeader />
+      <PublicHeader sessionAware mobileMenu />
       <main className={`auth-main${image === "register" ? " auth-main-register" : ""}`}>
         <section className="auth-form-column" aria-label="Account access">
           {children}
