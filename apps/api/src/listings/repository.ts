@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import type { AuthConfig } from "../auth/config.js";
 import { AuthError } from "../auth/errors.js";
-import type { Listing, ListingContent, ListingDocument, ListingImage, ListingQuery, MediaAsset } from "./model.js";
+import type { Listing, ListingContent, ListingDocument, ListingImage, ListingQuery, MandateContent, MandateDocumentInput, MediaAsset, SalesMandate } from "./model.js";
 
 export type Mutation = { action: "CREATE" | "EDIT" | "DELETE" | "REQUEST_APPROVAL" | "UNLIST" | "DOCUMENTS"; id: string | null; version: number | null; content?: ListingContent; images?: ListingImage[]; documents?: Omit<ListingDocument, "id" | "batch_id">[] };
 export type CleanupAsset = Pick<MediaAsset, "public_id" | "resource_type" | "delivery_type">;
@@ -15,6 +15,9 @@ export interface ListingsRepository {
   referenced(owner: string, asset: CleanupAsset): Promise<boolean>;
   claimCleanup(owner: string, asset: CleanupAsset): Promise<boolean>;
   forgetCleanup(owner: string, asset: CleanupAsset): Promise<void>;
+  mandate(owner: string, id: string): Promise<SalesMandate | null>;
+  mutateMandate(owner: string, listingId: string, content: MandateContent, documents: MandateDocumentInput[]): Promise<string>;
+  submit(owner: string, listingId: string): Promise<string>;
 }
 export const notFound = () => new AuthError(404, "LISTING_NOT_FOUND", "Listing not found.");
 export const conflict = () => new AuthError(409, "LISTING_CHANGED", "This listing has changed. Refresh and try again.");
@@ -64,8 +67,12 @@ export class SupabaseListingsRepository implements ListingsRepository {
   }
   async referenced(_owner: string, asset: CleanupAsset) {
     // Internal cleanup safety checks all references, not browser-visible data.
-    for (const table of ["customer_listing_images", "customer_listing_documents"]) {
+    for (const table of ["customer_listing_images", "customer_listing_documents", "sales_mandate_documents"]) {
       const { data, error } = await this.db.from(table).select("id").eq("public_id", asset.public_id).eq("resource_type", asset.resource_type).eq("delivery_type", asset.delivery_type).limit(1); check(error);
+      if (data?.length) return true;
+    }
+    if (asset.resource_type === "raw" && asset.delivery_type === "authenticated") {
+      const { data, error } = await this.db.from("sales_mandates").select("id").eq("signature_public_id", asset.public_id).limit(1); check(error);
       if (data?.length) return true;
     }
     return false;
@@ -75,4 +82,17 @@ export class SupabaseListingsRepository implements ListingsRepository {
     check(error); return data === true;
   }
   async forgetCleanup(owner: string, asset: CleanupAsset) { const { error } = await this.db.from("customer_listing_media_cleanup").delete().eq("user_id", owner).eq("public_id", asset.public_id).eq("resource_type", asset.resource_type).eq("delivery_type", asset.delivery_type); check(error); }
+
+  async mandate(owner: string, id: string) {
+    const { data, error } = await this.db.from("sales_mandates").select("*,documents:sales_mandate_documents(*)").eq("user_id", owner).eq("listing_id", id).maybeSingle();
+    check(error); return data;
+  }
+  async mutateMandate(owner: string, listingId: string, content: MandateContent, documents: MandateDocumentInput[]) {
+    const { data, error } = await this.db.rpc("mutate_sales_mandate", { p_owner: owner, p_listing_id: listingId, p_content: content, p_documents: documents });
+    check(error); return data as string;
+  }
+  async submit(owner: string, listingId: string) {
+    const { error } = await this.db.rpc("submit_customer_listing", { p_owner: owner, p_id: listingId });
+    check(error); return listingId;
+  }
 }

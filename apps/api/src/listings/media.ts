@@ -9,8 +9,10 @@ export interface MediaStorage {
   download(asset: MediaAsset): Promise<Uint8Array>;
 }
 const unavailable = () => new AuthError(503,"MEDIA_UNAVAILABLE","File storage is temporarily unavailable. Please try again.");
-export function planAsset(file: UploadFile, document: boolean): CleanupAsset {
+export function planAsset(file: UploadFile, document: boolean, signature: boolean = false, mandateDocument: boolean = false): CleanupAsset {
   const extension = file.mime === "application/pdf" ? "pdf" : file.mime === "image/png" ? "png" : "jpg";
+  if (signature) return { public_id: `beryl-v2/mandates/signatures/${randomUUID()}.png`, resource_type: "raw", delivery_type: "authenticated" };
+  if (mandateDocument) return { public_id: `beryl-v2/mandates/documents/${randomUUID()}.${extension}`, resource_type: "raw", delivery_type: "authenticated" };
   return { public_id: `beryl-v2/listings/${randomUUID()}${document ? `.${extension}` : ""}`, resource_type: document ? "raw" : "image", delivery_type: document ? "authenticated" : "upload" };
 }
 export class CloudinaryStorage implements MediaStorage {

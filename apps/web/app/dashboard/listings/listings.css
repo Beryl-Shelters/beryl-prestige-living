@@ -132,3 +132,168 @@
 @media(max-width:1100px){.listing-editor-columns{grid-template-columns:minmax(0,1fr) 240px;}.listing-card-top{grid-template-columns:32% 68%;}.listing-card-financial{grid-column:1/-1;border-left:0;border-top:1px solid #bfc0c4;flex-direction:row;}.listing-card-financial>div{width:48%;}.listing-card-bottom{grid-template-columns:65% 35%;}.listing-performance-metrics{flex-wrap:wrap;}.listing-completeness{width:100%;}.listing-detail-columns{grid-template-columns:minmax(0,1fr);}.listing-gallery{max-width:620px;}}
 @media(max-width:700px){.listing-editor-columns{grid-template-columns:minmax(0,1fr);}.listing-quick-preview{max-width:400px;}.listing-facilities{grid-template-columns:repeat(2,minmax(0,1fr));}.listings-toolbar{flex-wrap:wrap;}.listings-toolbar input{flex:1;width:180px;}.listings-toolbar>span{width:100%;text-align:right;}.listings-title h1{font-size:19px;}.listing-primary{padding:9px 12px;}.listing-card-top{grid-template-columns:36% 64%;}.listing-card-information{padding:10px;}.listing-code{margin-block:12px;}.listing-facts{flex-wrap:wrap;}.listing-facts>div{min-width:35px;}.listing-card-financial{gap:10px;}.listing-card-bottom{grid-template-columns:minmax(0,1fr);}.listing-card-status{border-left:0;border-top:1px solid #bfc0c4;min-height:65px;}.listing-performance-metrics{margin-top:20px;}.listing-completeness{width:100%;}.listing-three-fields{grid-template-columns:minmax(0,1fr);gap:0;}.listing-six-fields{gap:12px;}.listing-detail-metrics{font-size:12px;flex-wrap:wrap;}.unlist-button{max-width:220px;}.listing-action-menu>div{bottom:28px;top:auto;}.listing-dialog{font-size:13px;}}
 @media(max-width:390px){.listing-two-fields{grid-template-columns:minmax(0,1fr);}.listing-six-fields{grid-template-columns:repeat(2,minmax(0,1fr));}.listings-title{align-items:flex-start;}.listing-primary{font-size:11px;}.listing-card-financial{flex-direction:column;}.listing-card-financial>div{width:100%;}.delete-content{padding:18px;}.document-drawer{padding:28px 18px;}}
+
+/* Wizard Stepper */
+.wizard-stepper { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e5e6eb; }
+.wizard-steps-list { display: flex; align-items: center; list-style: none; padding: 0; margin: 0; gap: 8px; flex-wrap: wrap; }
+.wizard-step-item { display: flex; align-items: center; gap: 8px; }
+.wizard-step-item:not(:last-child)::after { content: "›"; color: #9aa4b2; font-size: 16px; font-weight: 700; margin-left: 8px; }
+.wizard-step-button { display: inline-flex; align-items: center; gap: 8px; border: 0; background: transparent; padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: 500; color: #6b7280; cursor: default; }
+.wizard-step-button:not(:disabled) { cursor: pointer; }
+.wizard-step-badge { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; background: #e5e7eb; color: #4b5563; }
+.wizard-step-item.current .wizard-step-button { color: var(--gold, #90691f); font-weight: 700; }
+.wizard-step-item.current .wizard-step-badge { background: var(--gold, #90691f); color: white; }
+.wizard-step-item.completed .wizard-step-button { color: #15803d; font-weight: 600; }
+.wizard-step-item.completed .wizard-step-badge { background: #dcfce7; color: #15803d; }
+
+/* Image Cover Badge */
+.listing-image-thumbnail { position: relative; }
+.image-cover-tag { position: absolute; left: 2px; bottom: 2px; background: var(--gold, #90691f); color: white; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+.image-make-cover-btn { position: absolute; left: 2px; bottom: 2px; background: rgba(0, 0, 0, 0.75); color: white; font-size: 8px; font-weight: 600; padding: 1px 4px; border-radius: 3px; border: 0; cursor: pointer; text-transform: uppercase; }
+.image-make-cover-btn:hover { background: var(--gold, #90691f); }
+.preview-cover-badge { position: absolute; left: 14px; top: 14px; background: var(--gold, #90691f); color: white; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; }
+
+/* Field context notes */
+.field-context-note { display: block; font-size: 11px; font-weight: 400; color: #6b7280; margin-top: 3px; }
+.field-helper-text { display: block; font-size: 11px; font-weight: 400; color: #6b7280; margin-top: 3px; }
+.quick-preview-location { font-size: 11px; color: #818895; margin: -10px 0 14px; overflow-wrap: anywhere; }
+
+/* Form footer actions */
+.listing-form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid #e4e5eb; }
+
+/* Mandate Step Shell & Sales Mandate */
+.mandate-step-shell { max-width: 680px; margin: 0 auto; padding: 10px 0 40px; }
+.mandate-step-shell.sales-mandate-step { max-width: 860px; }
+.mandate-step-shell.loading { text-align: center; padding: 40px 0; color: #6b7280; font-size: 14px; }
+.mandate-shell-header h2 { font-size: 22px; font-weight: 750; margin: 0 0 8px; }
+.mandate-shell-subtitle { color: #5a6474; font-size: 14px; margin: 0 0 24px; line-height: 1.5; }
+.mandate-shell-card { background: white; border: 1px solid #e2e4ea; border-radius: 12px; padding: 28px 24px; box-shadow: 0 4px 16px #0000000a; }
+.mandate-shell-status-badge { display: inline-block; background: #fef3c7; color: #92400e; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; margin-bottom: 12px; text-transform: uppercase; }
+.mandate-shell-code { font-size: 13px; color: #5a6474; margin: 0 0 8px; }
+.mandate-shell-card h3 { font-size: 18px; margin: 0 0 12px; }
+.mandate-shell-info { font-size: 14px; line-height: 1.55; color: #4b5563; margin: 0 0 28px; }
+.mandate-shell-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.mandate-shell-actions .button { padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.mandate-shell-actions .button-primary { background: var(--gold, #90691f); color: white; border: 1px solid var(--gold, #90691f); }
+.mandate-shell-actions .button-secondary { background: white; color: #374151; border: 1px solid #d1d5db; }
+
+/* Sales Mandate Step 2 Design */
+.sales-mandate-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px 36px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); }
+.mandate-header { text-align: center; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid #e5e7eb; }
+.mandate-header-brand { display: block; font-size: 11px; font-weight: 700; color: var(--gold, #8f6b2e); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
+.mandate-header-title { font-size: 22px; font-weight: 800; color: #111827; margin: 0; }
+
+.mandate-section { margin-bottom: 32px; padding-bottom: 28px; border-bottom: 1px solid #e5e7eb; }
+.mandate-section:last-of-type { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+.mandate-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+.mandate-section-header h2 { font-size: 17px; font-weight: 750; color: #111827; margin: 0; }
+.mandate-reset-link { background: transparent; border: 0; color: var(--gold, #8f6b2e); font-size: 12px; font-weight: 600; cursor: pointer; padding: 0; text-decoration: underline; }
+.mandate-reset-link:hover { color: #6e5223; }
+
+.mandate-fields-grid { display: flex; flex-direction: column; gap: 16px; }
+.mandate-field { display: flex; flex-direction: column; font-size: 12px; font-weight: 600; color: #374151; gap: 6px; min-width: 0; }
+.mandate-field b { color: #e64c4c; }
+.mandate-field input:not([type="checkbox"]), .mandate-field select {
+  width: 100%; border: 1px solid #e2dfd7; background: #f4f3ed; border-radius: 6px; padding: 10px 12px; font: inherit; font-weight: 400; color: #111827; font-size: 13px;
+}
+.mandate-field input:focus, .mandate-field select:focus {
+  outline: 2px solid var(--gold, #8f6b2e); border-color: transparent; background: #ffffff;
+}
+.mandate-field.full-width { width: 100%; }
+.mandate-three-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.mandate-three-fields.align-start { align-items: start; }
+.mandate-two-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+
+/* Documents list */
+.mandate-field-label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+.mandate-field-label b { color: #e64c4c; }
+.mandate-docs-list { list-style: none; padding: 0; margin: 0 0 10px; display: flex; flex-direction: column; gap: 8px; }
+.mandate-doc-item { display: flex; align-items: center; gap: 10px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04); }
+.mandate-doc-pdf-badge { background: #fee2e2; color: #dc2626; font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px; }
+.mandate-doc-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.mandate-doc-title { font-size: 12px; font-weight: 600; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mandate-doc-size { font-size: 10px; color: #6b7280; }
+.mandate-doc-remove-btn { border: 0; background: transparent; font-size: 18px; line-height: 1; color: #9ca3af; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+.mandate-doc-remove-btn:hover { color: #dc2626; background: #fee2e2; }
+.mandate-upload-btn-label { display: block; width: 100%; cursor: pointer; }
+.mandate-upload-btn { display: flex; align-items: center; justify-content: center; gap: 6px; border: 1.5px dashed #c9c5b8; border-radius: 6px; padding: 10px 14px; background: #fbfaf6; color: #5a5446; font-size: 12px; font-weight: 600; text-align: center; transition: all 0.15s ease; }
+.mandate-upload-btn:hover { border-color: var(--gold, #8f6b2e); background: #f5f2e8; color: var(--gold, #8f6b2e); }
+.mandate-upload-hidden-input { display: none; }
+
+/* Terms and Conditions (Part 2) */
+.mandate-terms-body { font-size: 12.5px; line-height: 1.6; color: #374151; }
+.mandate-clause { margin-bottom: 16px; }
+.mandate-clause strong { display: block; color: #111827; font-weight: 700; margin-bottom: 4px; }
+.mandate-clause p { margin: 0 0 6px; }
+.mandate-clause ul { margin: 4px 0 8px 18px; padding: 0; }
+.mandate-clause li { margin-bottom: 6px; }
+.mandate-clause.consent-clause { margin-top: 24px; padding-top: 18px; border-top: 1px solid #e5e7eb; }
+.mandate-consent-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; font-weight: 700; color: #111827; }
+.mandate-consent-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--gold, #8f6b2e); cursor: pointer; }
+
+/* Signature Card */
+.mandate-signature-fields { display: flex; flex-direction: column; gap: 16px; margin-top: 14px; }
+.signature-canvas-container { margin-top: 12px; }
+.signature-canvas-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.signature-canvas-title { font-size: 12px; font-weight: 700; color: #111827; letter-spacing: 0.5px; }
+.signature-canvas-title b { color: #e64c4c; }
+.signature-reset-btn { background: transparent; border: 0; color: var(--gold, #8f6b2e); font-size: 12px; font-weight: 600; cursor: pointer; padding: 0; text-decoration: underline; }
+.signature-reset-btn:disabled { color: #9ca3af; text-decoration: none; cursor: default; }
+.signature-canvas-wrapper { position: relative; border: 1.5px solid #d4d0c5; border-radius: 8px; background: #fbfaf6; overflow: hidden; min-height: 150px; }
+.signature-canvas { display: block; width: 100%; height: 150px; touch-action: none; cursor: crosshair; }
+.signature-placeholder-hint { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; color: #9ca3af; pointer-events: none; }
+.signature-existing-preview { position: relative; border: 1.5px solid #d4d0c5; border-radius: 8px; background: #fbfaf6; padding: 16px; text-align: center; }
+.signature-preview-img { max-height: 120px; max-width: 100%; object-fit: contain; margin: 0 auto; display: block; }
+.signature-existing-overlay { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 8px; border-top: 1px solid #e5e7eb; }
+.signature-existing-tag { font-size: 11px; font-weight: 700; color: #16a34a; background: #dcfce7; padding: 3px 8px; border-radius: 4px; }
+.signature-change-btn { font-size: 11px; padding: 5px 12px; border-radius: 4px; }
+
+/* Mandate Actions */
+.mandate-actions { margin-top: 32px; display: flex; flex-direction: column; gap: 14px; }
+.mandate-submit-btn { width: 100%; padding: 14px 20px; font-size: 15px; font-weight: 700; background: var(--gold, #8f6b2e); color: white; border: 0; border-radius: 6px; cursor: pointer; text-align: center; transition: filter 0.15s ease; }
+.mandate-submit-btn:hover:not(:disabled) { filter: brightness(1.06); }
+.mandate-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.mandate-secondary-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.mandate-secondary-actions .button { padding: 9px 16px; font-size: 12px; font-weight: 600; border-radius: 5px; text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; }
+.mandate-dashboard-link { color: #4b5563; }
+
+/* Step 3: Submission Success Screen */
+.submit-success-container { max-width: 620px; margin: 20px auto 40px; padding: 0 16px; }
+.submit-success-content { background: white; border: 1px solid #e5e7eb; border-radius: 14px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06); padding: 44px 36px 36px; text-align: center; }
+.submit-success-illustration-wrapper { margin: 0 auto 20px; width: 140px; height: 120px; }
+.submit-success-house-svg { width: 100%; height: 100%; }
+.submit-success-title { font-size: 24px; font-weight: 800; color: #111827; margin: 0 0 10px; line-height: 1.3; }
+.submit-success-subtitle { font-size: 14px; color: #4b5563; line-height: 1.5; margin: 0 0 32px; max-width: 480px; margin-inline: auto; }
+.submit-success-timeline-card { background: #fafaf9; border: 1px solid #e7e5e4; border-radius: 10px; padding: 24px 28px; text-align: left; margin-bottom: 32px; }
+.timeline-card-title { font-size: 15px; font-weight: 750; color: #1f2937; margin: 0 0 20px; }
+.submit-timeline-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 24px; position: relative; }
+.submit-timeline-item { display: flex; gap: 16px; position: relative; align-items: flex-start; }
+.submit-timeline-item:not(:last-child)::after { content: ""; position: absolute; left: 11px; top: 26px; bottom: -20px; width: 2px; background: #e5e7eb; }
+.timeline-badge-check { width: 24px; height: 24px; border-radius: 50%; background: #16a34a; color: white; display: grid; place-items: center; font-size: 12px; font-weight: 700; flex-shrink: 0; z-index: 1; }
+.timeline-badge-dot { width: 24px; height: 24px; border-radius: 50%; background: var(--gold, #8f6b2e); color: white; display: grid; place-items: center; flex-shrink: 0; z-index: 1; }
+.timeline-badge-dot.hollow { background: white; border: 2px solid #d1d5db; }
+.timeline-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.timeline-heading { font-size: 13px; font-weight: 700; color: #111827; }
+.timeline-timestamp { font-size: 11px; color: #6b7280; }
+.timeline-body { font-size: 12px; color: #4b5563; margin: 0; line-height: 1.45; }
+.submit-success-action { display: flex; justify-content: center; }
+.submit-success-cta { padding: 12px 36px; font-size: 14px; font-weight: 700; border-radius: 6px; text-decoration: none; background: var(--gold, #8f6b2e); color: white; display: inline-block; }
+.submit-success-cta:hover { filter: brightness(1.06); }
+
+/* Responsive adjustments for Mandate & Success */
+@media (max-width: 768px) {
+  .mandate-three-fields { grid-template-columns: minmax(0, 1fr); }
+  .mandate-two-fields { grid-template-columns: minmax(0, 1fr); }
+  .sales-mandate-card { padding: 22px 18px; }
+  .submit-success-content { padding: 28px 18px; }
+  .submit-success-title { font-size: 20px; }
+}
+@media (max-width: 390px) {
+  .sales-mandate-card { padding: 16px 12px; }
+  .mandate-header-title { font-size: 18px; }
+  .submit-success-title { font-size: 18px; }
+  .submit-success-content { padding: 20px 12px; }
+  .submit-success-timeline-card { padding: 18px 14px; }
+  .mandate-secondary-actions { flex-direction: column; width: 100%; }
+  .mandate-secondary-actions .button { width: 100%; justify-content: center; }
+}

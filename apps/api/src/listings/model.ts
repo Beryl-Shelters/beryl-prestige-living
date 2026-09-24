@@ -13,6 +13,7 @@ export type ListingStatus = typeof statuses[number];
 export const MAX_IMAGES = 24;
 export const PAGE_SIZE = 10;
 const text = (max: number) => z.string().trim().min(1).max(max);
+const optionalText = (max: number) => z.string().trim().max(max).nullable().optional();
 const count = z.number().int().min(0).max(100);
 const optionalNumber = z.number().finite().nonnegative().max(1e9).nullable();
 // Integer kobo remains exact in Postgres and JSON, bounded below MAX_SAFE_INTEGER.
@@ -24,6 +25,7 @@ export function minorUnits(value: string) {
 const money = z.string().regex(/^(0|[1-9]\d{0,12})(\.\d{1,2})?$/).transform(minorUnits);
 export const listingInput = z.object({
   title: text(160), description: text(10000), occupancy_type: z.enum(listingOptions.occupancy_type),
+  registered_title_document: optionalText(200), additional_information: optionalText(5000),
   ownership_type: z.enum(listingOptions.ownership_type), property_type: z.enum(listingOptions.property_type),
   property_subtype: z.enum(listingOptions.property_subtype), has_lien: z.boolean(),
   bedrooms: count, bathrooms: count, parking_spaces: count, units: count.nullable(), land_area: optionalNumber,
@@ -45,6 +47,53 @@ export const listingQuery = z.object({ q: z.string().trim().max(100).default("")
 export type ListingQuery = z.output<typeof listingQuery>;
 export const versionInput = z.object({ version: z.number().int().positive() }).strict();
 export const documentInput = z.object({ title: text(160), document_type: z.enum(listingOptions.document_type), description: text(2000), version: z.number().int().positive() }).strict();
+
+export const mandateInput = z.object({
+  seller_title: text(50), surname: text(100), first_names: text(150), gender: text(20), email: z.string().trim().email().max(255),
+  telephone: text(50), date_of_birth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD format"), nationality: text(100), post_code: text(20),
+  address: text(500), property_development_name: text(160), document_title: text(200),
+  signer_name: text(250), signer_address: text(500), signer_email: z.string().trim().email().max(255),
+  mandate_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD format"), agreed_to_mandate: z.boolean(),
+  signature_public_id: text(200), signature_mime_type: z.literal("image/png"), signature_size_bytes: z.number().int().positive().max(2097152)
+}).strict();
+export type MandateContent = z.infer<typeof mandateInput>;
+export type MandateDocument = MediaAsset & { id: string; title: string; sort_order: number };
+export type MandateDocumentInput = Pick<MediaAsset, "public_id" | "resource_type" | "delivery_type" | "mime_type" | "size_bytes"> & { title: string };
+export const mandateDocumentInput = z.object({
+  public_id: text(200), resource_type: z.literal("raw"), delivery_type: z.literal("authenticated"),
+  title: text(160), mime_type: z.enum(["application/pdf", "image/png", "image/jpeg"]),
+  size_bytes: z.number().int().positive().max(10485760),
+}).strict();
+export type SalesMandate = MandateContent & { id: string; listing_id: string; user_id: string; signed_at: string; submitted_at: string | null; created_at: string; updated_at: string; documents: MandateDocument[] };
+
+const uploadHandle = z.string().min(1).max(4096);
+export const mandateSaveInput = z.object({
+  content: mandateInput.omit({ signature_public_id: true, signature_mime_type: true, signature_size_bytes: true }),
+  signature: z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("existing") }).strict(),
+    z.object({ kind: z.literal("upload"), upload_id: uploadHandle }).strict(),
+  ]),
+  documents: z.array(z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("existing"), id: z.uuid() }).strict(),
+    z.object({ kind: z.literal("upload"), upload_id: uploadHandle, title: text(160) }).strict(),
+  ])).min(1).max(10),
+}).strict();
+export type MandateSaveInput = z.infer<typeof mandateSaveInput>;
+export type MandateDocumentView = Pick<MandateDocument, "id" | "title" | "mime_type" | "size_bytes" | "sort_order">;
+export type SalesMandateView = Omit<SalesMandate, "user_id" | "signature_public_id" | "documents"> & {
+  has_signature: boolean;
+  documents: MandateDocumentView[];
+};
+export function presentMandate(mandate: SalesMandate): SalesMandateView {
+  const { user_id: _owner, signature_public_id, documents, ...fields } = mandate;
+  void _owner;
+  return {
+    ...fields,
+    has_signature: Boolean(signature_public_id),
+    documents: documents.map(({ id, title, mime_type, size_bytes, sort_order }) => ({ id, title, mime_type, size_bytes, sort_order })),
+  };
+}
+
 export function completeness(listing: Listing) {
   const required = [listing.title, listing.description, listing.occupancy_type, listing.ownership_type, listing.property_type, listing.property_subtype,
     typeof listing.has_lien === "boolean", listing.bedrooms >= 0, listing.bathrooms >= 0, listing.parking_spaces >= 0,
@@ -56,7 +105,10 @@ export function completeness(listing: Listing) {
 export function presentListing(listing: Listing, webOrigin: string) {
   const { user_id: _owner, images, documents, ...fields } = listing;
   void _owner;
-  return { ...fields, images: images.map(({ id, url, sort_order }) => ({ id, url, sort_order })),
+  return { ...fields,
+    registered_title_document: listing.registered_title_document ?? null,
+    additional_information: listing.additional_information ?? null,
+    images: images.map(({ id, url, sort_order }) => ({ id, url, sort_order })),
     documents: documents.map(({ id, batch_id, title, document_type, description, sort_order }) => ({ id, batch_id, title, document_type, description, sort_order })),
     completeness: completeness(listing), leads: 0, views: 0,
     time_on_market: listing.listing_status === "LISTED" && listing.listed_at ? Math.max(0, Math.floor((Date.now() - Date.parse(listing.listed_at)) / 86400000)) : null,

@@ -7,7 +7,7 @@ import {authConfigSchema} from "../src/auth/config.js";
 import {AuthCipher,hashToken} from "../src/auth/crypto.js";
 import type {AuthGateway,Customer,StoredSession} from "../src/auth/gateway.js";
 import {AuthError} from "../src/auth/errors.js";
-import type {Listing,ListingQuery,MediaAsset} from "../src/listings/model.js";
+import type {Listing,ListingQuery,MandateContent,MandateDocumentInput,MediaAsset,SalesMandate} from "../src/listings/model.js";
 import type {CleanupAsset,ListingsRepository,Mutation} from "../src/listings/repository.js";
 import type {MediaStorage} from "../src/listings/media.js";
 import type {UploadFile} from "../src/listings/uploads.js";
@@ -22,9 +22,12 @@ export class LocalRepository implements ListingsRepository {
   async recent(owner:string){return (await this.db.query<{id:string;title:string}>("select id,title from public.customer_listings where user_id=$1 order by created_at desc,id desc limit 5",[owner])).rows;}
   async journal(owner:string,a:CleanupAsset){await this.db.query("insert into public.customer_listing_media_cleanup(public_id,user_id,resource_type,delivery_type) values($1,$2,$3,$4)",[a.public_id,owner,a.resource_type,a.delivery_type]);}
   async cleanupCandidates(owner:string){return (await this.db.query<CleanupAsset>("select public_id,resource_type,delivery_type from public.customer_listing_media_cleanup where user_id=$1 and created_at<clock_timestamp()-interval '1 hour'",[owner])).rows;}
-  async referenced(_owner:string,a:CleanupAsset){return (await this.db.query("select id from public.customer_listing_images where public_id=$1 and resource_type=$2 and delivery_type=$3 union all select id from public.customer_listing_documents where public_id=$1 and resource_type=$2 and delivery_type=$3",[a.public_id,a.resource_type,a.delivery_type])).rows.length>0;}
+  async referenced(_owner:string,a:CleanupAsset){return (await this.db.query("select id from public.customer_listing_images where public_id=$1 and resource_type=$2 and delivery_type=$3 union all select id from public.customer_listing_documents where public_id=$1 and resource_type=$2 and delivery_type=$3 union all select id from public.sales_mandate_documents where public_id=$1 and resource_type=$2 and delivery_type=$3 union all select id from public.sales_mandates where signature_public_id=$1 and $2='raw' and $3='authenticated'",[a.public_id,a.resource_type,a.delivery_type])).rows.length>0;}
   async forgetCleanup(owner:string,a:CleanupAsset){await this.db.query("delete from public.customer_listing_media_cleanup where user_id=$1 and public_id=$2 and resource_type=$3 and delivery_type=$4",[owner,a.public_id,a.resource_type,a.delivery_type]);}
   async claimCleanup(owner:string,a:CleanupAsset){return (await this.db.query<{claimed:boolean}>("select public.claim_customer_listing_cleanup($1,$2,$3,$4) as claimed",[owner,a.public_id,a.resource_type,a.delivery_type])).rows[0]!.claimed;}
+  async mandate(owner:string,id:string): Promise<SalesMandate | null>{const {rows}=await this.db.query<{value:SalesMandate}>(`select to_jsonb(m)||jsonb_build_object('documents',coalesce((select jsonb_agg(d order by sort_order) from public.sales_mandate_documents d where mandate_id=m.id),'[]'::jsonb)) as value from public.sales_mandates m where user_id=$1 and listing_id=$2`,[owner,id]);return rows[0]?.value??null;}
+  async mutateMandate(owner:string,listingId:string,content:MandateContent,documents:MandateDocumentInput[]){try{const {rows}=await this.db.query<{id:string}>("select public.mutate_sales_mandate($1,$2,$3,$4) as id",[owner,listingId,JSON.stringify(content),JSON.stringify(documents)]);return rows[0]!.id;}catch(error){const code=(error as {code:string}).code;throw new AuthError(code==="P0002"?404:409,"TEST_SQL_CONSTRAINT","Mandate could not be updated.");}}
+  async submit(owner:string,listingId:string){try{await this.db.query("select public.submit_customer_listing($1,$2)",[owner,listingId]);return listingId;}catch(error){const code=(error as {code:string}).code;throw new AuthError(code==="P0002"?404:409,"TEST_SQL_CONSTRAINT","Listing could not be submitted.");}}
 }
 export async function listingFixture(t:TestContext,shortCodes=true){
   const db=new PGlite();await db.exec("create schema auth; create table auth.users(id uuid primary key); create role anon; create role authenticated; create role service_role;");
@@ -32,6 +35,7 @@ export async function listingFixture(t:TestContext,shortCodes=true){
   await db.exec(await readFile(new URL("../supabase/migrations/202609180002_listing_taxonomy.sql",import.meta.url),"utf8"));
   if(shortCodes) await db.exec(await readFile(new URL("../supabase/migrations/202609100001_short_display_codes.sql",import.meta.url),"utf8"));
   await db.exec(await readFile(new URL("../supabase/migrations/202609100002_single_document_upload.sql",import.meta.url),"utf8"));
+  await db.exec(await readFile(new URL("../supabase/migrations/202609250001_sales_mandates.sql",import.meta.url),"utf8"));
   const owner=randomUUID(),other=randomUUID();await db.query("insert into auth.users values($1),($2)",[owner,other]);
   const config=authConfigSchema.parse({webOrigin:"http://localhost:3000",apiOrigin:"http://localhost:4000",supabaseUrl:"https://example.supabase.co",anonKey:"test",serviceKey:"test",encryptionKey:randomBytes(32).toString("base64"),cookieSecure:false,production:false});
   const profile:Customer={id:owner,first_name:"Ada",last_name:"Okafor",email:"ada@example.test",phone_number:null,phone_number_normalized:null,country_code:null,account_type:"INVESTOR",profile_type:"PERSONAL",email_verified_at:new Date().toISOString()};

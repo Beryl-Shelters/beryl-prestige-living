@@ -2,17 +2,18 @@ import { Router, type Request, type Response, type NextFunction } from "express"
 import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
 import type { AuthConfig } from "../auth/config.js";
+import { AuthCipher } from "../auth/crypto.js";
 import type { AuthGateway, Customer } from "../auth/gateway.js";
 import { AuthSessions } from "../auth/sessions.js";
 import { AuthError, expired } from "../auth/errors.js";
 import { listingOptions, listingQuery, presentListing, versionInput } from "./model.js";
 import { notFound, type ListingsRepository } from "./repository.js";
 import type { MediaStorage } from "./media.js";
-import { readUpload } from "./uploads.js";
+import { readUpload, readMandateUpload } from "./uploads.js";
 import { ListingsService } from "./service.js";
 const wrap=(fn:(request:Request,response:Response)=>Promise<void>)=>(request:Request,response:Response,next:NextFunction)=>{void fn(request,response).catch(next);};
 export function listingsRouter(config:AuthConfig,gateway:AuthGateway,repository:ListingsRepository,storage:MediaStorage) {
-  const router=Router(); const sessions=new AuthSessions(config,gateway); const service=new ListingsService(repository,storage);
+  const router=Router(); const sessions=new AuthSessions(config,gateway); const service=new ListingsService(repository,storage,new AuthCipher(config.encryptionKey));
   router.use((_req,res,next)=>{res.setHeader("Cache-Control","no-store");res.vary("Cookie");next();});
   router.use((req,_res,next)=>{
     if(req.method!=="GET" && (req.headers.origin!==config.webOrigin || !(req.is("application/json") || req.is("multipart/form-data")))) return next(new AuthError(403,"UNTRUSTED_ORIGIN","This request is not permitted."));
@@ -31,5 +32,41 @@ export function listingsRouter(config:AuthConfig,gateway:AuthGateway,repository:
   for(const [path,action] of [["request-approval","REQUEST_APPROVAL"],["unlist","UNLIST"]] as const) router.post(`/:id/${path}`,wrap(async(req,res)=>{const listing=await service.action(customer(res).id,id(req),versionInput.parse(req.body).version,action);res.json({success:true,data:presentListing(listing!,config.webOrigin)});}));
   router.post("/:id/documents",wrap(async(req,res)=>{const owner=customer(res).id;const listingId=id(req);await service.own(owner,listingId);const {data,files}=await readUpload(req,true);res.status(201).json({success:true,data:presentListing(await service.documents(owner,listingId,data,files),config.webOrigin)});}));
   router.get("/:id/documents/:documentId",wrap(async(req,res)=>{const listing=await service.own(customer(res).id,id(req));const document=listing.documents.find(d=>d.id===z.uuid().parse(req.params.documentId));if(!document) throw notFound();const bytes=await storage.download(document);const extension=document.mime_type==="application/pdf"?"pdf":document.mime_type==="image/png"?"png":"jpg";res.setHeader("Content-Type",document.mime_type);res.setHeader("Content-Disposition",`attachment; filename="document-${document.id}.${extension}"`);res.send(Buffer.from(bytes));}));
+
+  router.post("/:id/mandate/documents",wrap(async(req,res)=>{
+    const owner=customer(res).id; const listingId=id(req); await service.own(owner,listingId);
+    const {data,files}=await readMandateUpload(req,false);
+    res.status(201).json({success:true,data:await service.mandateDocumentsUpload(owner,listingId,data,files)});
+  }));
+  router.post("/:id/mandate/signature",wrap(async(req,res)=>{
+    const owner=customer(res).id; const listingId=id(req); await service.own(owner,listingId);
+    const {files}=await readMandateUpload(req,true);
+    res.status(201).json({success:true,data:await service.mandateSignatureUpload(owner,listingId,files)});
+  }));
+  router.post("/:id/mandates",wrap(async(req,res)=>{
+    const owner=customer(res).id; const listingId=id(req); await service.own(owner,listingId);
+    res.status(201).json({success:true,data:await service.saveMandate(owner,listingId,req.body)});
+  }));
+  router.get("/:id/mandate",wrap(async(req,res)=>{
+    const mandate=await service.mandate(customer(res).id,id(req));
+    res.json({success:true,data:mandate});
+  }));
+  router.get("/:id/mandate/documents/:documentId",wrap(async(req,res)=>{
+    const mandate=await service.mandateRecord(customer(res).id,id(req));
+    const document=mandate.documents.find(d=>d.id===z.uuid().parse(req.params.documentId)); if(!document) throw notFound();
+    const bytes=await storage.download(document);
+    const extension=document.mime_type==="application/pdf"?"pdf":document.mime_type==="image/png"?"png":"jpg";
+    res.setHeader("Content-Type",document.mime_type);res.setHeader("Content-Disposition",`attachment; filename="mandate-document-${document.id}.${extension}"`);res.send(Buffer.from(bytes));
+  }));
+  router.get("/:id/mandate/signature",wrap(async(req,res)=>{
+    const mandate=await service.mandateRecord(customer(res).id,id(req));
+    const bytes=await storage.download({ public_id: mandate.signature_public_id, resource_type: "raw", delivery_type: "authenticated", url: "", mime_type: mandate.signature_mime_type, size_bytes: mandate.signature_size_bytes });
+    res.setHeader("Content-Type",mandate.signature_mime_type);res.setHeader("Content-Disposition",`attachment; filename="signature.png"`);res.send(Buffer.from(bytes));
+  }));
+  router.post("/:id/submit",wrap(async(req,res)=>{
+    const owner=customer(res).id; const listingId=id(req); await service.own(owner,listingId);
+    res.status(201).json({success:true,data:presentListing(await service.submit(owner,listingId),config.webOrigin)});
+  }));
+
   return router;
 }

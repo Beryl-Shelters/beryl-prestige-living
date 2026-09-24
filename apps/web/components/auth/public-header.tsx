@@ -11,7 +11,7 @@ const navigation = [
   ["About", "/about"],
   ["Referrals", "/referrals"],
   ["Buy", "/buy"],
-  ["Sell / List a Property", "/login?next=/dashboard/listings/new"],
+  ["Sell / List a Property", "/sell"],
   ["Analytics & Insights", "/analytics"],
   ["Careers", "/careers"],
   ["Support", "/support"],

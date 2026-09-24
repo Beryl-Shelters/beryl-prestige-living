@@ -44,3 +44,47 @@ export function readUpload(request: Request, document = false): Promise<{ data: 
     request.pipe(parser);
   });
 }
+
+export const SIGNATURE_BYTES = 2*1024*1024;
+export function validateMandateFile(file: UploadFile, signature: boolean) {
+  const b = file.bytes;
+  const png = b.length > 8 && b.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
+  const jpeg = b.length > 3 && b[0] === 255 && b[1] === 216 && b[2] === 255;
+  const pdf = b.length > 5 && b.toString("ascii",0,5) === "%PDF-";
+  if (!b.length || b.length > (signature ? SIGNATURE_BYTES : DOCUMENT_BYTES)) throw invalid();
+  if (signature) { if (!(file.mime === "image/png" && png)) throw invalid(); }
+  else { if (!(file.mime === "image/png" && png || file.mime === "image/jpeg" && jpeg || file.mime === "application/pdf" && pdf)) throw invalid(); }
+}
+export function readMandateUpload(request: Request, signature: boolean): Promise<{ data: unknown; files: UploadFile[] }> {
+  return new Promise((resolve, reject) => {
+    let parser: ReturnType<typeof Busboy>;
+    try { parser = Busboy({ headers: request.headers, limits: { files: signature ? 1 : 10, fields: signature ? 0 : 1, fieldSize: 32768, fileSize: signature ? SIGNATURE_BYTES : DOCUMENT_BYTES, parts: signature ? 2 : 12 } }); }
+    catch { reject(invalid()); return; }
+    let data: unknown; let failed = false; let total = 0; let fieldSeen = false;
+    const files: UploadFile[] = [];
+    const timer = setTimeout(() => { failed=true; request.unpipe(parser); parser.destroy(invalid()); request.resume(); }, 120000);
+    parser.on("field", (name, value, info) => {
+      if (signature || name !== "data" || fieldSeen || info.valueTruncated) { failed=true; return; }
+      fieldSeen=true;
+      try { data=JSON.parse(value); } catch { failed=true; }
+    });
+    parser.on("file", (field, stream, info) => {
+      const chunks: Buffer[] = []; const file: UploadFile = { field, mime: info.mimeType, bytes: Buffer.alloc(0) }; files.push(file);
+      if (field !== (signature ? "signature" : "documents")) failed=true;
+      stream.on("limit", () => { failed=true; });
+      stream.on("error", () => { failed=true; });
+      stream.on("data", (chunk: Buffer) => { total+=chunk.length; if (total>32*1024*1024) failed=true; if (!failed) chunks.push(chunk); });
+      stream.on("end", () => { if (!failed) file.bytes=Buffer.concat(chunks); });
+    });
+    for (const event of ["filesLimit", "fieldsLimit", "partsLimit"]) parser.on(event, () => { failed=true; });
+    const abort = () => { parser.destroy(invalid()); };
+    request.once("aborted", abort);
+    parser.once("error", () => { failed=true; clearTimeout(timer); reject(invalid()); });
+    parser.once("close", () => {
+      clearTimeout(timer); request.removeListener("aborted", abort);
+      if (failed || (!signature && !fieldSeen) || files.length === 0) { reject(invalid()); return; }
+      try { files.forEach(file => validateMandateFile(file, signature)); resolve({ data, files }); } catch(error) { reject(error); }
+    });
+    request.pipe(parser);
+  });
+}

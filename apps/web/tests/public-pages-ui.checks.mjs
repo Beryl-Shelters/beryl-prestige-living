@@ -5,7 +5,7 @@ runIfMain(import.meta.url,"public-pages");
 
 export async function checkPublicPages({page,origin,calls,failures,screenshot,passed,pauseRequest,resume}){
   const widths=[1440,1280,768,430,390,360];
-  const loadPage=async(path,heading)=>{await page.goto(origin+path);await page.getByRole("heading",{name:heading}).waitFor();await page.evaluate(async()=>{for(let y=0;y<document.body.scrollHeight;y+=700){scrollTo(0,y);await new Promise(resolve=>setTimeout(resolve,20));}scrollTo(0,0);await document.fonts.ready;});await page.waitForFunction(()=>[...document.images].every(image=>image.complete&&image.naturalWidth>0));};
+  const loadPage=async(path,heading)=>{await page.goto(origin+path);await page.getByRole("heading",{name:heading}).waitFor();const failed=await page.evaluate(async()=>{for(let y=0;y<document.body.scrollHeight;y+=700){scrollTo(0,y);await new Promise(resolve=>setTimeout(resolve,20));}scrollTo(0,0);await document.fonts.ready;const results=await Promise.all([...document.images].map(async image=>{const source=image.currentSrc||image.src;try{return (await fetch(source,{cache:"force-cache"})).ok?null:source;}catch{return source;}}));return results.filter(Boolean);});assert.deepEqual(failed,[]);await page.waitForFunction(()=>[...document.images].filter(image=>image.loading==="eager").every(image=>image.complete&&image.naturalWidth>0));};
   const checkAbout=async width=>{
     assert.equal(await page.locator(".about-hero .about-eyebrow").innerText(),"WHO ARE WE?");
     assert.equal(await page.getByRole("heading",{level:1,name:"About Us"}).count(),1);

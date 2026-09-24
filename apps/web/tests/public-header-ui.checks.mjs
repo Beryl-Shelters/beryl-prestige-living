@@ -12,7 +12,11 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
   await page.getByRole("link", { name: "Login" }).waitFor();
   assert.equal(await trigger.count(), 0);
   assert.equal(await page.getByRole("link", { name: "Register" }).count(), 1);
-  assert.equal(await page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell / List a Property" }).getAttribute("href"), "/login?next=/dashboard/listings/new");
+  assert.equal(await page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell / List a Property" }).getAttribute("href"), "/sell");
+  await page.goto(origin + "/sell");
+  await page.getByRole("heading", { name: "Sign in to list a property" }).waitFor();
+  assert.equal(await page.getByRole("link", { name: "Create free account" }).getAttribute("href"), "/register?next=%2Fdashboard%2Flistings%2Fnew");
+  assert.equal(await page.getByRole("link", { name: "Log In" }).getAttribute("href"), "/login?next=%2Fdashboard%2Flistings%2Fnew");
   failures.delete("/me");
 
   for (const route of routes) {
@@ -27,6 +31,7 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
     assert.equal(await nav.getByRole("link", { name: "Buy", exact: true }).getAttribute("href"), "/buy", route);
   }
   await page.goto(origin + "/referrals"); await page.waitForURL("**/dashboard/referrals");
+  await page.goto(origin + "/sell"); await page.waitForURL("**/dashboard/listings/new");
 
   await page.goto(origin + "/"); await trigger.waitFor();
   assert.equal(await page.getByRole("link", { name: "My Dashboard" }).first().getAttribute("href"), "/dashboard");
