@@ -13,6 +13,7 @@ import { nigerianStates, propertyFacilities, propertySubtypes } from "../../lib/
 import { PublicSiteFooter } from "./public-site-footer";
 import { apiQueryFromBuyUrl, formatNaira, nairaToKobo } from "../../lib/buy-query";
 import { fetchPublicProperties, recordPublicPropertySearch, type PublicProperty, type PublicPropertyPage } from "../../lib/public-properties-api";
+import { fetchSavedPropertyStates, saveProperty } from "../../lib/saved-properties-api";
 
 type Draft = { q: string; code: string; propertyType: string; propertySubtype: string; state: string; city: string;
   budget: string; bedrooms: string; bathrooms: string; facility: string };
@@ -49,9 +50,17 @@ function FilterFields({ draft, setDraft, apply, reset, mobile = false, error }: 
   </div>;
 }
 
-function PropertyCard({ property, signedIn }: { property: PublicProperty; signedIn: boolean }) {
-  const [notice, setNotice] = useState(false);
+function PropertyCard({ property, signedIn, saved, onSaved }: { property: PublicProperty; signedIn: boolean; saved: boolean; onSaved: () => void }) {
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
   const [copying, setCopying] = useState(false);
+  async function save() {
+    if (!signedIn) { router.push(`/login?next=${encodeURIComponent(`/buy?code=${property.code}`)}`); return; }
+    if (saving || saved) return; setSaving(true);
+    try { await saveProperty(property.code); onSaved(); toast.success("Property saved"); }
+    catch (error) { showAuthError(error, "buy-save-error"); }
+    finally { setSaving(false); }
+  }
   async function copyReferral() {
     if (copying) return;
     setCopying(true);
@@ -61,7 +70,7 @@ function PropertyCard({ property, signedIn }: { property: PublicProperty; signed
   }
   return <article className="buy-property-card"><div className="buy-property-image">
     {property.images[0] ? <Image src={property.images[0]} alt={`Exterior of ${property.title}`} width={640} height={450} unoptimized/> : <div className="buy-image-placeholder" role="img" aria-label={`No photograph available for ${property.title}`}>Photo unavailable</div>}
-    <button type="button" className="buy-save" aria-label={`Save ${property.title}`} onClick={() => setNotice(true)}>♡</button>
+    <button type="button" className="buy-save" aria-label={saved ? `${property.title} is saved` : `Save ${property.title}`} aria-pressed={saved} disabled={saving || saved} onClick={() => void save()}>{saved ? "♥" : "♡"}</button>
     {property.images.length > 0 && <span className="buy-image-count">▧ {property.images.length}</span>}
   </div><div className="buy-property-copy">
     <strong className="buy-price">{formatNaira(property.priceMinor)}</strong>
@@ -69,7 +78,7 @@ function PropertyCard({ property, signedIn }: { property: PublicProperty; signed
     <h3>{property.title}</h3><p className="buy-description">{property.description}</p>
     <p className="buy-location">⌖ {property.city}, {property.state}</p>
     <div className="buy-property-facts"><span>▱ {property.bedrooms} {property.bedrooms === 1 ? "Bedroom" : "Bedrooms"}</span><span>♧ {property.bathrooms} {property.bathrooms === 1 ? "Bathroom" : "Bathrooms"}</span><span>▣ {property.parkingSpaces} {property.parkingSpaces === 1 ? "Parking Space" : "Parking Spaces"}</span></div>
-    <div className="buy-card-bottom"><span>Property Code: {property.code}</span>{signedIn ? <button type="button" disabled={copying} onClick={() => void copyReferral()}>{copying ? "Copying…" : "Copy Referral Link"}</button> : <Link href={`/login?next=${encodeURIComponent(`/buy?code=${property.code}`)}`}>Copy Referral Link</Link>}{notice && <small role="status">Saved properties are not available yet.</small>}</div>
+    <div className="buy-card-bottom"><span>Property Code: {property.code}</span>{signedIn ? <button type="button" disabled={copying} onClick={() => void copyReferral()}>{copying ? "Copying…" : "Copy Referral Link"}</button> : <Link href={`/login?next=${encodeURIComponent(`/buy?code=${property.code}`)}`}>Copy Referral Link</Link>}</div>
   </div></article>;
 }
 
@@ -82,6 +91,7 @@ export function PublicBuyPage() {
   const [resultState, setResultState] = useState<{ key: string; page: PublicPropertyPage | null; error: string | null } | null>(null);
   const [formError, setFormError] = useState<string | null>(null); const [mandateNotice, setMandateNotice] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false); const [retry, setRetry] = useState(0);
+  const [savedCodes, setSavedCodes] = useState<Set<string>>(() => new Set());
   const pendingSearch = useRef<string | null>(null); const closeButton = useRef<HTMLButtonElement>(null);
   const interpreted = apiQueryFromBuyUrl(new URLSearchParams(searchKey));
   const requestKey = `${searchKey}:${retry}`;
@@ -98,6 +108,13 @@ export function PublicBuyPage() {
     }).catch(() => { if (!controller.signal.aborted) { setResultState({ key: requestKey, page: null, error: "Properties are temporarily unavailable. Please try again." }); pendingSearch.current = null; } });
     return () => controller.abort();
   }, [searchKey, requestKey]);
+  useEffect(() => {
+    if (!customer || !results?.items.length) return;
+    const controller = new AbortController();
+    void fetchSavedPropertyStates(results.items.map(property => property.code), controller.signal)
+      .then(codes => { if (!controller.signal.aborted) setSavedCodes(new Set(codes)); }).catch(() => {});
+    return () => controller.abort();
+  }, [customer, results]);
   useEffect(() => {
     if (!mobileOpen) return;
     closeButton.current?.focus(); const previous = document.body.style.overflow; document.body.style.overflow = "hidden";
@@ -144,7 +161,7 @@ export function PublicBuyPage() {
       <div className="buy-results-toolbar"><p>{loading ? "Loading results…" : `${first}–${last} of ${total} ${total === 1 ? "property" : "properties"} for sale`}</p><label className="buy-sort">↕ <span className="buy-sr-only">Sort properties</span><select aria-label="Sort properties" value={new URLSearchParams(searchKey).get("sort") || "latest"} onChange={event => { const next = new URLSearchParams(searchKey); next.set("sort", event.target.value); next.delete("page"); navigate(next, true); }}><option value="latest">Sort: Latest listed</option><option value="oldest">Sort: Oldest listed</option><option value="price_asc">Sort: Price: Low to High</option><option value="price_desc">Sort: Price: High to Low</option></select></label></div>
       {interpreted.locationNotice && <p className="buy-location-notice" role="status">{interpreted.locationNotice}</p>}
       {formError && <p className="buy-results-error" role="alert">{formError}</p>}
-      {loading ? <div className="buy-results-state" role="status">Loading available properties…</div> : error ? <div className="buy-results-state" role="alert"><strong>{error}</strong><button type="button" onClick={() => setRetry(value => value + 1)}>Try again</button></div> : results?.items.length ? <div className="buy-card-list">{results.items.map(property => <PropertyCard key={property.code} property={property} signedIn={!!customer}/>)}</div> : <div className="buy-results-state"><strong>No properties match these filters yet.</strong><p>Try a different search or clear your filters.</p><button type="button" onClick={reset}>Clear filters</button></div>}
+      {loading ? <div className="buy-results-state" role="status">Loading available properties…</div> : error ? <div className="buy-results-state" role="alert"><strong>{error}</strong><button type="button" onClick={() => setRetry(value => value + 1)}>Try again</button></div> : results?.items.length ? <div className="buy-card-list">{results.items.map(property => <PropertyCard key={property.code} property={property} signedIn={!!customer} saved={!!customer && savedCodes.has(property.code)} onSaved={() => setSavedCodes(current => new Set(current).add(property.code))}/>)}</div> : <div className="buy-results-state"><strong>No properties match these filters yet.</strong><p>Try a different search or clear your filters.</p><button type="button" onClick={reset}>Clear filters</button></div>}
       {!loading && !error && results && results.totalPages > 1 && <nav className="buy-pagination" aria-label="Property results pages"><span>Showing {first}–{last} of {total} properties</span><div><button type="button" onClick={() => setPage(results.page - 1)} disabled={results.page <= 1} aria-label="Previous page">←</button><span>Page {results.page} of {results.totalPages}</span><button type="button" onClick={() => setPage(results.page + 1)} disabled={results.page >= results.totalPages} aria-label="Next page">→</button></div></nav>}
     </section><aside className="buy-sidebar" aria-label="Advanced Filters"><FilterFields draft={draft} setDraft={setDraft} apply={() => apply()} reset={reset}/></aside></div>
       <div className="buy-referral"><Link href="/referrals" aria-label="Learn about property referrals"><Image src="/buy/refer-and-earn.png" alt="Refer and earn with Beryl Shelter" width={1300} height={350} unoptimized/></Link><p>Refer a successful transaction and earn 2%. <Link href="/referrals">Learn about referrals →</Link></p></div>

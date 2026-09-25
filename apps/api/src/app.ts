@@ -31,6 +31,8 @@ import { publicCareersRouter } from "./public-careers/routes.js";
 import { SupabaseCareerApplicationsRepository, type CareerApplicationsRepository } from "./public-careers/repository.js";
 import { publicPropertiesRouter } from "./public-properties/routes.js";
 import { SupabasePublicPropertiesRepository, type PublicPropertiesRepository } from "./public-properties/repository.js";
+import { savedPropertiesRouter } from "./saved-properties/routes.js";
+import { SupabaseSavedPropertiesRepository, type SavedPropertiesRepository } from "./saved-properties/repository.js";
 
 export interface AppConfig {
   webAppUrl: string | undefined;
@@ -50,6 +52,7 @@ export interface AppConfig {
   publicSupportRepository?: PublicSupportRepository;
   careerApplicationsRepository?: CareerApplicationsRepository;
   publicPropertiesRepository?: PublicPropertiesRepository;
+  savedPropertiesRepository?: SavedPropertiesRepository;
   trustProxyHops?: number;
 }
 
@@ -83,6 +86,7 @@ export function createApp(config: AppConfig): Express {
     app.use("/api/v1/dashboard/analytics", analyticsRouter(config.auth, gateway, config.analyticsRepository ?? new SupabaseAnalyticsRepository(config.auth), config.categoryPerformanceRepository));
     app.use("/api/v1/dashboard/properties", purchasedPropertiesRouter(config.auth, gateway, config.purchasedPropertiesRepository));
     app.use("/api/v1/dashboard/referrals", referralsRouter(config.auth,gateway,config.referralsRepository??new SupabaseReferralsRepository(config.auth)));
+    app.use("/api/v1/saved-properties", savedPropertiesRouter(config.auth, gateway, config.savedPropertiesRepository ?? new SupabaseSavedPropertiesRepository(config.auth)));
     app.use("/api/v1/dashboard/settings", settingsRouter(config.auth,gateway,config.settingsRepository??new SupabaseSettingsRepository(config.auth),storage));
     app.use("/api/v1/dashboard/kyc",kycRouter(config.auth,gateway,config.kycRepository??new SupabaseKycRepository(config.auth),storage));
     app.use("/api/v1/listings", listingsRouter(config.auth, gateway, listings, storage));

@@ -71,8 +71,9 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(origin + "/buy"); await trigger.waitFor(); await trigger.click();
   assert.deepEqual(await dropdown.locator("a").evaluateAll(elements => elements.map(element => element.getAttribute("href"))),
-    ["/dashboard", "/dashboard/listings/new", "/dashboard/referrals"]);
-  for (const label of ["Saved Property", "Compare Property", "Mortgage Calculator"]) {
+    ["/dashboard", "/dashboard/listings/new", "/dashboard/referrals", "/saved-properties"]);
+  assert.equal(await dropdown.getByRole("link", { name: "Saved Property" }).getAttribute("href"), "/saved-properties");
+  for (const label of ["Compare Property", "Mortgage Calculator"]) {
     const item = dropdown.getByRole("button", { name: label });
     assert.equal(await item.getAttribute("aria-disabled"), "true");
     assert.equal(await item.isEnabled(), false);
@@ -88,6 +89,8 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
     assert.equal(await dropdown.getByRole("link", { name: label }).getAttribute("href"), path);
     await dropdown.getByRole("link", { name: label }).click(); await page.waitForURL(`**${path}`);
   }
+  await page.goto(origin + "/buy"); await trigger.waitFor(); await trigger.click();
+  await dropdown.getByRole("link", { name: "Saved Property" }).click(); await page.waitForURL("**/saved-properties");
   await page.goto(origin + "/buy"); await trigger.waitFor(); await trigger.click();
   const beforeLogout = calls.filter(call => call.endpoint === "/logout").length;
   await dropdown.getByRole("button", { name: "Log Out" }).click();

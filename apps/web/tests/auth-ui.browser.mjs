@@ -22,11 +22,12 @@ import { checkPublicReferrals } from "./public-referrals-ui.checks.mjs";
 import { checkPublicSupport, supportState } from "./public-support-ui.checks.mjs";
 import { checkPublicBuy, buyResponse, buyState } from "./public-buy-ui.checks.mjs";
 import { checkPublicHeader } from "./public-header-ui.checks.mjs";
+import { checkSavedProperties, resetSavedPropertiesState, savedPropertiesResponse } from "./saved-properties-ui.checks.mjs";
 
 import { isMain, runSuites } from "./run-ui-suite.mjs";
 
 export async function runBrowserSuite(suite) {
-assert(["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals", "settings", "kyc", "landing", "public-pages", "public-analytics", "public-referrals", "public-support", "public-buy", "public-header"].includes(suite));
+assert(["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals", "settings", "kyc", "landing", "public-pages", "public-analytics", "public-referrals", "public-support", "public-buy", "public-header", "saved-properties"].includes(suite));
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE
   ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : "playwright");
 const origin = process.env.AUTH_UI_ORIGIN || "http://localhost:3000";
@@ -85,10 +86,10 @@ await context.route("**/*", async (route) => {
     return route.fulfill({status:error?error.status??503:endpoint==="/public/property-searches"?201:200,contentType:"application/json",headers:{"access-control-allow-origin":origin},body:JSON.stringify(error?{success:false,error}:{success:true,data})});
   }
   if (url.pathname.startsWith("/api/v1/listings")) return mockListings(route, origin);
-  if (url.pathname.startsWith("/api/v1/auth/") || url.pathname.startsWith("/api/v1/messages/") || url.pathname.startsWith("/api/v1/dashboard/kyc") || ["/api/v1/dashboard/overview", "/api/v1/dashboard/analytics", "/api/v1/dashboard/properties", "/api/v1/dashboard/referrals", "/api/v1/dashboard/referrals/public-property", "/api/v1/dashboard/settings/profile", "/api/v1/dashboard/settings/password", "/api/v1/dashboard/settings/business"].includes(url.pathname)) {
+  if (url.pathname.startsWith("/api/v1/auth/") || url.pathname.startsWith("/api/v1/messages/") || url.pathname.startsWith("/api/v1/saved-properties") || url.pathname.startsWith("/api/v1/dashboard/kyc") || ["/api/v1/dashboard/overview", "/api/v1/dashboard/analytics", "/api/v1/dashboard/properties", "/api/v1/dashboard/referrals", "/api/v1/dashboard/referrals/public-property", "/api/v1/dashboard/settings/profile", "/api/v1/dashboard/settings/password", "/api/v1/dashboard/settings/business"].includes(url.pathname)) {
     if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: {
       "access-control-allow-origin": origin, "access-control-allow-credentials": "true",
-      "access-control-allow-headers": "content-type", "access-control-allow-methods": "GET, POST, OPTIONS",
+      "access-control-allow-headers": "content-type", "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
     } });
     const endpoint = url.pathname.startsWith("/api/v1/auth/") ? url.pathname.replace("/api/v1/auth", "") : url.pathname.replace("/api/v1", "");
     const requestBody=endpoint.startsWith("/messages/")?messagesRequestBody(request):endpoint==="/dashboard/kyc"&&request.method()==="POST"?kycRequestBody(request):endpoint.startsWith("/dashboard/settings/")&&endpoint!=="/dashboard/settings/password"?settingsRequestBody(request):request.postDataJSON();
@@ -101,12 +102,16 @@ await context.route("**/*", async (route) => {
       });
     }
     const error = failures.get(endpoint);
+    if(endpoint.startsWith("/saved-properties")){
+      const result=savedPropertiesResponse(url,request.method(),requestBody,buyState.items);
+      return route.fulfill({status:error?error.status??503:result.status,contentType:"application/json",headers:{"access-control-allow-origin":origin,"access-control-allow-credentials":"true"},body:JSON.stringify(error?{success:false,error}:result.error?{success:false,error:result.error}:{success:true,data:result.data})});
+    }
     if(!error&&endpoint.startsWith("/messages/")&&endpoint.includes("/attachments/"))return route.fulfill({status:200,contentType:"application/pdf",headers:{"access-control-allow-origin":origin,"access-control-allow-credentials":"true","content-disposition":"attachment"},body:"%PDF-1.4\nbrowser attachment"});
     const ticketOverview=messagesOverview();
     const publicReferral = endpoint === "/dashboard/referrals/public-property" ? {id:"REF-N4K7P9",referralType:"PROPERTY",propertyCode:requestBody.propertyCode,referralUrl:`${origin}/buy?code=${requestBody.propertyCode}&ref=REF-N4K7P9`} : null;
     return route.fulfill({ status: error ? error.status ?? 400 : publicReferral ? 201 : 200, contentType: "application/json",
       headers: { "access-control-allow-origin": origin, "access-control-allow-credentials": "true" },
-      body: JSON.stringify(error ? { success: false, error } : { success: true, data: publicReferral ?? (endpoint === "/me" && (suite === "public-header" || suite === "public-referrals" || suite === "public-buy" && buyState.authenticated) ? {customer:dashboardFixture.customer} : endpoint.startsWith("/messages/") ? messagesResponse(url,request.method(),requestBody) : endpoint === "/dashboard/kyc" ? kycResponse(request.method(),requestBody) : endpoint === "/dashboard/analytics" ? analyticsResponse(url) : endpoint === "/dashboard/properties" ? propertiesResponse(url) : endpoint === "/dashboard/referrals" ? referralsResponse(url,request.method(),requestBody,listingState.items,origin) : endpoint === "/dashboard/settings/profile" ? settingsResponse(request.method(),requestBody) : endpoint === "/dashboard/settings/business" ? settingsResponse(request.method(),requestBody,"business") : endpoint === "/dashboard/settings/password" ? {reauthenticate:true} : endpoint === "/dashboard/overview" ? {...dashboardFixture,recent_messages:ticketOverview.recent,summary:{...dashboardFixture.summary,new_messages:ticketOverview.unread}} : { maskedEmail: "t***@example.test" }) }) });
+      body: JSON.stringify(error ? { success: false, error } : { success: true, data: publicReferral ?? (endpoint === "/me" && (suite === "public-header" || suite === "public-referrals" || suite === "saved-properties" || suite === "public-buy" && buyState.authenticated) ? {customer:dashboardFixture.customer} : endpoint.startsWith("/messages/") ? messagesResponse(url,request.method(),requestBody) : endpoint === "/dashboard/kyc" ? kycResponse(request.method(),requestBody) : endpoint === "/dashboard/analytics" ? analyticsResponse(url) : endpoint === "/dashboard/properties" ? propertiesResponse(url) : endpoint === "/dashboard/referrals" ? referralsResponse(url,request.method(),requestBody,listingState.items,origin) : endpoint === "/dashboard/settings/profile" ? settingsResponse(request.method(),requestBody) : endpoint === "/dashboard/settings/business" ? settingsResponse(request.method(),requestBody,"business") : endpoint === "/dashboard/settings/password" ? {reauthenticate:true} : endpoint === "/dashboard/overview" ? {...dashboardFixture,recent_messages:ticketOverview.recent,summary:{...dashboardFixture.summary,new_messages:ticketOverview.unread}} : { maskedEmail: "t***@example.test" }) }) });
   }
   if (url.origin === origin) return route.continue();
   if (url.hostname === "www.google.com" && url.pathname === "/maps") return route.fulfill({status:200,contentType:"text/html",body:"<!doctype html><title>Map embed test stub</title>"});
@@ -293,7 +298,7 @@ try {
   const safeNext = "/dashboard/referrals?source=landing#share";
   await loginThrough(`/login?next=${encodeURIComponent(safeNext)}`);
   await page.waitForURL(url => `${url.pathname}${url.search}${url.hash}` === safeNext);
-  for (const buyNext of ["/buy", "/buy?code=RES-ABC234"]) {
+  for (const buyNext of ["/buy", "/buy?code=RES-ABC234", "/saved-properties"]) {
     await loginThrough(`/login?next=${encodeURIComponent(buyNext)}`);
     await page.waitForURL(url => `${url.pathname}${url.search}` === buyNext);
   }
@@ -466,6 +471,7 @@ try {
   if (suite === "public-support") await checkPublicSupport({page,origin,calls,failures,screenshot,passed,pauseRequest,resume});
   if (suite === "public-buy") await checkPublicBuy({page,origin,calls,failures,screenshot,passed,pauseRequest,resume});
   if (suite === "public-header") await checkPublicHeader({page,origin,calls,failures,screenshot,passed});
+  if (suite === "saved-properties") await checkSavedProperties({page,origin,calls,failures,screenshot,passed});
   assert.deepEqual(pageErrors, []);
   await writeFile(join(artifacts, "results.json"), JSON.stringify({ suite, passed, authCalls: calls.length, pageErrors, networkErrors }, null, 2));
   // Keep complete request diagnostics in results.json, including expected
@@ -501,6 +507,7 @@ try {
     referralsState.next = 2;
     supportState.submissions = [];
     buyState.authenticated = false;
+    resetSavedPropertiesState();
     Object.assign(settingsState.profile,{firstName:"Ada",lastName:"Okafor",profileImageUrl:null});
     dashboardFixture.customer.profile_image_url=null;
   }
