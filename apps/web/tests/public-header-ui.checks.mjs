@@ -71,15 +71,10 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(origin + "/buy"); await trigger.waitFor(); await trigger.click();
   assert.deepEqual(await dropdown.locator("a").evaluateAll(elements => elements.map(element => element.getAttribute("href"))),
-    ["/dashboard", "/dashboard/listings/new", "/dashboard/referrals", "/saved-properties", "/compare-properties"]);
+    ["/dashboard", "/dashboard/listings/new", "/dashboard/referrals", "/saved-properties", "/compare-properties", "/mortgage-calculator"]);
   assert.equal(await dropdown.getByRole("link", { name: "Saved Property" }).getAttribute("href"), "/saved-properties");
   assert.equal(await dropdown.getByRole("link", { name: "Compare Property" }).getAttribute("href"), "/compare-properties");
-  for (const label of ["Mortgage Calculator"]) {
-    const item = dropdown.getByRole("button", { name: label });
-    assert.equal(await item.getAttribute("aria-disabled"), "true");
-    assert.equal(await item.isEnabled(), false);
-    await item.dispatchEvent("click"); assert.equal(new URL(page.url()).pathname, "/buy");
-  }
+  assert.equal(await dropdown.getByRole("link", { name: "Mortgage Calculator" }).getAttribute("href"), "/mortgage-calculator");
   await dropdown.getByRole("link", { name: "My Dashboard" }).click();
   await page.waitForURL("**/dashboard");
   await page.goto(origin + "/buy"); await trigger.waitFor();

@@ -84,12 +84,12 @@ export async function checkSavedProperties({page,origin,calls,failures,screensho
   await page.setViewportSize({width:1440,height:920});await page.goto(origin+"/saved-properties");await page.locator(".public-account-trigger").click();
   assert.equal(await page.locator(".public-account-dropdown").getByRole("link",{name:"Saved Property"}).getAttribute("href"),"/saved-properties");
   assert.equal(await page.locator(".public-account-dropdown").getByRole("link",{name:"Compare Property"}).getAttribute("href"),"/compare-properties");
-  assert.equal(await page.locator(".public-account-dropdown").getByRole("button",{name:"Mortgage Calculator"}).getAttribute("aria-disabled"),"true");
+  assert.equal(await page.locator(".public-account-dropdown").getByRole("link",{name:"Mortgage Calculator"}).getAttribute("href"),"/mortgage-calculator");
 
   await page.goto(origin+"/buy");await page.getByText("Properties found for sale",{exact:false}).waitFor();
   const unsaved=page.getByRole("button",{name:/^Save /}).first();const title=(await unsaved.getAttribute("aria-label")).replace(/^Save /,"");await unsaved.click();
   await page.getByText("Property saved",{exact:true}).waitFor();assert.equal(await page.getByRole("button",{name:`${title} is saved`}).getAttribute("aria-pressed"),"true");
   assert.equal(calls.filter(call=>call.endpoint==="/saved-properties"&&call.method==="POST").length,1);
   passed.push("Saved Properties protects signed-out data, renders real safe cards, searches server-side, removes only bookmarks, shares normal Buy URLs, and handles loading/error/empty states");
-  passed.push("Desktop/tablet/mobile layouts match the supplied grid/stack structure at eight widths; Saved, Compare and the existing Buy Save entry point are active while Mortgage remains unavailable");
+  passed.push("Desktop/tablet/mobile layouts match the supplied grid/stack structure at eight widths; Saved, Compare, Mortgage Calculator and the existing Buy Save entry point are active");
 }
