@@ -89,6 +89,7 @@ export async function checkPublicBuy({ page, origin, calls, failures, screenshot
   await advanced.getByLabel("State").selectOption("Lagos");
   await advanced.getByLabel("City").fill("Ikeja");
   await advanced.getByPlaceholder("Enter Amount here").fill("85,000,000.00");
+  assert.equal(await advanced.getByPlaceholder("Enter Amount here").inputValue(),"85,000,000.00");
   await advanced.getByRole("button", { name: "3", exact: true }).first().click();
   await advanced.getByRole("button", { name: "2", exact: true }).last().click();
   await advanced.getByLabel("Wi-Fi").check();

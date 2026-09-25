@@ -11,7 +11,7 @@ import type { Customer } from "../../lib/auth-api";
 import { createPublicPropertyReferral } from "../../lib/referrals-api";
 import { nigerianStates, propertyFacilities, propertySubtypes } from "../../lib/property-taxonomy";
 import { PublicSiteFooter } from "./public-site-footer";
-import { apiQueryFromBuyUrl, formatNaira, nairaToKobo } from "../../lib/buy-query";
+import { apiQueryFromBuyUrl, formatNaira, formatNairaInput, nairaToKobo } from "../../lib/buy-query";
 import { fetchPublicProperties, recordPublicPropertySearch, type PublicProperty, type PublicPropertyPage } from "../../lib/public-properties-api";
 import { fetchSavedPropertyStates, saveProperty } from "../../lib/saved-properties-api";
 
@@ -21,7 +21,7 @@ const editableKeys = ["q", "code", "propertyType", "propertySubtype", "state", "
 function draftFrom(params: URLSearchParams): Draft {
   return { q: params.get("q") ?? "", code: params.get("code") ?? "", propertyType: params.get("propertyType") ?? "",
     propertySubtype: params.get("propertySubtype") ?? "", state: params.get("state") ?? "", city: params.get("city") ?? "",
-    budget: params.get("budget") ?? "", bedrooms: params.get("bedrooms") ?? "", bathrooms: params.get("bathrooms") ?? "",
+    budget: formatNairaInput(params.get("budget") ?? "") ?? "", bedrooms: params.get("bedrooms") ?? "", bathrooms: params.get("bathrooms") ?? "",
     facility: params.get("facility") ?? "" };
 }
 
@@ -38,7 +38,7 @@ function FilterFields({ draft, setDraft, apply, reset, mobile = false, error }: 
     <label>Select Property Type<select value={draft.propertyType} onChange={event => update("propertyType", event.target.value)}><option value="">Any type</option><option>Residential</option><option>Commercial</option></select></label>
     <div className="buy-filter-pair"><label>State<select value={draft.state} onChange={event => update("state", event.target.value)}><option value="">Select State</option>{nigerianStates.map(state => <option key={state}>{state}</option>)}</select></label><label>City<input value={draft.city} maxLength={100} placeholder="Enter City" onChange={event => update("city", event.target.value)}/></label></div>
     <label>Local Government<input disabled placeholder="Not available yet" title="LGA filtering is not available in the current property data"/></label>
-    <label>What is your budget?<span className="buy-budget-input"><span>NGN</span><input inputMode="decimal" value={draft.budget} placeholder="Enter Amount here" onChange={event => update("budget", event.target.value)}/></span></label>
+    <label>What is your budget?<span className="buy-budget-input"><span>NGN</span><input inputMode="decimal" value={draft.budget} placeholder="Enter Amount here" onChange={event => { const value=formatNairaInput(event.target.value); if(value!==null)update("budget",value); }}/></span></label>
     {countField("Bedrooms", "bedrooms")}{countField("Bathrooms", "bathrooms")}
     <fieldset className="buy-facility-filter"><legend>Additional Conveniences</legend>
       {propertyFacilities.map(facility => <label key={facility}><input type="radio" name={mobile ? "buy-mobile-facility" : "buy-desktop-facility"} checked={draft.facility === facility} onChange={() => update("facility", facility)}/>{facility}</label>)}

@@ -9,6 +9,14 @@ export function nairaToKobo(value: string): string | null {
   return minor <= MAX_MINOR ? minor.toString() : null;
 }
 
+export function formatNairaInput(value: string): string | null {
+  const normalized = value.replace(/,/g, "");
+  if (!/^\d{0,13}(\.\d{0,2})?$/.test(normalized)) return null;
+  const [whole = "", fraction] = normalized.split(".");
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return fraction === undefined ? grouped : `${grouped}.${fraction}`;
+}
+
 export function formatNaira(priceMinor: number): string {
   const minor = BigInt(priceMinor);
   const whole = minor / 100n;
