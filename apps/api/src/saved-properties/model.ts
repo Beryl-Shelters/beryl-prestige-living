@@ -16,7 +16,13 @@ export const savedPropertyStatesQuery = z.strictObject({
   codes: z.string().trim().min(1).max(5049).transform(value => value.split(",").map(code => code.trim()))
     .pipe(z.array(propertyCode).min(1).max(50).refine(codes => new Set(codes).size === codes.length, "Property codes must be unique.")),
 });
+export const savedPropertyCompareQuery = z.strictObject({
+  codes: z.string().trim().min(1).max(302).transform(value => value.split(",").map(code => code.trim()))
+    .pipe(z.array(propertyCode).min(2).max(3).refine(codes => new Set(codes).size === codes.length, "Property codes must be unique.")),
+});
 
 export type SavedPropertiesQuery = z.output<typeof savedPropertiesQuery>;
 export type SavedPropertyPage = { items: PublicProperty[]; page: number; pageSize: number; total: number; totalPages: number };
-
+export type ComparedProperty = PublicProperty & {
+  propertyStatus: "Available"; unitSizeSqft: null; yearBuilt: number | null; minimumDownPaymentMinor: number;
+};

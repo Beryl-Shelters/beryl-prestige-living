@@ -4,7 +4,7 @@ import type { AuthConfig } from "../auth/config.js";
 import { AuthError, expired } from "../auth/errors.js";
 import type { AuthGateway } from "../auth/gateway.js";
 import { AuthSessions } from "../auth/sessions.js";
-import { savedPropertiesQuery, savedPropertyInput, savedPropertyParams, savedPropertyStatesQuery } from "./model.js";
+import { savedPropertiesQuery, savedPropertyCompareQuery, savedPropertyInput, savedPropertyParams, savedPropertyStatesQuery } from "./model.js";
 import type { SavedPropertiesRepository } from "./repository.js";
 
 const wrap = (fn: (request: Request, response: Response) => Promise<void>) =>
@@ -32,6 +32,10 @@ export function savedPropertiesRouter(config: AuthConfig, gateway: AuthGateway, 
   }));
   router.get("/states", wrap(async (request, response) => {
     response.json({ success: true, data: { propertyCodes: await repository.states(owner(response), savedPropertyStatesQuery.parse(request.query).codes) } });
+  }));
+  router.get("/compare", wrap(async (request, response) => {
+    const { codes } = savedPropertyCompareQuery.parse(request.query);
+    response.json({ success: true, data: { items: await repository.compare(owner(response), codes) } });
   }));
   router.post("/", wrap(async (request, response) => {
     if (Object.keys(request.query).length) throw new AuthError(400, "INVALID_SAVED_PROPERTY", "Check the property details.");

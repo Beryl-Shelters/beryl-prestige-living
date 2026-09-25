@@ -8,7 +8,7 @@ export function loginDestination(value: string | null | undefined): string {
   try {
     const base = new URL("https://internal.invalid");
     const destination = new URL(value,base);
-    if (destination.origin !== base.origin || !["/account","/dashboard","/buy","/saved-properties"].includes(destination.pathname) && !destination.pathname.startsWith("/dashboard/")) return fallback;
+    if (destination.origin !== base.origin || !["/account","/dashboard","/buy","/saved-properties","/compare-properties","/compare-properties/compare"].includes(destination.pathname) && !destination.pathname.startsWith("/dashboard/")) return fallback;
     return `${destination.pathname}${destination.search}${destination.hash}`;
   } catch { return fallback; }
 }

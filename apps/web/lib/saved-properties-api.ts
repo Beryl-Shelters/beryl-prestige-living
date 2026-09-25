@@ -1,4 +1,7 @@
 import type { PublicPropertyPage } from "./public-properties-api";
+import type { PublicProperty } from "./public-properties-api";
+
+export type ComparedProperty = PublicProperty & { propertyStatus: "Available"; unitSizeSqft: null; yearBuilt: number | null; minimumDownPaymentMinor: number };
 
 export class SavedPropertiesApiError extends Error {
   constructor(public code: string, message: string, public status = 0) { super(message); }
@@ -40,4 +43,8 @@ export async function fetchSavedPropertyStates(propertyCodes: string[], signal?:
   if (!propertyCodes.length) return [];
   const query = new URLSearchParams({ codes: propertyCodes.join(",") });
   return (await request<{ propertyCodes: string[] }>(`/states?${query}`, signal ? { signal } : {})).propertyCodes;
+}
+export function fetchComparedProperties(propertyCodes: string[], signal?: AbortSignal) {
+  const query = new URLSearchParams({ codes: propertyCodes.join(",") });
+  return request<{ items: ComparedProperty[] }>(`/compare?${query}`, signal ? { signal } : {});
 }

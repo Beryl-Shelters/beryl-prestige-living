@@ -86,7 +86,7 @@ export function PublicHeader({ sessionAware = false, mobileMenu = false, onSessi
             <Link href="/dashboard/listings/new" onClick={() => { setAccountOpen(false); setOpen(false); }}><AccountIcon name="listing"/>List Property</Link>
             <Link href="/dashboard/referrals" onClick={() => { setAccountOpen(false); setOpen(false); }}><AccountIcon name="referrals"/>Referrals</Link>
             <Link href="/saved-properties" onClick={() => { setAccountOpen(false); setOpen(false); }}><AccountIcon name="saved"/>Saved Property</Link>
-            <button type="button" aria-disabled="true"><AccountIcon name="compare"/>Compare Property</button>
+            <Link href="/compare-properties" onClick={() => { setAccountOpen(false); setOpen(false); }}><AccountIcon name="compare"/>Compare Property</Link>
             <button type="button" aria-disabled="true"><AccountIcon name="mortgage"/>Mortgage Calculator</button>
             <button type="button" onClick={logout}><AccountIcon name="logout"/>Log Out</button>
           </nav>}

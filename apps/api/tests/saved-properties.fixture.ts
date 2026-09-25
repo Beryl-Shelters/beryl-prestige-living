@@ -7,7 +7,7 @@ import { authConfigSchema } from "../src/auth/config.js";
 import { AuthCipher, hashToken } from "../src/auth/crypto.js";
 import { AuthError } from "../src/auth/errors.js";
 import type { AuthGateway, Customer, StoredSession } from "../src/auth/gateway.js";
-import type { SavedPropertyPage, SavedPropertiesQuery } from "../src/saved-properties/model.js";
+import type { ComparedProperty, SavedPropertyPage, SavedPropertiesQuery } from "../src/saved-properties/model.js";
 import type { SavedPropertiesRepository } from "../src/saved-properties/repository.js";
 
 export async function savedPropertiesFixture(t: TestContext) {
@@ -17,11 +17,12 @@ export async function savedPropertiesFixture(t: TestContext) {
     await db.exec(await readFile(new URL(`../supabase/migrations/${migration}`, import.meta.url), "utf8"));
   const owner = randomUUID(), other = randomUUID();
   await db.query("insert into auth.users values($1),($2)", [owner, other]);
-  const listing = randomUUID(), foreignListing = randomUUID(), hiddenListing = randomUUID();
+  const listing = randomUUID(), foreignListing = randomUUID(), thirdListing = randomUUID(), hiddenListing = randomUUID();
   const insert = `insert into public.customer_listings(id,user_id,listing_code,title,description,occupancy_type,ownership_type,property_type,property_subtype,has_lien,bedrooms,bathrooms,parking_spaces,facilities,property_cost_minor,minimum_down_payment_minor,location,state,city,listing_status,listed_at)
     values($1,$2,$3,$4,'Safe public description','Residential','Personal','Residential','Bungalow',false,$5,2,1,array['Wi-Fi'],8500000000,100000000,'Test road',$6,$7,$8,case when $8='LISTED' then clock_timestamp() else null end)`;
   await db.query(insert, [listing, owner, "RES-OWN111", "Owner home", 3, "Lagos", "Ikeja", "LISTED"]);
   await db.query(insert, [foreignListing, other, "RES-OTH222", "Foreign listed home", 4, "Rivers", "Port Harcourt", "LISTED"]);
+  await db.query(insert, [thirdListing, other, "RES-THR444", "Third listed home", 2, "Lagos", "Lekki", "LISTED"]);
   await db.query(insert, [hiddenListing, other, "RES-HID333", "Private pending home", 5, "Abuja", "Abuja", "PENDING"]);
   await db.query("insert into public.customer_listing_images(listing_id,public_id,resource_type,delivery_type,url,mime_type,size_bytes,sort_order) values($1,'saved-test-image','image','upload','https://images.example.test/saved-home.png','image/png',100,0)", [foreignListing]);
   async function rpc<T>(name: string, args: unknown[]): Promise<T> {
@@ -37,6 +38,11 @@ export async function savedPropertiesFixture(t: TestContext) {
     save: (id, code) => rpc<boolean>("save_customer_property", [id, code]),
     remove: (id, code) => rpc<boolean>("remove_customer_saved_property", [id, code]),
     states: (id, codes) => rpc<string[]>("customer_saved_property_states", [id, codes]),
+    compare: async (id, codes) => {
+      const rows = (await db.query<{ listing_code:string;title:string;description:string;property_type:string;property_subtype:string;property_cost_minor:number;minimum_down_payment_minor:number;state:string;city:string;bedrooms:number;bathrooms:number;parking_spaces:number;facilities:string[];year_built:number|null;listed_at:string|null }>(`select l.listing_code,l.title,l.description,l.property_type,l.property_subtype,l.property_cost_minor,l.minimum_down_payment_minor,l.state,l.city,l.bedrooms,l.bathrooms,l.parking_spaces,l.facilities,l.year_built,l.listed_at from public.customer_saved_properties s join public.customer_listings l on l.id=s.listing_id and l.listing_status='LISTED' where s.user_id=$1 and l.listing_code=any($2)`, [id,codes])).rows;
+      const byCode=new Map(rows.map(row=>[row.listing_code,{code:row.listing_code,title:row.title,description:row.description,propertyType:row.property_type,propertySubtype:row.property_subtype,priceMinor:row.property_cost_minor,state:row.state,city:row.city,bedrooms:row.bedrooms,bathrooms:row.bathrooms,parkingSpaces:row.parking_spaces,facilities:row.facilities,listedAt:row.listed_at,images:[],propertyStatus:"Available" as const,unitSizeSqft:null,yearBuilt:row.year_built,minimumDownPaymentMinor:row.minimum_down_payment_minor}]));
+      return codes.flatMap(code=>{const item=byCode.get(code);return item?[item]:[];}) as ComparedProperty[];
+    },
   };
   const config = authConfigSchema.parse({ webOrigin: "http://localhost:3000", apiOrigin: "http://localhost:4000", supabaseUrl: "https://example.supabase.co", anonKey: "test", serviceKey: "test", encryptionKey: randomBytes(32).toString("base64"), cookieSecure: false, production: false });
   const profile: Customer = { id: owner, first_name: "Ada", last_name: "Okafor", email: "ada@example.test", phone_number: null, phone_number_normalized: null, country_code: null, account_type: "INVESTOR", profile_type: "PERSONAL", email_verified_at: new Date().toISOString() };
@@ -51,5 +57,5 @@ export async function savedPropertiesFixture(t: TestContext) {
     const response = await fetch(`http://127.0.0.1:${address.port}/api/v1/saved-properties${path}`, { method, headers: { Cookie: cookie, Origin: config.webOrigin, ...(method !== "GET" ? { "Content-Type": "application/json" } : {}), ...headers }, ...(body ? { body: JSON.stringify(body) } : {}) });
     return { response, payload: await response.json() };
   }
-  return { db, owner, other, listing, foreignListing, hiddenListing, repository, request, state };
+  return { db, owner, other, listing, foreignListing, thirdListing, hiddenListing, repository, request, state };
 }

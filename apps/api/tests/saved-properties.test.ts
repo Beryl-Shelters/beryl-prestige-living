@@ -83,3 +83,33 @@ test("foreign-key cascades clean up only bookmark relationships", async t => {
   await f.db.query("delete from public.customer_listings where id=$1", [f.foreignListing]);
   assert.equal((await f.db.query<{ count: number }>("select count(*)::integer count from public.customer_saved_properties")).rows[0]!.count, 0);
 });
+
+test("comparison requires authentication and two to three unique public codes", async t => {
+  const f = await savedPropertiesFixture(t);
+  assert.equal((await f.request("/compare?codes=RES-OTH222,RES-THR444", "GET", undefined, "")).response.status, 401);
+  for (const codes of ["RES-OTH222", "RES-OTH222,RES-OTH222", "RES-OWN111,RES-OTH222,RES-THR444,RES-HID333"])
+    assert.equal((await f.request(`/compare?codes=${codes}`)).response.status, 400, codes);
+});
+
+test("comparison returns only the caller's saved LISTED properties in requested order with a safe DTO", async t => {
+  const f = await savedPropertiesFixture(t);
+  await f.repository.save(f.owner, "RES-OTH222"); await f.repository.save(f.owner, "RES-THR444");
+  const two = await f.request("/compare?codes=RES-THR444,RES-OTH222");
+  assert.equal(two.response.status, 200); assert.deepEqual(two.payload.data.items.map((item: {code:string})=>item.code), ["RES-THR444","RES-OTH222"]);
+  assert.equal(two.payload.data.items[0].propertyStatus,"Available"); assert.equal(two.payload.data.items[0].unitSizeSqft,null);
+  const serialized=JSON.stringify(two.payload);
+  for(const secret of [f.owner,f.other,f.foreignListing,"user_id","listing_status","public_id","documents"])assert(!serialized.includes(secret),secret);
+  await f.repository.save(f.other,"RES-OWN111");
+  const scoped=await f.request("/compare?codes=RES-OWN111,RES-OTH222");assert.deepEqual(scoped.payload.data.items.map((item:{code:string})=>item.code),["RES-OTH222"]);
+  await f.db.query("update public.customer_listings set listing_status='PENDING' where id=$1",[f.foreignListing]);
+  assert.deepEqual((await f.request("/compare?codes=RES-OTH222,RES-THR444")).payload.data.items.map((item:{code:string})=>item.code),["RES-THR444"]);
+  assert.equal((await f.db.query<{count:number}>("select count(*)::integer count from public.customer_saved_properties")).rows[0]!.count,3,"comparison must not mutate saved relationships");
+  assert.equal((await f.db.query<{count:number}>("select count(*)::integer count from public.customer_referral_links")).rows[0]!.count,0,"comparison must not create referrals");
+});
+
+test("three-property comparison is supported without changing listing ownership or lifecycle", async t => {
+  const f=await savedPropertiesFixture(t);await f.repository.save(f.owner,"RES-OWN111");await f.repository.save(f.owner,"RES-OTH222");await f.repository.save(f.owner,"RES-THR444");
+  const compared=await f.request("/compare?codes=RES-OWN111,RES-OTH222,RES-THR444");assert.equal(compared.payload.data.items.length,3);
+  const rows=(await f.db.query<{user_id:string;listing_status:string}>("select user_id,listing_status from public.customer_listings order by listing_code")).rows;
+  assert(rows.every(row=>row.listing_status==="LISTED"||row.listing_status==="PENDING"));assert.equal(rows.find(row=>row.user_id===f.owner)?.user_id,f.owner);
+});
