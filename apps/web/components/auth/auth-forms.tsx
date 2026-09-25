@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type FormEvent, type FormEventHandler, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { AuthApiError, authRequest } from "../../lib/auth-api";
@@ -28,6 +28,33 @@ function Divider({ children }: { children: ReactNode }) {
   return <div className="auth-divider"><span>{children}</span></div>;
 }
 
+const subscribeToHydration = () => () => {};
+const hydratedSnapshot = () => true;
+const serverSnapshot = () => false;
+
+function AuthForm({ className, pending, onSubmit, children }: {
+  className: string;
+  pending: boolean;
+  onSubmit: FormEventHandler<HTMLFormElement>;
+  children: ReactNode;
+}) {
+  const hydrated = useSyncExternalStore(subscribeToHydration, hydratedSnapshot, serverSnapshot);
+  return (
+    <form
+      className={className}
+      method="post"
+      inert={hydrated ? undefined : true}
+      aria-busy={pending || !hydrated}
+      onSubmit={(event) => {
+        if (!hydrated) { event.preventDefault(); return; }
+        onSubmit(event);
+      }}
+    >
+      {children}
+    </form>
+  );
+}
+
 export function LoginForm() {
   const router = useRouter();
   const { pending, run } = useAuthAction();
@@ -43,7 +70,7 @@ export function LoginForm() {
     });
   }
   return (
-    <form className="auth-card" onSubmit={submit} aria-busy={pending}>
+    <AuthForm className="auth-card" pending={pending} onSubmit={submit}>
       <AuthHeading title="Welcome Back">Ready to continue your journey in real estate? Sign in now to connect with top agents, agencies, and developers who can help you achieve your property goals.</AuthHeading>
       <div className="field-group">
         <label htmlFor="login-identity">Email Address / Phone Number <span aria-hidden="true">*</span></label>
@@ -66,7 +93,7 @@ export function LoginForm() {
       <button className="button button-primary submit-button" type="submit" disabled={pending}>Submit</button>
       <Divider>or sign in with</Divider>
       <GoogleAuthButton action="sign in" />
-    </form>
+    </AuthForm>
   );
 }
 
@@ -91,7 +118,7 @@ export function RegisterForm() {
     });
   }
   return (
-    <form className="auth-card register-card" onSubmit={submit} aria-busy={pending}>
+    <AuthForm className="auth-card register-card" pending={pending} onSubmit={submit}>
       <AuthHeading title="Create your account">Join Beryl Shelter and begin your property journey.</AuthHeading>
       <div className="two-column-fields">
         <div className="field-group"><label htmlFor="first-name">First Name <span aria-hidden="true">*</span></label><input autoComplete="given-name" id="first-name" name="firstName" placeholder="Enter First Name" required /></div>
@@ -112,7 +139,7 @@ export function RegisterForm() {
       <Divider>or sign up with</Divider>
       <GoogleAuthButton action="sign up" />
       <p className="auth-footer">Already have an account? <Link href="/login">Login</Link></p>
-    </form>
+    </AuthForm>
   );
 }
 
@@ -149,7 +176,7 @@ export function VerifyEmailForm() {
   }, [router]);
   if (contextLoading) return <BrandLoader />;
   return (
-    <form className="auth-card compact-card" aria-busy={pending} onSubmit={(event) => {
+    <AuthForm className="auth-card compact-card" pending={pending} onSubmit={(event) => {
       const data = values(event);
       verifyCode(String(data.code ?? ""));
     }}>
@@ -161,7 +188,7 @@ export function VerifyEmailForm() {
         await authRequest("/resend-verification", {}); toast.success("Verification code sent to your email");
       })}>Resend Code</button>
       <p className="auth-footer"><Link href="/login">Back to log in</Link></p>
-    </form>
+    </AuthForm>
   );
 }
 
@@ -169,7 +196,7 @@ export function ForgotPasswordForm() {
   const router = useRouter();
   const { pending, run } = useAuthAction();
   return (
-    <form className="auth-card compact-card" aria-busy={pending} onSubmit={(event) => {
+    <AuthForm className="auth-card compact-card" pending={pending} onSubmit={(event) => {
       const data = values(event);
       void run(async () => {
         await authRequest("/forgot-password", { identifier: data.identity });
@@ -181,7 +208,7 @@ export function ForgotPasswordForm() {
       <div className="field-group"><label htmlFor="recovery-identity">Email Address / Phone Number <span aria-hidden="true">*</span></label><input autoComplete="username" id="recovery-identity" name="identity" placeholder="Enter valid email / phone no." required type="text" /></div>
       <button className="button button-primary submit-button" type="submit" disabled={pending}>Submit</button>
       <p className="auth-footer"><Link href="/login">Back to log in</Link></p>
-    </form>
+    </AuthForm>
   );
 }
 
@@ -189,7 +216,7 @@ export function ForgotPasswordVerifyForm() {
   const router = useRouter();
   const { pending, run } = useAuthAction();
   return (
-    <form className="auth-card compact-card" aria-busy={pending} onSubmit={(event) => {
+    <AuthForm className="auth-card compact-card" pending={pending} onSubmit={(event) => {
       const data = values(event);
       void run(async () => { await authRequest("/verify-recovery", { code: data.code }); router.replace("/reset-password"); });
     }}>
@@ -201,7 +228,7 @@ export function ForgotPasswordVerifyForm() {
         await authRequest("/resend-recovery", {}); toast.info("Password reset code sent to your email.");
       })}>Resend Code</button>
       <p className="auth-footer"><Link href="/login">Back to log in</Link></p>
-    </form>
+    </AuthForm>
   );
 }
 
@@ -219,7 +246,7 @@ export function ResetPasswordForm() {
   }, []);
   if (contextLoading) return <BrandLoader />;
   return (
-    <form className="auth-card compact-card" aria-busy={pending} onSubmit={(event) => {
+    <AuthForm className="auth-card compact-card" pending={pending} onSubmit={(event) => {
       const data = values(event);
       void run(async () => {
         validateNewPassword(String(data["new-password"] ?? ""), String(data["confirm-new-password"] ?? ""));
@@ -232,6 +259,6 @@ export function ResetPasswordForm() {
       <PasswordInput autoComplete="new-password" id="confirm-new-password" label="Confirm Password *" />
       <button className="button button-primary submit-button" type="submit" disabled={pending || !ready}>Submit</button>
       <p className="auth-footer"><Link href="/login">Back to log in</Link></p>
-    </form>
+    </AuthForm>
   );
 }

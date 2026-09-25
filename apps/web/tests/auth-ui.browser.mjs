@@ -156,6 +156,40 @@ try {
   assert.equal(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches), false);
   assert.deepEqual(listingState, { items: [], calls: [] });
   if (suite === "auth") {
+  const preHydrationContext = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 1440, height: 900 } });
+  const preHydrationPage = await preHydrationContext.newPage();
+  const preHydrationNavigations = [];
+  preHydrationPage.on("request", request => {
+    if (request.isNavigationRequest() && request.frame() === preHydrationPage.mainFrame()) {
+      preHydrationNavigations.push({ method: request.method(), url: request.url() });
+    }
+  });
+  for (const path of ["/login", "/register", "/forgot-password", "/forgot-password/verify"]) {
+    await preHydrationPage.goto(origin + path);
+    const form = preHydrationPage.locator("form.auth-card");
+    await form.waitFor();
+    assert.equal(await form.getAttribute("method"), "post", `${path} must not default to GET`);
+    assert.equal(await form.getAttribute("action"), null, `${path} must not add a native auth endpoint`);
+    assert.equal(await form.getAttribute("inert"), "", `${path} must be inert before hydration`);
+    assert.equal(await form.getAttribute("aria-busy"), "true", `${path} must expose its temporary unavailable state`);
+  }
+  for (const path of ["/verify-email", "/reset-password"]) {
+    await preHydrationPage.goto(origin + path);
+    await preHydrationPage.locator(".brand-loader").waitFor();
+    assert.equal(await preHydrationPage.locator("form").count(), 0, `${path} must render no form before hydration`);
+  }
+  await preHydrationPage.goto(origin + "/register");
+  await preHydrationPage.locator("#register-password").evaluate((input) => { input.value = "NeverInAUrl1!"; });
+  await preHydrationPage.locator("#register-confirm-password").evaluate((input) => { input.value = "NeverInAUrl1!"; });
+  const navigationCount = preHydrationNavigations.length;
+  await preHydrationPage.getByRole("button", { name: "Create Account", exact: true }).click({ force: true }).catch(() => {});
+  await preHydrationPage.keyboard.press("Enter");
+  await preHydrationPage.waitForTimeout(250);
+  assert.equal(preHydrationNavigations.length, navigationCount, "Pre-hydration registration interaction must not navigate");
+  assert.equal(new URL(preHydrationPage.url()).search, "", "Registration credentials must not enter the query string");
+  await preHydrationContext.close();
+  passed.push("All auth forms use POST semantics and block native interaction before hydration; registration credentials cannot enter a URL");
+
   for (const width of [1440, 1024, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 900 });
     for (const path of routes) {
@@ -203,8 +237,11 @@ try {
   assert.equal(await page.locator("#register-confirm-password").getAttribute("type"), "text");
   await page.getByRole("button", { name: "Hide confirm password" }).click();
   await page.locator("#register-password").fill("TestingPass1!"); await page.locator("#register-confirm-password").fill("TestingPass1!");
-  await page.getByRole("button", { name: "Create Account", exact: true }).click();
+  const registrationCallsBefore = calls.filter((call) => call.endpoint === "/register").length;
+  await page.locator("#register-confirm-password").press("Enter");
   await page.waitForURL("**/verify-email"); await toast("Verification code sent to your email");
+  assert.equal(calls.filter((call) => call.endpoint === "/register").length, registrationCallsBefore + 1);
+  assert.equal(new URL(page.url()).search, "");
   assert.equal(calls.find((c) => c.endpoint === "/register").body.accountType, "INVESTOR");
   assert.equal(calls.find((c) => c.endpoint === "/register").body.profileType, "PERSONAL");
   const verificationCount = () => calls.filter((c) => c.endpoint === "/verify-email").length;
@@ -225,7 +262,7 @@ try {
   assert.equal(calls.filter((c) => c.endpoint === "/verify-email").at(-1).body.code, "123456");
   assert(release); pausedEndpoint = undefined; release(); await page.waitForURL("**/dashboard");
   await page.getByRole("button", { name: "Log Out", exact: true }).click(); await page.waitForURL("**/login");
-  passed.push("Registration, six-box auto verification on final digit, pending lock, account and logout");
+  passed.push("Hydrated keyboard registration, password-free navigation, six-box auto verification on final digit, pending lock, account and logout");
 
   await goto("/login");
   await page.locator("#login-identity").fill("test@example.test"); await page.locator("#login-password").fill("TestingPass1!");
