@@ -473,7 +473,7 @@ export function SalesMandateStep({
         </div>
         {/* Header */}
         <div className="mandate-header">
-          <span className="mandate-header-brand">BERYL PRESTIGE LIVING</span>
+          <span className="mandate-header-brand">BERYL SHELTER NIGERIA LIMITED</span>
           <h1 className="mandate-header-title">Exclusive Sales Mandate (Sellers)</h1>
         </div>
 
@@ -733,7 +733,7 @@ export function SalesMandateStep({
             <div className="mandate-clause">
               <strong>1. PROFESSIONAL/BROKERAGE FEE:</strong>
               <p>
-                Beryl Prestige Living will charge a professional fee of 5% of the gross sale
+                BERYL SHELTER NIGERIA LIMITED will charge a professional fee of 5% of the gross sale
                 price.
               </p>
             </div>
@@ -742,7 +742,7 @@ export function SalesMandateStep({
               <strong>2. INSTRUCTIONS:</strong>
               <ul>
                 <li>
-                  Beryl Prestige Living will only accept direct written instructions from
+                  BERYL SHELTER NIGERIA LIMITED will only accept direct written instructions from
                   Vendor/Seller whether by letter, email or chat and will not accept oral
                   instructions whether by telephone or physical conversation and will not accept
                   instructions from agents or third parties.
@@ -757,8 +757,8 @@ export function SalesMandateStep({
             <div className="mandate-clause">
               <strong>3. AUTHORITY:</strong>
               <p>
-                Beryl Prestige Living is only a broking and marketing firm and does not have
-                authority to transfer property. Beryl Prestige Living does not charge legal fees
+                BERYL SHELTER NIGERIA LIMITED is only a broking and marketing firm and does not have
+                authority to transfer property. BERYL SHELTER NIGERIA LIMITED does not charge legal fees
                 and Clients are advised to seek legal advice.
               </p>
             </div>
@@ -766,7 +766,7 @@ export function SalesMandateStep({
             <div className="mandate-clause">
               <strong>4. NEGOTIATION:</strong>
               <p>
-                Beryl Prestige Living will quantify potential buyers and negotiate the sales
+                BERYL SHELTER NIGERIA LIMITED will quantify potential buyers and negotiate the sales
                 transaction on behalf of the Seller/Vendor and will achieve a price within the
                 range agreed with the Seller/Client or consistent with offer accepted by the
                 Seller/Client.
@@ -776,8 +776,8 @@ export function SalesMandateStep({
             <div className="mandate-clause">
               <strong>5. MARKETING:</strong>
               <p>
-                Beryl Prestige Living will market and advertise and present the property to target
-                market, and the Seller/Client acknowledges that Beryl Prestige Living will invest in
+                BERYL SHELTER NIGERIA LIMITED will market and advertise and present the property to target
+                market, and the Seller/Client acknowledges that BERYL SHELTER NIGERIA LIMITED will invest in
                 resources in this regard and will be remunerated for its effort from the
                 professional fees in clause 1 above.
               </p>
@@ -786,7 +786,7 @@ export function SalesMandateStep({
             <div className="mandate-clause">
               <strong>6.</strong>
               <p>
-                Beryl Prestige Living shall manage the sales administration and relationship
+                BERYL SHELTER NIGERIA LIMITED shall manage the sales administration and relationship
                 between the Seller/Client and the Buyer until the sale is closed.
               </p>
             </div>
@@ -804,7 +804,7 @@ export function SalesMandateStep({
                 </li>
                 <li>
                   When the Seller/Client accepts the 1st installment of payment from the Buyer,
-                  Beryl Prestige Living shall deduct its full fees of 5% from 1st payments made.
+                  BERYL SHELTER NIGERIA LIMITED shall deduct its full fees of 5% from 1st payments made.
                 </li>
               </ul>
             </div>
@@ -814,14 +814,14 @@ export function SalesMandateStep({
               <p>
                 Consultants (Agents) and interested Buyers shall be permitted to view the property at
                 reasonable times by appointment within 24 hours notice in the company of an
-                accredited representative of Beryl Prestige Living.
+                accredited representative of BERYL SHELTER NIGERIA LIMITED.
               </p>
             </div>
 
             <div className="mandate-clause">
               <strong>9. SIGNAGE:</strong>
               <p>
-                Beryl Prestige Living as the exclusive marketing / sales consultant will be
+                BERYL SHELTER NIGERIA LIMITED as the exclusive marketing / sales consultant will be
                 authorized to place its signage on your property/development(s).
               </p>
             </div>
