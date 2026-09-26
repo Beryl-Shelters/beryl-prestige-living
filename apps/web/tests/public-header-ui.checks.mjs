@@ -27,7 +27,7 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
     assert.equal(await page.locator(".header-actions > .header-button").count(), 0, route);
     assert.equal(await page.locator(".header-actions .public-account-menu").count(), 1, route);
     const nav = page.getByRole("navigation", { name: "Public navigation" });
-    assert.equal(await nav.getByRole("link", { name: "Sell / List a Property" }).getAttribute("href"), "/dashboard/listings/new", route);
+    assert.equal(await nav.getByRole("link", { name: "Sell / List a Property" }).getAttribute("href"), "/sell", route);
     assert.equal(await nav.getByRole("link", { name: "Buy", exact: true }).getAttribute("href"), "/buy", route);
   }
   await page.goto(origin + "/referrals"); await page.waitForURL("**/dashboard/referrals");
@@ -79,7 +79,7 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
   await page.waitForURL("**/dashboard");
   await page.goto(origin + "/buy"); await trigger.waitFor();
   await page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell / List a Property" }).click();
-  await page.waitForURL("**/dashboard/listings/new");
+  const sellPrompt=page.getByRole("dialog",{name:"Do you need assistance"});await sellPrompt.waitFor();await sellPrompt.getByRole("button",{name:"No",exact:true}).click();await page.waitForURL("**/dashboard/listings/new");
   for (const [label, path] of [["List Property", "/dashboard/listings/new"], ["Referrals", "/dashboard/referrals"]]) {
     await page.goto(origin + "/buy"); await trigger.waitFor(); await trigger.click();
     assert.equal(await dropdown.getByRole("link", { name: label }).getAttribute("href"), path);

@@ -5,6 +5,7 @@ import localFont from "next/font/local";
 import { ToastProvider } from "../components/auth/toast-provider";
 import "./globals.css";
 import "./floating-help.css";
+import "./sell-assistance.css";
 
 const jakarta = localFont({
   src: "./fonts/plus-jakarta-sans-latin.woff2",

@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { authRequest, type Customer } from "../../lib/auth-api";
 import { BrandLogo } from "./brand-logo";
 import { FloatingHelp } from "../public/floating-help";
+import { SellAssistanceDecision } from "../public/sell-assistance-decision";
 
 const navigation = [
   ["Home", "/"],
@@ -35,9 +36,12 @@ export function PublicHeader({ sessionAware = false, mobileMenu = false, onSessi
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [open, setOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [sellPromptOpen, setSellPromptOpen] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
   const accountTrigger = useRef<HTMLButtonElement>(null);
+  const sellTrigger = useRef<HTMLAnchorElement>(null);
   const pathname = usePathname();
+  const router = useRouter();
   const helpExcluded = ["/login","/register","/verify-email","/forgot-password","/reset-password","/auth","/account"].some(path => pathname === path || pathname.startsWith(`${path}/`));
 
   useEffect(() => {
@@ -72,8 +76,11 @@ export function PublicHeader({ sessionAware = false, mobileMenu = false, onSessi
       <div className={`public-site-menu${open ? " open" : ""}`}>
         <nav className="public-nav" aria-label="Public navigation">
           {navigation.map(([label, href]) => {
-            const destination = label === "Sell / List a Property" && sessionAware && customer ? "/dashboard/listings/new" : href;
-            return <Link className={pathname === destination ? "active" : undefined} href={destination} key={label} onClick={() => setOpen(false)}>{label}</Link>;
+            const isSell = label === "Sell / List a Property";
+            return <Link ref={isSell ? sellTrigger : undefined} className={pathname === href || isSell && pathname.startsWith("/sell") ? "active" : undefined} href={href} key={label} onClick={event => {
+              if (isSell) { event.preventDefault(); setOpen(false); setAccountOpen(false); setSellPromptOpen(true); return; }
+              setOpen(false);
+            }}>{label}</Link>;
           })}
         </nav>
         <div className="header-actions">
@@ -99,6 +106,7 @@ export function PublicHeader({ sessionAware = false, mobileMenu = false, onSessi
         </div>
       </div>
       {!helpExcluded&&<FloatingHelp key={pathname} pathname={pathname} customer={customer}/>}
+      <SellAssistanceDecision open={sellPromptOpen} onClose={() => { setSellPromptOpen(false); setTimeout(() => sellTrigger.current?.focus(), 0); }} onNo={() => { setSellPromptOpen(false); router.push("/sell"); }} onYes={() => { setSellPromptOpen(false); router.push("/sell/assistance"); }}/>
     </header>
   );
 }
