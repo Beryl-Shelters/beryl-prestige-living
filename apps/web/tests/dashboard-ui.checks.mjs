@@ -4,7 +4,7 @@ runIfMain(import.meta.url, "dashboard");
 
 // Synthetic browser-only customer. No test identity or metric is shipped in UI.
 export const dashboardFixture = {
-  customer: { id: "browser-test-customer", first_name: "Ada", last_name: "Okafor", account_type: "PROPERTY_DEVELOPER", profile_type: "PERSONAL", profile_image_url: null },
+  customer: { id: "browser-test-customer", first_name: "Ada", last_name: "Okafor", email: "ada@example.test", account_type: "PROPERTY_DEVELOPER", profile_type: "PERSONAL", profile_image_url: null },
   summary: { total_investments: 0, properties_owned: 0, referral_earnings: 0, new_messages: 0 },
   revenue: { monthly: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map(label => ({ label, amount: 0 })), yearly: [] },
   recent_messages: [], recent_property_listings: [],

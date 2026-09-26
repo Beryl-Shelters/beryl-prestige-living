@@ -25,11 +25,12 @@ import { checkPublicHeader } from "./public-header-ui.checks.mjs";
 import { checkSavedProperties, resetSavedPropertiesState, savedPropertiesResponse } from "./saved-properties-ui.checks.mjs";
 import { checkCompareProperties } from "./compare-properties-ui.checks.mjs";
 import { checkMortgageCalculator } from "./mortgage-calculator-ui.checks.mjs";
+import { checkInquiry } from "./inquiry-ui.checks.mjs";
 
 import { isMain, runSuites } from "./run-ui-suite.mjs";
 
 export async function runBrowserSuite(suite) {
-assert(["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals", "settings", "kyc", "landing", "public-pages", "public-analytics", "public-referrals", "public-support", "public-buy", "public-header", "saved-properties", "compare-properties", "mortgage-calculator"].includes(suite));
+assert(["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals", "settings", "kyc", "landing", "public-pages", "public-analytics", "public-referrals", "public-support", "public-buy", "public-header", "saved-properties", "compare-properties", "mortgage-calculator", "inquiry"].includes(suite));
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE
   ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : "playwright");
 const origin = process.env.AUTH_UI_ORIGIN || "http://localhost:3000";
@@ -77,6 +78,10 @@ await context.route("**/*", async (route) => {
       if(!error)supportState.submissions.push(request.postDataJSON());
       return route.fulfill({status:error?error.status??503:201,contentType:"application/json",headers:{"access-control-allow-origin":origin},body:JSON.stringify(error?{success:false,error}:{success:true,data:{recorded:true}})});
     }
+    if(endpoint==="/public/inquiries"){
+      if(endpoint===pausedEndpoint){await pauseGate;if(endpoint===pausedEndpoint)await new Promise(resolve=>{pendingReleases.add(resolve);release=resume;pauseObserved?.();pauseObserved=undefined;});}
+      const error=failures.get(endpoint);return route.fulfill({status:error?error.status??503:201,contentType:"application/json",headers:{"access-control-allow-origin":origin},body:JSON.stringify(error?{success:false,error}:{success:true,data:{recorded:true}})});
+    }
     if(endpoint==="/public/properties"){
       if(endpoint===pausedEndpoint){await pauseGate;if(endpoint===pausedEndpoint)await new Promise(resolve=>{pendingReleases.add(resolve);release=resume;pauseObserved?.();pauseObserved=undefined;});}
       const error=failures.get(endpoint);
@@ -113,7 +118,7 @@ await context.route("**/*", async (route) => {
     const publicReferral = endpoint === "/dashboard/referrals/public-property" ? {id:"REF-N4K7P9",referralType:"PROPERTY",propertyCode:requestBody.propertyCode,referralUrl:`${origin}/buy?code=${requestBody.propertyCode}&ref=REF-N4K7P9`} : null;
     return route.fulfill({ status: error ? error.status ?? 400 : publicReferral ? 201 : 200, contentType: "application/json",
       headers: { "access-control-allow-origin": origin, "access-control-allow-credentials": "true" },
-      body: JSON.stringify(error ? { success: false, error } : { success: true, data: publicReferral ?? (endpoint === "/me" && (suite === "public-header" || suite === "public-referrals" || suite === "saved-properties" || suite === "compare-properties" || suite === "mortgage-calculator" || suite === "public-buy" && buyState.authenticated) ? {customer:dashboardFixture.customer} : endpoint.startsWith("/messages/") ? messagesResponse(url,request.method(),requestBody) : endpoint === "/dashboard/kyc" ? kycResponse(request.method(),requestBody) : endpoint === "/dashboard/analytics" ? analyticsResponse(url) : endpoint === "/dashboard/properties" ? propertiesResponse(url) : endpoint === "/dashboard/referrals" ? referralsResponse(url,request.method(),requestBody,listingState.items,origin) : endpoint === "/dashboard/settings/profile" ? settingsResponse(request.method(),requestBody) : endpoint === "/dashboard/settings/business" ? settingsResponse(request.method(),requestBody,"business") : endpoint === "/dashboard/settings/password" ? {reauthenticate:true} : endpoint === "/dashboard/overview" ? {...dashboardFixture,recent_messages:ticketOverview.recent,summary:{...dashboardFixture.summary,new_messages:ticketOverview.unread}} : { maskedEmail: "t***@example.test" }) }) });
+      body: JSON.stringify(error ? { success: false, error } : { success: true, data: publicReferral ?? (endpoint === "/me" && (suite === "public-header" || suite === "public-referrals" || suite === "saved-properties" || suite === "compare-properties" || suite === "mortgage-calculator" || suite === "inquiry" || suite === "public-buy" && buyState.authenticated) ? {customer:dashboardFixture.customer} : endpoint.startsWith("/messages/") ? messagesResponse(url,request.method(),requestBody) : endpoint === "/dashboard/kyc" ? kycResponse(request.method(),requestBody) : endpoint === "/dashboard/analytics" ? analyticsResponse(url) : endpoint === "/dashboard/properties" ? propertiesResponse(url) : endpoint === "/dashboard/referrals" ? referralsResponse(url,request.method(),requestBody,listingState.items,origin) : endpoint === "/dashboard/settings/profile" ? settingsResponse(request.method(),requestBody) : endpoint === "/dashboard/settings/business" ? settingsResponse(request.method(),requestBody,"business") : endpoint === "/dashboard/settings/password" ? {reauthenticate:true} : endpoint === "/dashboard/overview" ? {...dashboardFixture,recent_messages:ticketOverview.recent,summary:{...dashboardFixture.summary,new_messages:ticketOverview.unread}} : { maskedEmail: "t***@example.test" }) }) });
   }
   if (url.origin === origin) return route.continue();
   if (url.hostname === "www.google.com" && url.pathname === "/maps") return route.fulfill({status:200,contentType:"text/html",body:"<!doctype html><title>Map embed test stub</title>"});
@@ -476,6 +481,7 @@ try {
   if (suite === "saved-properties") await checkSavedProperties({page,origin,calls,failures,screenshot,passed});
   if (suite === "compare-properties") await checkCompareProperties({page,origin,calls,failures,screenshot,passed});
   if (suite === "mortgage-calculator") await checkMortgageCalculator({page,origin,calls,failures,screenshot,passed});
+  if (suite === "inquiry") await checkInquiry({page,origin,calls,failures,screenshot,passed,pauseRequest,resume});
   assert.deepEqual(pageErrors, []);
   await writeFile(join(artifacts, "results.json"), JSON.stringify({ suite, passed, authCalls: calls.length, pageErrors, networkErrors }, null, 2));
   // Keep complete request diagnostics in results.json, including expected

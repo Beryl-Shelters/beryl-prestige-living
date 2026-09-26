@@ -33,6 +33,8 @@ import { publicPropertiesRouter } from "./public-properties/routes.js";
 import { SupabasePublicPropertiesRepository, type PublicPropertiesRepository } from "./public-properties/repository.js";
 import { savedPropertiesRouter } from "./saved-properties/routes.js";
 import { SupabaseSavedPropertiesRepository, type SavedPropertiesRepository } from "./saved-properties/repository.js";
+import { publicInquiriesRouter } from "./public-inquiries/routes.js";
+import { SupabasePublicInquiriesRepository, type PublicInquiriesRepository } from "./public-inquiries/repository.js";
 
 export interface AppConfig {
   webAppUrl: string | undefined;
@@ -53,6 +55,7 @@ export interface AppConfig {
   careerApplicationsRepository?: CareerApplicationsRepository;
   publicPropertiesRepository?: PublicPropertiesRepository;
   savedPropertiesRepository?: SavedPropertiesRepository;
+  publicInquiriesRepository?: PublicInquiriesRepository;
   trustProxyHops?: number;
 }
 
@@ -78,6 +81,7 @@ export function createApp(config: AppConfig): Express {
     app.use("/api/v1/public/support", publicSupportRouter(config.auth, config.publicSupportRepository ?? new SupabasePublicSupportRepository(config.auth)));
     app.use("/api/v1/public/careers", publicCareersRouter(config.auth, config.careerApplicationsRepository ?? new SupabaseCareerApplicationsRepository(config.auth), storage));
     app.use("/api/v1/public/properties", publicPropertiesRouter(config.publicPropertiesRepository ?? new SupabasePublicPropertiesRepository(config.auth)));
+    app.use("/api/v1/public/inquiries", publicInquiriesRouter(config.auth,config.publicInquiriesRepository??new SupabasePublicInquiriesRepository(config.auth)));
     const gateway = config.gateway ?? new SupabaseAuthGateway(config.auth);
     const listings = config.listingsRepository ?? new SupabaseListingsRepository(config.auth);
     const tickets = config.ticketsRepository ?? new SupabaseTicketsRepository(config.auth);

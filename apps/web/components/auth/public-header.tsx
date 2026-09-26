@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { authRequest, type Customer } from "../../lib/auth-api";
 import { BrandLogo } from "./brand-logo";
+import { FloatingHelp } from "../public/floating-help";
 
 const navigation = [
   ["Home", "/"],
@@ -37,6 +38,7 @@ export function PublicHeader({ sessionAware = false, mobileMenu = false, onSessi
   const accountRef = useRef<HTMLDivElement>(null);
   const accountTrigger = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
+  const helpExcluded = ["/login","/register","/verify-email","/forgot-password","/reset-password","/auth","/account"].some(path => pathname === path || pathname.startsWith(`${path}/`));
 
   useEffect(() => {
     if (!sessionAware) return;
@@ -96,6 +98,7 @@ export function PublicHeader({ sessionAware = false, mobileMenu = false, onSessi
         </>}
         </div>
       </div>
+      {!helpExcluded&&<FloatingHelp key={pathname} pathname={pathname} customer={customer}/>}
     </header>
   );
 }
