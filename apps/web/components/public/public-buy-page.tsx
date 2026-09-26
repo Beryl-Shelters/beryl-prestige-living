@@ -52,10 +52,13 @@ function FilterFields({ draft, setDraft, apply, reset, mobile = false, error }: 
 
 function PropertyCard({ property, signedIn, saved, onSaved }: { property: PublicProperty; signedIn: boolean; saved: boolean; onSaved: () => void }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const referralCode = searchParams.get("ref");
+  const detailPath = `/buy/${encodeURIComponent(property.code)}${referralCode ? `?ref=${encodeURIComponent(referralCode)}` : ""}`;
   const [saving, setSaving] = useState(false);
   const [copying, setCopying] = useState(false);
   async function save() {
-    if (!signedIn) { router.push(`/login?next=${encodeURIComponent(`/buy?code=${property.code}`)}`); return; }
+    if (!signedIn) { router.push(`/login?next=${encodeURIComponent(detailPath)}`); return; }
     if (saving || saved) return; setSaving(true);
     try { await saveProperty(property.code); onSaved(); toast.success("Property saved"); }
     catch (error) { showAuthError(error, "buy-save-error"); }
@@ -78,7 +81,7 @@ function PropertyCard({ property, signedIn, saved, onSaved }: { property: Public
     <h3>{property.title}</h3><p className="buy-description">{property.description}</p>
     <p className="buy-location">⌖ {property.city}, {property.state}</p>
     <div className="buy-property-facts"><span>▱ {property.bedrooms} {property.bedrooms === 1 ? "Bedroom" : "Bedrooms"}</span><span>♧ {property.bathrooms} {property.bathrooms === 1 ? "Bathroom" : "Bathrooms"}</span><span>▣ {property.parkingSpaces} {property.parkingSpaces === 1 ? "Parking Space" : "Parking Spaces"}</span></div>
-    <div className="buy-card-bottom"><span>Property Code: {property.code}</span>{signedIn ? <button type="button" disabled={copying} onClick={() => void copyReferral()}>{copying ? "Copying…" : "Copy Referral Link"}</button> : <Link href={`/login?next=${encodeURIComponent(`/buy?code=${property.code}`)}`}>Copy Referral Link</Link>}</div>
+    <div className="buy-card-bottom"><span>Property Code: {property.code}</span><Link className="buy-view-more" href={detailPath}>View More</Link>{signedIn ? <button type="button" disabled={copying} onClick={() => void copyReferral()}>{copying ? "Copying…" : "Copy Referral Link"}</button> : <Link href={`/login?next=${encodeURIComponent(detailPath)}`}>Copy Referral Link</Link>}</div>
   </div></article>;
 }
 
@@ -98,6 +101,10 @@ export function PublicBuyPage() {
   const loading = !interpreted.error && resultState?.key !== requestKey;
   const error = interpreted.error ?? (resultState?.key === requestKey ? resultState.error : null);
   const results = resultState?.key === requestKey ? resultState.page : null;
+  useEffect(() => {
+    const code = searchParams.get("code")?.trim(); const ref = searchParams.get("ref")?.trim();
+    if (code && ref) router.replace(`/buy/${encodeURIComponent(code)}?ref=${encodeURIComponent(ref)}`);
+  }, [router, searchParams]);
   useEffect(() => {
     const controller = new AbortController(); const current = apiQueryFromBuyUrl(new URLSearchParams(searchKey));
     if (current.error) { pendingSearch.current = null; return () => controller.abort(); }

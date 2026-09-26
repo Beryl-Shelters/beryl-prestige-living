@@ -35,4 +35,11 @@ export type PublicProperty = {
   priceMinor: number; state: string; city: string; bedrooms: number; bathrooms: number;
   parkingSpaces: number; facilities: string[]; listedAt: string | null; images: string[];
 };
+export type PublicPropertyDetail = PublicProperty & {
+  occupancyType: string; ownershipType: string; hasLien: boolean;
+  minimumDownPaymentMinor: number; location: string; landArea: number | null; yearBuilt: number | null;
+};
 export type PublicPropertyPage = { items: PublicProperty[]; page: number; pageSize: number; total: number; totalPages: number };
+
+export const publicPropertyCode = z.string().trim().min(1).max(80)
+  .regex(/^[A-Za-z0-9-]+$/, "Check the property code.").transform(value => value.toUpperCase());

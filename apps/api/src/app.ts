@@ -39,6 +39,8 @@ import { publicSellAssistanceRouter } from "./public-sell-assistance/routes.js";
 import { SupabaseSellAssistanceRepository, type SellAssistanceRepository } from "./public-sell-assistance/repository.js";
 import { publicBuyAssistanceRouter } from "./public-buy-assistance/routes.js";
 import { SupabaseBuyAssistanceRepository, type BuyAssistanceRepository } from "./public-buy-assistance/repository.js";
+import { publicPropertyViewingsRouter } from "./public-viewings/routes.js";
+import { SupabasePropertyViewingsRepository, type PropertyViewingsRepository } from "./public-viewings/repository.js";
 
 export interface AppConfig {
   webAppUrl: string | undefined;
@@ -62,6 +64,7 @@ export interface AppConfig {
   publicInquiriesRepository?: PublicInquiriesRepository;
   sellAssistanceRepository?: SellAssistanceRepository;
   buyAssistanceRepository?: BuyAssistanceRepository;
+  propertyViewingsRepository?: PropertyViewingsRepository;
   trustProxyHops?: number;
 }
 
@@ -90,6 +93,7 @@ export function createApp(config: AppConfig): Express {
     app.use("/api/v1/public/inquiries", publicInquiriesRouter(config.auth,config.publicInquiriesRepository??new SupabasePublicInquiriesRepository(config.auth)));
     app.use("/api/v1/public/sell-assistance", publicSellAssistanceRouter(config.auth, config.sellAssistanceRepository ?? new SupabaseSellAssistanceRepository(config.auth), storage));
     app.use("/api/v1/public/buy-assistance", publicBuyAssistanceRouter(config.auth, config.buyAssistanceRepository ?? new SupabaseBuyAssistanceRepository(config.auth), storage));
+    app.use("/api/v1/public/property-viewings", publicPropertyViewingsRouter(config.auth, config.propertyViewingsRepository ?? new SupabasePropertyViewingsRepository(config.auth)));
     const gateway = config.gateway ?? new SupabaseAuthGateway(config.auth);
     const listings = config.listingsRepository ?? new SupabaseListingsRepository(config.auth);
     const tickets = config.ticketsRepository ?? new SupabaseTicketsRepository(config.auth);

@@ -1,0 +1,49 @@
+import assert from "node:assert/strict";
+import { runIfMain } from "./run-ui-suite.mjs";
+runIfMain(import.meta.url, "property-details");
+
+const image = name => `https://images.example.test/${name}.png`;
+export const propertyDetailsState = {
+  authenticated: false,
+  submissions: [],
+  property: {
+    code: "RES-ABC234", title: "Gorgeous Family Home in Ikeja", description: "A spacious and carefully finished family home with bright living areas, generous bedrooms, secure parking, and thoughtful conveniences. ".repeat(4),
+    propertyType: "Residential", propertySubtype: "Bungalow", priceMinor: 8500000000, state: "Lagos", city: "Ikeja", bedrooms: 3, bathrooms: 2, parkingSpaces: 1,
+    facilities: ["Wi-Fi", "CCTV", "Air Conditioning", "Garden"], listedAt: "2026-09-20T10:00:00.000Z", images: [image("detail-1"),image("detail-2"),image("detail-3"),image("detail-4"),image("detail-5"),image("detail-6")],
+    occupancyType: "Residential", ownershipType: "Personal", hasLien: false, minimumDownPaymentMinor: 1700000000, location: "12 Garden Avenue, Ikeja GRA", landArea: 650, yearBuilt: 2024,
+  },
+};
+propertyDetailsState.similar = Array.from({length:4},(_,index)=>({ ...propertyDetailsState.property, code:`RES-SIM${index+1}`, title:`Similar Lagos Home ${index+1}`, images:[image(`similar-${index+1}`)], priceMinor:8500000000+index*500000000 }));
+
+export function propertyDetailResponse(endpoint) {
+  const code = decodeURIComponent(endpoint.slice("/public/properties/".length)).toUpperCase();
+  if (code !== propertyDetailsState.property.code) return null;
+  return { property: propertyDetailsState.property, similar: propertyDetailsState.similar };
+}
+
+export async function checkPropertyDetails({page,origin,calls,screenshot,passed}) {
+  propertyDetailsState.authenticated=false; propertyDetailsState.submissions=[];
+  await page.setViewportSize({width:1440,height:1000}); await page.goto(origin+"/buy"); await page.getByText("2 Properties found for sale").waitFor();
+  await page.locator('.buy-property-card a[href="/buy/RES-ABC234"]').click(); await page.waitForURL("**/buy/RES-ABC234");
+  await page.getByRole("heading",{name:propertyDetailsState.property.title,exact:true}).waitFor();
+  for(const width of [1440,768,390,320]){await page.setViewportSize({width,height:1000});await page.goto(origin+"/buy/RES-ABC234");await page.getByRole("heading",{name:propertyDetailsState.property.title,exact:true}).waitFor();await page.evaluate(()=>document.fonts.ready);const overflow=await page.evaluate(()=>({global:document.documentElement.scrollWidth>innerWidth,elements:[...document.querySelectorAll("body *")].filter(element=>{const rect=element.getBoundingClientRect();return rect.right>innerWidth+1||rect.left<-1}).slice(0,8).map(element=>({tag:element.tagName,className:element.className,left:element.getBoundingClientRect().left,right:element.getBoundingClientRect().right,scrollWidth:element.scrollWidth,clientWidth:element.clientWidth}))}));assert.equal(overflow.global,false,`Property detail overflow at ${width}: ${JSON.stringify(overflow.elements)}`);assert.equal(await page.locator(".site-footer").count(),1);assert.equal(await page.getByRole("button",{name:"Open help"}).count(),1);assert.equal(await page.getByRole("dialog",{name:"Do you need assistance"}).count(),0);if(width===1440||width===390)await screenshot(`property-details-${width}`)}
+  assert.equal(await page.getByText("SECRET-OWNER").count(),0);assert.equal(await page.getByText("Agent Assigned").count(),0);assert.equal(await page.getByText("Buy Now").count(),0);assert.equal(await page.getByText("Pay Now").count(),0);
+  assert.equal(await page.getByText("RES-ABC234",{exact:true}).count(),1);assert.equal(await page.getByText("₦85,000,000",{exact:true}).count()>0,true);assert.equal(await page.getByText("₦17,000,000",{exact:true}).count(),1);
+  assert.equal(await page.locator('.property-address a').getAttribute("href"),"https://www.google.com/maps/search/?api=1&query=12%20Garden%20Avenue%2C%20Ikeja%20GRA%2C%20Ikeja%2C%20Lagos%2C%20Nigeria");
+  const primary=page.locator(".property-primary-image img");const firstSrc=await primary.getAttribute("src");await page.getByRole("button",{name:"Show property photo 2"}).click();assert.notEqual(await primary.getAttribute("src"),firstSrc);await page.getByRole("button",{name:"Show property photo 2"}).press("Enter");
+  assert.equal(await page.getByText(propertyDetailsState.property.description,{exact:true}).count(),0);await page.getByRole("button",{name:"Show full description"}).click();assert.equal(await page.getByText(propertyDetailsState.property.description,{exact:true}).count(),1);
+  assert.equal(await page.locator('.similar-property-card').count(),4);assert.equal(await page.locator('.similar-property-card a[href="/buy/RES-SIM1"]').count(),1);
+  await page.setViewportSize({width:390,height:1000});
+  await page.getByRole("button",{name:"Submit",exact:true}).click();for(const text of ["Enter your first name.","Enter your last name.","Enter a valid email address.","Enter a valid phone number.","Choose a preferred date.","Choose a preferred time."])await page.getByText(text,{exact:true}).waitFor();
+  await page.getByLabel("First Name *").fill("Ada");await page.getByLabel("Last Name *").fill("Buyer");await page.getByLabel("Email address *").fill("ADA@EXAMPLE.COM");await page.getByLabel("Phone Number *").fill("+234 801 234 5678");await page.getByLabel("My dates are flexible").check();
+  await page.getByRole("button",{name:"Submit",exact:true}).click();const modal=page.getByRole("dialog",{name:"Viewing Scheduled Successfully"});await modal.waitFor();assert.equal(await page.evaluate(()=>document.body.style.overflow),"hidden");assert.deepEqual(propertyDetailsState.submissions.at(-1),{propertyCode:"RES-ABC234",firstName:"Ada",lastName:"Buyer",email:"ada@example.com",phone:"+234 801 234 5678",preferredDate:null,preferredTime:null,flexibleDates:true});assert.equal(await modal.getByText(propertyDetailsState.property.title,{exact:true}).count(),1);assert(await modal.getByRole("button",{name:"Close viewing confirmation"}).evaluate(element=>element===document.activeElement));await page.keyboard.press("Shift+Tab");assert(await modal.getByRole("button",{name:"Got it"}).evaluate(element=>element===document.activeElement));await screenshot("property-details-success-390");await page.keyboard.press("Escape");assert.equal(await modal.count(),0);assert(await page.getByRole("button",{name:"Submit",exact:true}).evaluate(element=>element===document.activeElement));
+  await page.setViewportSize({width:1440,height:1000});await page.getByLabel("First Name *").fill("Ada");await page.getByLabel("Last Name *").fill("Buyer");await page.getByLabel("Email address *").fill("ada@example.com");await page.getByLabel("Phone Number *").fill("07042055678");await page.getByLabel("My dates are flexible").check();await page.getByRole("button",{name:"Submit",exact:true}).click();await modal.waitFor();assert.equal(await modal.getByRole("button",{name:"Close viewing confirmation"}).count(),1);await screenshot("property-details-success-1440");await modal.getByRole("button",{name:"Got it"}).click();assert.equal(await modal.count(),0);
+  await page.setViewportSize({width:390,height:1000});
+  const beforeMortgage=calls.length;await page.locator("#detail-down-payment").fill("10,000,000");await page.locator("#detail-loan-term").selectOption("20");await page.locator("#detail-interest-rate").fill("0");await page.getByRole("button",{name:"Calculate",exact:true}).click();await page.getByText("₦312,500.00",{exact:true}).waitFor();assert.equal(calls.length,beforeMortgage,"Mortgage calculation must be local only");
+  await page.getByRole("button",{name:`Save ${propertyDetailsState.property.title}`}).click();await page.waitForURL(url=>url.pathname==="/login");assert.equal(new URL(page.url()).searchParams.get("next"),"/buy/RES-ABC234");
+  propertyDetailsState.authenticated=true;await page.goto(origin+"/buy/RES-ABC234?ref=REF-KEEP01");await page.getByRole("heading",{name:propertyDetailsState.property.title,exact:true}).waitFor();await page.getByRole("button",{name:`Save ${propertyDetailsState.property.title}`}).click();await page.getByText("Property saved",{exact:true}).waitFor();assert.equal(calls.filter(call=>call.endpoint==="/saved-properties"&&call.method==="POST").at(-1).body.propertyCode,"RES-ABC234");await page.getByRole("button",{name:`Remove ${propertyDetailsState.property.title} from saved properties`}).click();assert.equal(calls.filter(call=>call.endpoint==="/saved-properties/RES-ABC234"&&call.method==="DELETE").length,1);
+  await page.context().grantPermissions(["clipboard-read","clipboard-write"],{origin});await page.getByRole("button",{name:/Refer a friend for this property/}).click();await page.getByText("Referral link copied to clipboard",{exact:true}).waitFor();assert.deepEqual(calls.filter(call=>call.endpoint==="/dashboard/referrals/public-property").at(-1).body,{propertyCode:"RES-ABC234"});assert.equal(new URL(page.url()).searchParams.get("ref"),"REF-KEEP01");
+  await page.goto(origin+"/buy?code=RES-ABC234&ref=REF-LEGACY");await page.waitForURL("**/buy/RES-ABC234?ref=REF-LEGACY");await page.getByRole("heading",{name:propertyDetailsState.property.title,exact:true}).waitFor();
+  await page.goto(origin+"/buy/RES-NOTLISTED");await page.getByRole("heading",{name:"Property not found",exact:true}).waitFor();assert.equal(await page.getByText("private",{exact:false}).count(),0);
+  passed.push("View More and legacy referral URLs open canonical public-code details; LISTED-only safe rendering, gallery, description, location, payment information, save/referral reuse, anonymous viewing, accessible success modal, local mortgage calculation, real similar cards, footer/help and 1440/768/390/320 responsive layouts pass");
+}

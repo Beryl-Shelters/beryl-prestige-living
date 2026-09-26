@@ -23,7 +23,11 @@ test("public properties are read-only, unauthenticated, validated and never reco
   let fail = false, searchEvents = 0;
   const empty: PublicPropertyPage = { items: [], page: 1, pageSize: 10, total: 0, totalPages: 0 };
   const repository: PublicPropertiesRepository = { async list(query) { queries.push(query); if (fail) throw new Error("private SQL details");
-    return { ...empty, page: query.page, pageSize: query.pageSize }; } };
+    return { ...empty, page: query.page, pageSize: query.pageSize }; }, async detail(code) { if (fail) throw new Error("private SQL details"); return code === "RES-ABC234" ? { property: {
+      code, title: "Home", description: "Public description", propertyType: "Residential", propertySubtype: "Bungalow", priceMinor: 5000000000,
+      state: "Lagos", city: "Ikeja", bedrooms: 2, bathrooms: 1, parkingSpaces: 1, facilities: ["Wi-Fi"], listedAt: null, images: [],
+      occupancyType: "Residential", ownershipType: "Personal", hasLien: false, minimumDownPaymentMinor: 500000000, location: "Ikeja GRA", landArea: null, yearBuilt: null,
+    }, similar: [] } : null; } };
   const server = createApp({ webAppUrl: config.webOrigin, auth: config, publicPropertiesRepository: repository,
     publicAnalyticsRepository: { async read() { throw new Error("unused"); }, async recordSearch() { searchEvents++; } } }).listen(0, "127.0.0.1");
   await new Promise<void>(resolve => server.once("listening", resolve));
@@ -49,8 +53,14 @@ test("public properties are read-only, unauthenticated, validated and never reco
   assert.deepEqual(queries.at(-1), publicPropertyQuery.parse({ state: "Abia", propertySubtype: "Detached Duplexes", facility: "Tennis Court", bedroomsMin: "7", bathroomsMin: "7", sort: "price_desc" }));
   assert.equal((await fetch(base, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })).status, 404);
   assert.equal(searchEvents, 0);
+  const detail = await fetch(base + "/res-abc234"); assert.equal(detail.status, 200);
+  const detailPayload = await detail.json(); assert.equal(detailPayload.data.property.code, "RES-ABC234");
+  for (const privateField of ["userId","owner","email","phone","documents","publicId","signature","mandate"]) assert.equal(privateField in detailPayload.data.property, false);
+  assert.equal((await fetch(base + "/RES-MISSING")).status, 404);
+  assert.equal((await fetch(base + "/bad%20code")).status, 400);
   fail = true;
   const unavailable = await fetch(base); assert.equal(unavailable.status, 503);
+  assert.equal((await fetch(base + "/RES-ABC234")).status, 503);
   assert(!JSON.stringify(await unavailable.json()).includes("private SQL"));
 });
 
@@ -64,6 +74,8 @@ test("repository projects only LISTED public fields, includes legacy null dates 
     return new Response(JSON.stringify([{ listing_code: "RES-ABC234", title: "Home", description: "Public description",
       property_type: "Residential", property_subtype: "Bungalow", property_cost_minor: 999999999999999,
       state: "Lagos", city: "Ikeja", bedrooms: 2, bathrooms: 1, parking_spaces: 1,
+      occupancy_type: "Residential", ownership_type: "Personal", has_lien: false, minimum_down_payment_minor: 2500000000,
+      location: "Ikeja GRA", land_area: "650.0000", year_built: 2024,
       facilities: ["Wi-Fi"], listed_at: null, images: [{ url: "https://res.cloudinary.com/example/image/second", sort_order: 1 },
         { url: "https://res.cloudinary.com/example/image/first", sort_order: 0 }],
       user_id: "never-serialize", email: "never-serialize", documents: [{ public_id: "private" }], public_id: "private" }]),
@@ -101,6 +113,14 @@ test("repository projects only LISTED public fields, includes legacy null dates 
     assert(sorted.searchParams.get("facilities")?.includes("Basketball Court"));
     assert.equal(sorted.searchParams.get("offset"), "10");
   }
+  const detail = await repository.detail("RES-ABC234"); assert(detail);
+  assert.deepEqual({ occupancyType: detail.property.occupancyType, ownershipType: detail.property.ownershipType, hasLien: detail.property.hasLien,
+    minimumDownPaymentMinor: detail.property.minimumDownPaymentMinor, location: detail.property.location, landArea: detail.property.landArea, yearBuilt: detail.property.yearBuilt },
+    { occupancyType: "Residential", ownershipType: "Personal", hasLien: false, minimumDownPaymentMinor: 2500000000, location: "Ikeja GRA", landArea: 650, yearBuilt: 2024 });
+  const detailRequest = requests.at(-2)!, similarRequest = requests.at(-1)!;
+  assert.equal(detailRequest.searchParams.get("listing_code"), "eq.RES-ABC234"); assert.equal(detailRequest.searchParams.get("listing_status"), "eq.LISTED");
+  assert.equal(similarRequest.searchParams.get("listing_status"), "eq.LISTED"); assert.equal(similarRequest.searchParams.get("property_type"), "eq.Residential"); assert.equal(similarRequest.searchParams.get("listing_code"), "neq.RES-ABC234");
+  for (const privateField of ["user_id","email","phone","documents","public_id","requested_at","version","signature"]) assert(!detailRequest.searchParams.get("select")!.includes(privateField));
   const projection = url.searchParams.get("select")!;
   for (const privateField of ["user_id", "email", "phone", "documents", "public_id", "requested_at", "version", "minimum_down_payment_minor"])
     assert(!projection.includes(privateField), privateField);

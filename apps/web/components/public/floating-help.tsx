@@ -24,7 +24,7 @@ const contexts:Record<string,{title:string;copy:string;source:string}>={
 const fallback={title:"Beryl Shelter Help",copy:"Need guidance using this page? Send our real estate team an inquiry.",source:"other"};
 
 export function FloatingHelp({pathname,customer}:{pathname:string;customer:Customer|null}){
-  const context=useMemo<{title:string;copy:string;source:string}>(()=>contexts[pathname]??(pathname.startsWith("/compare-properties")?contexts["/compare-properties"]!:fallback),[pathname]);
+  const context=useMemo<{title:string;copy:string;source:string}>(()=>contexts[pathname]??(pathname.startsWith("/buy/")?contexts["/buy"]!:pathname.startsWith("/compare-properties")?contexts["/compare-properties"]!:fallback),[pathname]);
   const [helpOpen,setHelpOpen]=useState(false),[modalOpen,setModalOpen]=useState(false),[pending,setPending]=useState(false),[success,setSuccess]=useState(false),[failure,setFailure]=useState("");
   const [values,setValues]=useState({inquiryType:"",name:"",phone:"",email:"",message:""});const [errors,setErrors]=useState<Record<string,string>>({});
   const floating=useRef<HTMLButtonElement>(null),dialog=useRef<HTMLDivElement>(null),closeButton=useRef<HTMLButtonElement>(null);
