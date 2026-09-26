@@ -9,8 +9,10 @@
 .public-referral-icon { display: block; height: 49px; width: 52px; color: #90691f; flex: none; }
 .public-referrals-card h2 { font-size: 22px; font-weight: 750; line-height: 1.3; margin: 28px 0 10px; }
 .public-referrals-card p { font-size: 18px; line-height: 1.45; margin: 0; max-width: 330px; }
-.public-referrals-card a { align-items: center; background: #90691f; border-radius: 12px; color: #fff; display: inline-flex; font-size: 16px; font-weight: 700; gap: 12px; justify-content: center; margin-top: 26px; min-height: 48px; padding: 12px 24px; text-decoration: none; }
-.public-referrals-card a:hover { background: #765622; }
+.public-referrals-card>button { align-items: center; background: #90691f; border: 0; border-radius: 12px; color: #fff; display: inline-flex; font-size: 16px; font-weight: 700; gap: 12px; justify-content: center; margin-top: 26px; min-height: 48px; padding: 12px 24px; }
+.public-referrals-card>button:hover { background: #765622; }
+.public-referrals-card>button:focus-visible,.referral-auth-dialog a:focus-visible,.referral-auth-close:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+.referral-auth-backdrop{align-items:center;background:#0007;display:flex;inset:0;justify-content:center;padding:16px;position:fixed;z-index:2200}.referral-auth-dialog{background:#fff;border-radius:16px;box-shadow:0 20px 55px #0003;max-width:490px;padding:46px 48px 38px;position:relative;text-align:center;width:calc(100vw - 32px)}.referral-auth-close{background:transparent;border:0;color:#765622;font-size:28px;line-height:1;padding:6px;position:absolute;right:18px;top:15px}.referral-auth-icon{color:#a17327;display:inline-block;height:54px;width:54px}.referral-auth-icon svg{height:100%;width:100%}.referral-auth-dialog h2{font-size:23px;margin:18px 0 8px}.referral-auth-dialog p{font-size:14px;line-height:1.55;margin:0 auto 24px;max-width:390px}.referral-auth-dialog a{align-items:center;display:flex;justify-content:center;text-decoration:none}.referral-auth-register{background:#9c711f;border-radius:28px;color:#fff;font-weight:700;min-height:56px;padding:12px 20px}.referral-auth-login{color:#4b3516;font-weight:700;margin-top:10px;min-height:42px}
 @media (max-width: 700px) {
   .public-referrals-page main { min-height: 100svh; }
   .public-referrals-content { padding: 22px 16px 80px; }
@@ -20,5 +22,6 @@
   .public-referral-icon { height: 38px; width: 41px; }
   .public-referrals-card h2 { font-size: 19px; line-height: 1.22; margin: 26px 0 12px; max-width: 225px; }
   .public-referrals-card p { font-size: 16px; max-width: 245px; }
-  .public-referrals-card a { margin-top: auto; min-height: 48px; width: 100%; }
+  .public-referrals-card>button { margin-top: auto; min-height: 48px; width: 100%; }
+  .referral-auth-dialog{padding:54px 24px 30px}.referral-auth-dialog h2{font-size:21px}.referral-auth-dialog p{font-size:14px}.referral-auth-register{min-height:56px}
 }

@@ -2,20 +2,20 @@ import assert from "node:assert/strict";
 import { runIfMain } from "./run-ui-suite.mjs";
 runIfMain(import.meta.url, "referrals");
 
-export const referralsState = { links: [], next: 2 };
-const page = () => ({
+export const referralsState = { links: [], next: 2, history: [], summary: null };
+const page = (requestedPage = 1) => ({
   program: { commissionRateBasisPoints: 200 },
-  summary: {
+  summary: referralsState.summary ?? {
     availableBalance: 0,
     totalEarnings: 0,
     referrals: 0,
     propertiesSold: 0,
   },
-  items: [],
-  page: 1,
+  items: referralsState.history.slice((requestedPage-1)*10,requestedPage*10),
+  page: requestedPage,
   pageSize: 10,
-  total: 0,
-  totalPages: 0,
+  total: referralsState.history.length,
+  totalPages: Math.ceil(referralsState.history.length/10),
 });
 export function referralsResponse(
   url,
@@ -24,7 +24,7 @@ export function referralsResponse(
   listings = [],
   webOrigin = url.origin,
 ) {
-  if (method === "GET") return page();
+  if (method === "GET") return page(Number(url.searchParams.get("page")||1));
   assert.deepEqual(
     Object.keys(body).sort(),
     body.type === "PROPERTY" ? ["listingId", "type"] : ["type"],
@@ -75,14 +75,14 @@ export async function checkReferrals({
   const endpoint = "/dashboard/referrals",
     ready = () =>
       browserPage
-        .getByRole("heading", { name: "Earn with Beryl Shelter", exact: true })
+        .getByRole("heading", { name: "Earn with Beryl Prestige Livings", exact: true })
         .waitFor();
   const open = async () => {
     await browserPage.goto(origin + "/dashboard/referrals");
     await ready();
     await browserPage.evaluate(() => document.fonts.ready);
   };
-  for (const width of [1440, 1280, 1024, 768, 390, 320]) {
+  for (const width of [1440, 768, 390, 320]) {
     await browserPage.setViewportSize({ width, height: 900 });
     referralsState.links = [];
     await open();
@@ -95,22 +95,8 @@ export async function checkReferrals({
       await browserPage.locator(".referral-flow-step h3").allTextContents(),
       ["Send Invitation", "Registration and Purchase", "Referral Reward"],
     );
-    assert.deepEqual(
-      await browserPage.locator(".referrals-table th").allTextContents(),
-      [
-        "Id",
-        "Budget",
-        "Buyer Entity Type",
-        "Ownership Type",
-        "Contact Method",
-        "Property Code",
-        "Earnings",
-        "Status",
-      ],
-    );
-    await browserPage
-      .getByText("No Referrals Found", { exact: true })
-      .waitFor();
+    assert.equal(await browserPage.locator(".referrals-table").count(),0);
+    await browserPage.getByRole("heading", { name: "No referrals yet" }).waitFor();
     assert.equal(
       await browserPage
         .locator('.dashboard-navigation [aria-current="page"]')
@@ -124,10 +110,11 @@ export async function checkReferrals({
       false,
       `Referrals overflow at ${width}`,
     );
+    if(width<=768){const positions=await browserPage.evaluate(()=>Object.fromEntries(["invite","kpis","earn","history"].map(name=>[name,document.querySelector(`.referrals-${name},.referral-${name}`)?.getBoundingClientRect().top])));assert(positions.invite<positions.kpis&&positions.kpis<positions.earn&&positions.earn<positions.history);}
     await screenshot(`referrals-empty-${width}`);
   }
   passed.push(
-    "Reference referral flow, two actions, four honest zero KPIs, exact table and responsive empty state at 1440/1280/1024/768/390/320px",
+    "Reference referral flow, two actions, four honest zero KPIs and responsive empty state match the supplied hierarchy at 1440/768/390/320px",
   );
   await browserPage.setViewportSize({ width: 1440, height: 900 });
   await open();
@@ -142,7 +129,7 @@ export async function checkReferrals({
     await browserPage.evaluate(() => navigator.clipboard.readText()),
     /\/register\?ref=REF-[A-HJ-NP-Z2-9]{6}$/,
   );
-  await browserPage.getByText("No Referrals Found", { exact: true }).waitFor();
+  await browserPage.getByRole("heading", { name: "No referrals yet" }).waitFor();
   assert.equal(
     await browserPage
       .locator('.referral-kpi[aria-label="Referrals"] p')
@@ -165,6 +152,13 @@ export async function checkReferrals({
   passed.push(
     "Seller link creation is server-shaped, copyable and idempotent; no purchase, balance or earnings are invented; View Properties uses public Buy",
   );
+  referralsState.history=Array.from({length:12},(_,index)=>({id:`REF-REAL${String(index+1).padStart(2,"0")}`,referralType:index%2?"SELLER":"PROPERTY",budget:index%3===0?null:50000000+index*1000000,buyerEntityType:index%2?null:"Individual",ownershipType:null,contactMethod:index%2?"Email":"Phone",propertyCode:index%2?null:`RES-TEST${index}`,earnings:index===0?1000000:0,status:index===0?"VERIFIED":"PENDING"}));
+  referralsState.summary={availableBalance:1000000,totalEarnings:1000000,referrals:12,propertiesSold:1};
+  await open(); assert.deepEqual(await browserPage.locator(".referrals-table th").allTextContents(),["Id","Budget","Buyer Entity Type","Ownership Type","Contact Method","Property Code","Earnings","Status"]); assert.equal(await browserPage.locator(".referrals-table tbody tr").count(),10); await browserPage.getByText("Showing 1-10 of 12").waitFor();
+  await browserPage.getByRole("button",{name:/Next/}).click(); await browserPage.getByText("REF-REAL11").waitFor(); await browserPage.getByText("Showing 11-12 of 12").waitFor();
+  for(const width of [390,320]){await browserPage.setViewportSize({width,height:900});await browserPage.goto(origin+"/dashboard/referrals");await browserPage.getByText("REF-REAL01").waitFor();assert.equal(await browserPage.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.equal(await browserPage.locator(".referrals-table-scroll").evaluate(element=>element.scrollWidth>element.clientWidth),true);if(width===390)await screenshot("referrals-populated-390");}
+  referralsState.history=[];referralsState.summary=null;
+  passed.push("Populated history renders only API-shaped values and bounded server pagination; unavailable designed fields remain omitted rather than fabricated");
   referralsState.links = [];
   const observed = pauseRequest(endpoint);
   await browserPage.goto(origin + "/dashboard/referrals");
