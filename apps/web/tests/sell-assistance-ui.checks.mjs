@@ -6,6 +6,7 @@ export async function checkSellAssistance({ page, origin, calls, failures, scree
   const navSell = () => page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell / List a Property" });
   const prompt = page.getByRole("dialog", { name: "Do you need assistance" });
   await page.goto(origin + "/buy"); await navSell().click(); await prompt.waitFor(); await screenshot("sell-decision-1440");
+  const promptSize = await prompt.boundingBox(); assert(promptSize && promptSize.width <= 520 && promptSize.height < 260);
   await prompt.getByRole("button", { name: "Close sell assistance prompt" }).click(); assert.equal(await prompt.count(), 0); assert.equal(await navSell().evaluate(element => element === document.activeElement), true);
   await navSell().click(); await page.keyboard.press("Escape"); assert.equal(await prompt.count(), 0);
   await navSell().click(); await prompt.getByRole("button", { name: "No", exact: true }).click(); await page.waitForURL("**/dashboard/listings/new");
