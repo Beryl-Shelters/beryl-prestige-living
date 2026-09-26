@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { AuthConfig } from "../auth/config.js";
+import type { RecentListing } from "../dashboard/repository.js";
 import { AuthError } from "../auth/errors.js";
 import type { Listing, ListingContent, ListingDocument, ListingImage, ListingQuery, MandateContent, MandateDocumentInput, MediaAsset, SalesMandate } from "./model.js";
 
@@ -9,7 +10,7 @@ export interface ListingsRepository {
   list(owner: string, query: ListingQuery): Promise<{ items: Listing[]; total: number }>;
   get(owner: string, id: string): Promise<Listing | null>;
   mutate(owner: string, value: Mutation): Promise<string>;
-  recent(owner: string): Promise<{ id: string; title: string }[]>;
+  recent(owner: string): Promise<RecentListing[]>;
   journal(owner: string, asset: CleanupAsset): Promise<void>;
   cleanupCandidates(owner: string): Promise<CleanupAsset[]>;
   referenced(owner: string, asset: CleanupAsset): Promise<boolean>;
@@ -57,8 +58,10 @@ export class SupabaseListingsRepository implements ListingsRepository {
     throw conflict();
   }
   async recent(owner: string) {
-    const { data, error } = await this.db.from("customer_listings").select("id,title").eq("user_id", owner).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(5);
-    check(error); return data ?? [];
+    const { data, error } = await this.db.from("customer_listings").select("id,title,listing_status,property_cost_minor,updated_at,images:customer_listing_images(url,sort_order)").eq("user_id", owner).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(4);
+    check(error);
+    return (data ?? []).map(row => ({ id: row.id, title: row.title, status: row.listing_status, priceMinor: row.property_cost_minor,
+      imageUrl: [...row.images].sort((a,b)=>a.sort_order-b.sort_order)[0]?.url ?? null, updatedAt: row.updated_at })) as RecentListing[];
   }
   async journal(owner: string, asset: CleanupAsset) { const { error } = await this.db.from("customer_listing_media_cleanup").insert({ ...asset, user_id: owner }); check(error); }
   async cleanupCandidates(owner: string) {

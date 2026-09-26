@@ -6,7 +6,7 @@ export type DashboardOverview = {
   summary: { total_investments: number; properties_owned: number; referral_earnings: number; new_messages: number };
   revenue: { monthly: RevenuePoint[]; yearly: RevenuePoint[] };
   recent_messages: { id: string; subject: string }[];
-  recent_property_listings: { id: string; title: string }[];
+  recent_property_listings: { id: string; title: string; status: "UNLISTED"|"PENDING"|"LISTED"|"REJECTED"; priceMinor: number; imageUrl: string|null; updatedAt: string }[];
 };
 
 // Read-only dashboard client. Keep the stable auth client and its paths intact.

@@ -1,6 +1,6 @@
 export type RevenuePoint = { label: string; amount: number };
 export type RecentMessage = { id: string; subject: string };
-export type RecentListing = { id: string; title: string };
+export type RecentListing = { id: string; title: string; status: "UNLISTED"|"PENDING"|"LISTED"|"REJECTED"; priceMinor: number; imageUrl: string|null; updatedAt: string };
 
 // Each future domain adapter must scope its queries to this server-supplied id.
 // These are read models, not new domain tables or placeholder records.

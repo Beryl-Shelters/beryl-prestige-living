@@ -83,7 +83,7 @@ test("overview service passes only the server customer to each adapter and aggre
     async propertiesOwned(id) { ids.push(id); return 2; },
     async referralEarnings(id) { ids.push(id); return 40; },
     async messages(id) { ids.push(id); return { unread: 1, recent: [{ id: "message", subject: "Test subject" }] }; },
-    async recentListings(id) { ids.push(id); return [{ id: "listing", title: "Test listing" }]; },
+    async recentListings(id) { ids.push(id); return [{ id: "listing", title: "Test listing", status: "UNLISTED", priceMinor: 5000000000, imageUrl: null, updatedAt: "2026-09-26T10:00:00.000Z" }]; },
   };
   const result = await new DashboardService(repository).overview(customer);
   assert.deepEqual(ids, Array(5).fill(customer.id));
