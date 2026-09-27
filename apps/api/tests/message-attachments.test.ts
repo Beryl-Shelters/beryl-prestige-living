@@ -31,6 +31,16 @@ test("Private message attachments and Overview integration",async t=>{
     for(const path of [`/${foreign.id}/attachments/${attachmentId}`,`/${id}/attachments/${randomUUID()}`])assert.equal((await request(path)).response.status,404);
     assert.equal((await request(`/${id}/attachments/${attachmentId}`,"GET",undefined,{Cookie:""})).response.status,401);
   });
+  await t.test("resolved tickets reject new attachments but retain authorized downloads",async()=>{
+    const resolved=await repository.create(owner,"Resolved attachment ticket","Original message");
+    const first=await request(`/${resolved.id}/messages`,"POST",form("Attachment before resolution"));
+    assert.equal(first.response.status,201);const existing=first.payload.data.messages.at(-1).attachments[0];
+    await db.query("update customer_tickets set status='RESOLVED',resolved_at=clock_timestamp() where id=$1",[resolved.id]);
+    const storedBefore=stored.size,rejected=await request(`/${resolved.id}/messages`,"POST",form("Too late"));
+    assert.equal(rejected.response.status,409);assert.equal(rejected.payload.error.code,"TICKET_RESOLVED");assert.equal(stored.size,storedBefore);
+    const download=await request(`/${resolved.id}/attachments/${existing.id}`);assert.equal(download.response.status,200);assert.deepEqual(download.payload,pdf);
+    assert.equal((await repository.detail(owner,resolved.id)).messages.length,2);
+  });
   await t.test("reply supports file-only and text with a file, with correct preview/history",async()=>{
     const result=await request(`/${id}/messages`,"POST",form("","second.pdf"));assert.equal(result.response.status,201);assert.equal(result.payload.data.messages.length,2);
     assert.equal((await repository.list(owner,"")).items[0]!.latestMessagePreview,"second.pdf");

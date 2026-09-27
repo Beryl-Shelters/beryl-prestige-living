@@ -21,6 +21,7 @@ export interface TicketsRepository {
 export function checkTicketError(error: { code?: string } | null) {
   if (!error) return;
   if (error.code === "P0002") throw new AuthError(404,"TICKET_NOT_FOUND","Ticket not found.");
+  if (error.code === "PT409") throw new AuthError(409,"TICKET_RESOLVED","This ticket has been resolved and cannot receive new messages.");
   if (["23514","23502","22P02"].includes(error.code ?? "")) throw new AuthError(400,"INVALID_TICKET","Check the ticket subject and message.");
   throw new AuthError(503,"MESSAGES_UNAVAILABLE","Messages are temporarily unavailable. Please try again.");
 }

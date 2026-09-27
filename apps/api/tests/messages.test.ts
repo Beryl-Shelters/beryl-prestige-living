@@ -5,8 +5,11 @@ import { messagesFixture } from "./messages.fixture.js";
 import { checkTicketError } from "../src/messages/repository.js";
 
 test("Messages API and disposable PostgreSQL",async t=>{
-  const {db,owner,other,repository,request,row,profile}=await messagesFixture(t);
+  const {db,owner,other,repository,request,row,profile,migrationPreservation}=await messagesFixture(t);
   const create=()=>repository.create(owner,"Viewing enquiry","Please arrange a viewing.");
+  await t.test("lifecycle migration preserves existing tickets as OPEN",()=>{
+    assert.deepEqual(migrationPreservation,{status:"OPEN",resolved_at:null,messages:1});
+  });
   await t.test("anonymous, recovery-only and invalid sessions rejected",async()=>{
     for(const Cookie of ["","beryl_recovery=messages-test-session","beryl_account=invalid"]) assert.equal((await request("","GET",undefined,{Cookie})).response.status,401);
   });
@@ -17,6 +20,7 @@ test("Messages API and disposable PostgreSQL",async t=>{
   await t.test("create atomically returns first CUSTOMER message and trims input",async()=>{
     const {response,payload}=await request("","POST",{subject:"  First enquiry  ",message:"  Hello\nthere  "});assert.equal(response.status,201);
     assert.equal(payload.data.subject,"First enquiry");assert.equal(payload.data.messages.length,1);assert.equal(payload.data.messages[0].body,"Hello\nthere");assert.equal(payload.data.messages[0].senderType,"CUSTOMER");
+    assert.equal(payload.data.status,"OPEN");assert.equal(payload.data.resolvedAt,null);
     assert.equal((await db.query<{user_id:string}>("select user_id from customer_tickets where id=$1",[payload.data.id])).rows[0]!.user_id,owner);
   });
   await t.test("compact unique server-generated immutable numbers",async()=>{
@@ -51,6 +55,22 @@ test("Messages API and disposable PostgreSQL",async t=>{
     const list=await repository.list(owner,"");assert.equal(list.items[0]!.id,own.id);assert.equal(list.items[0]!.latestMessagePreview,"A second message");assert.equal(list.items[0]!.unread,false);
   });
   await t.test("foreign reply is hidden",async()=>assert.equal((await request(`/${foreign.id}/messages`,"POST",{message:"no"})).response.status,404));
+  await t.test("resolved lifecycle is exposed and rejects customer replies without reopening",async()=>{
+    const resolved=await create(),resolvedAt=new Date(Date.now()+1000).toISOString();
+    await db.query("update customer_tickets set status='RESOLVED',resolved_at=$1 where id=$2",[resolvedAt,resolved.id]);
+    const detail=(await request(`/${resolved.id}`)).payload.data;
+    assert.equal(detail.status,"RESOLVED");assert.equal(Date.parse(detail.resolvedAt),Date.parse(resolvedAt));
+    const summary=(await repository.list(owner,"Viewing enquiry")).items.find(item=>item.id===resolved.id)!;
+    assert.equal(summary.status,"RESOLVED");assert.equal(Date.parse(summary.resolvedAt!),Date.parse(resolvedAt));
+    const before=detail.messages.length,response=await request(`/${resolved.id}/messages`,"POST",{message:"Please reopen"});
+    assert.equal(response.response.status,409);assert.equal(response.payload.error.code,"TICKET_RESOLVED");
+    assert.equal((await repository.detail(owner,resolved.id)).messages.length,before);
+  });
+  await t.test("lifecycle timestamp invariant is enforced",async()=>{
+    const open=await create();
+    await assert.rejects(db.query("update customer_tickets set status='RESOLVED' where id=$1",[open.id]));
+    await assert.rejects(db.query("update customer_tickets set resolved_at=clock_timestamp() where id=$1",[open.id]));
+  });
   await t.test("reply rejects spoofed sender, owner, read state, timestamp and blank/long bodies",async()=>{
     for(const body of [{message:"hello",senderType:"SUPPORT"},{message:"hello",userId:other},{message:"hello",readByCustomerAt:new Date().toISOString()},{message:"hello",createdAt:"2000-01-01"},{message:" \n "},{message:"x".repeat(3001)}]) assert.equal((await request(`/${own.id}/messages`,"POST",body)).response.status,400);
   });

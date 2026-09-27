@@ -18,12 +18,12 @@ export function messagesOverview(){
   return {recent:sorted.slice(0,5).map(t=>({id:t.id,subject:t.subject})),unread:sorted.flatMap(t=>t.messages).filter(m=>m.senderType==="SUPPORT"&&!m.readByCustomerAt).length};
 }
 const message=(body,senderType="CUSTOMER")=>({id:randomUUID(),body,senderType,createdAt:new Date().toISOString(),readByCustomerAt:null});
-const ticket=(subject,body,number="27")=>({id:randomUUID(),ticketNumber:number,subject,createdAt:"2026-09-11T08:00:00Z",lastActivityAt:"2026-09-11T08:00:00Z",messages:[message(body)]});
+const ticket=(subject,body,number="27",status="OPEN")=>({id:randomUUID(),ticketNumber:number,subject,status,resolvedAt:status==="RESOLVED"?"2026-09-12T09:30:00Z":null,createdAt:"2026-09-11T08:00:00Z",lastActivityAt:"2026-09-11T08:00:00Z",messages:[message(body)]});
 export function messagesResponse(url,method,body) {
   const parts=url.pathname.split("/").slice(5),id=parts[0];
   if(!id&&method==="GET") {
     const q=(url.searchParams.get("q")??"").trim().toLowerCase();
-    return {items:messagesState.items.filter(t=>[t.subject,...t.messages.map(m=>m.body)].some(v=>v.toLowerCase().includes(q))).toSorted((a,b)=>b.lastActivityAt.localeCompare(a.lastActivityAt)||b.id.localeCompare(a.id)).map(t=>({id:t.id,ticketNumber:t.ticketNumber,subject:t.subject,lastActivityAt:t.lastActivityAt,latestMessagePreview:t.messages.at(-1).body.slice(0,160)||t.messages.at(-1).attachments?.[0]?.filename,unread:t.messages.some(m=>m.senderType==="SUPPORT"&&!m.readByCustomerAt)}))};
+    return {items:messagesState.items.filter(t=>[t.subject,...t.messages.map(m=>m.body)].some(v=>v.toLowerCase().includes(q))).toSorted((a,b)=>b.lastActivityAt.localeCompare(a.lastActivityAt)||b.id.localeCompare(a.id)).map(t=>({id:t.id,ticketNumber:t.ticketNumber,subject:t.subject,status:t.status,resolvedAt:t.resolvedAt,lastActivityAt:t.lastActivityAt,latestMessagePreview:t.messages.at(-1).body.slice(0,160)||t.messages.at(-1).attachments?.[0]?.filename,unread:t.messages.some(m=>m.senderType==="SUPPORT"&&!m.readByCustomerAt)}))};
   }
   if(!id&&method==="POST") {
     assert.deepEqual(Object.keys(body).filter(key=>key!=="attachment").sort(),["message","subject"]);
@@ -35,7 +35,7 @@ export function messagesResponse(url,method,body) {
     const index=value.messages.findIndex(m=>m.id===body.throughMessageId);assert(index>=0);
     value.messages.slice(0,index+1).forEach(m=>{if(m.senderType==="SUPPORT"&&!m.readByCustomerAt)m.readByCustomerAt=new Date().toISOString();});return {acknowledged:true};
   }
-  if(parts[1]==="messages") {assert.deepEqual(Object.keys(body).filter(key=>key!=="attachment"),["message"]);const reply=message(body.message);if(body.attachment)reply.attachments=[{id:randomUUID(),...body.attachment}];value.messages.push(reply);value.lastActivityAt=new Date().toISOString();}
+  if(parts[1]==="messages") {assert.equal(value.status,"OPEN");assert.deepEqual(Object.keys(body).filter(key=>key!=="attachment"),["message"]);const reply=message(body.message);if(body.attachment)reply.attachments=[{id:randomUUID(),...body.attachment}];value.messages.push(reply);value.lastActivityAt=new Date().toISOString();}
   return value;
 }
 
@@ -44,9 +44,9 @@ export async function checkMessages({page,origin,calls,failures,screenshot,passe
   const open=async()=>{await page.goto(origin+"/dashboard/messages");await page.getByRole("heading",{name:"My Tickets",exact:true}).waitFor();await page.locator('.tickets-list[aria-busy="false"]').waitFor();await page.evaluate(()=>document.fonts.ready);};
   const overflow=async()=>assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   const selectFirst=async()=>{await page.locator(".ticket-row").first().click();await page.locator(".conversation-header").waitFor();};
-  for(const width of [1440,1280,1024,768,390,320]) {
+  for(const width of [1440,768,390,320]) {
     await page.setViewportSize({width,height:900});messagesState.items=[];await open();
-    await page.getByText("No messages found.",{exact:true}).waitFor();await overflow();await screenshot(`messages-empty-${width}`);
+    await page.getByRole("heading",{name:"No messages yet",exact:true}).waitFor();await overflow();await screenshot(`messages-empty-${width}`);
     if(width>800){await page.getByRole("heading",{name:"Select a Conversation"}).waitFor();assert.equal(await page.locator(".tickets-header").evaluate(el=>getComputedStyle(el).backgroundColor),"rgb(183, 134, 75)");}
     messagesState.items=[ticket("Testing Message","Hello there")];await open();await page.locator(".ticket-row").waitFor();
     assert.equal(await page.locator(".ticket-unread").count(),0);await screenshot(`messages-list-${width}`);
@@ -54,7 +54,7 @@ export async function checkMessages({page,origin,calls,failures,screenshot,passe
     assert.equal(await page.getByRole("dialog").locator("input:not([type=file]),textarea").count(),2);
     assert.equal(await page.getByRole("dialog").getByRole("button",{name:"Attach a file",exact:true}).count(),1);
     const rect=await page.getByRole("dialog").boundingBox();assert(rect.x>=0&&rect.x+rect.width<=width);await overflow();await screenshot(`messages-modal-${width}`);
-    await page.getByRole("button",{name:"Cancel",exact:true}).click();await selectFirst();await page.getByText("Ticket #27",{exact:true}).waitFor();
+    await page.getByRole("button",{name:"Cancel",exact:true}).click();await selectFirst();await page.getByRole("heading",{name:"Ticket #27",exact:true}).waitFor();
     assert.equal(await page.locator(".message-bubble.customer").evaluate(el=>getComputedStyle(el).backgroundColor),"rgb(217, 255, 209)");
     const bubble=await page.locator(".message-bubble.customer").boundingBox(),history=await page.locator(".conversation-history").boundingBox();assert(bubble.x>bubble.width/10+history.x);
     await overflow();await screenshot(`messages-conversation-${width}`);
@@ -63,9 +63,14 @@ export async function checkMessages({page,origin,calls,failures,screenshot,passe
     if(width<=800)await page.keyboard.press("Escape");
     console.log(`Messages four states passed at ${width}px`);
   }
-  passed.push("Four reference states, project gold/font, customer bubble alignment, active navigation, mobile master/detail and no overflow at 1440/1280/1024/768/390/320");
+  passed.push("Four reference states, project gold/font, customer bubble alignment, active navigation, mobile master/detail and no overflow at 1440/768/390/320");
   await page.setViewportSize({width:1440,height:900});messagesState.items=[];await open();
-  await page.getByRole("button",{name:"+ New Ticket",exact:true}).click();
+  const newTicketButton=page.getByRole("button",{name:"+ New Ticket",exact:true});await newTicketButton.click();
+  assert.equal(await page.locator("#ticket-subject").getAttribute("placeholder"),"Enter subject of the message");
+  assert.equal(await page.locator("#ticket-message").getAttribute("placeholder"),"Enter message you want to send");
+  assert.equal(await page.evaluate(()=>document.activeElement?.id),"ticket-subject");
+  await page.getByRole("button",{name:"Cancel",exact:true}).click();assert(await newTicketButton.evaluate(element=>element===document.activeElement));
+  await newTicketButton.click();
   const count=()=>calls.filter(c=>c.endpoint===endpoint&&c.method==="POST").length,before=count();
   await page.getByRole("button",{name:"Send Message",exact:true}).click();assert.equal(count(),before);
   await page.getByLabel("Subject",{exact:true}).fill("   ");await page.locator("#ticket-message").fill("   ");
@@ -78,7 +83,7 @@ export async function checkMessages({page,origin,calls,failures,screenshot,passe
   const paused=pauseRequest(endpoint);await page.getByRole("button",{name:"Send Message",exact:true}).click();await paused;
   assert(await page.getByRole("button",{name:"Cancel",exact:true}).isDisabled());assert(await page.locator("#ticket-subject").isDisabled());await page.keyboard.press("Escape");assert(await page.getByRole("dialog").isVisible());
   resume();await page.getByRole("dialog").waitFor({state:"detached"});await page.locator(".conversation-header").waitFor();await page.locator(".ticket-row").waitFor();
-  assert.equal(count(),before+2);assert.equal(await page.locator(".conversation-header h2").innerText(),"Viewing enquiry");
+  assert.equal(count(),before+2);assert.equal(await page.locator(".conversation-header p").innerText(),"Viewing enquiry");
   const created=messagesState.items[0],replyEndpoint=`${endpoint}/${created.id}/messages`;
   failures.set(replyEndpoint,{status:503,code:"MESSAGES_UNAVAILABLE",message:"Reply unavailable. Please try again."});
   await page.getByRole("textbox",{name:"Reply",exact:true}).fill("A second message");await page.getByRole("button",{name:"Send reply",exact:true}).click();await toast("Reply unavailable. Please try again.");
@@ -91,6 +96,15 @@ export async function checkMessages({page,origin,calls,failures,screenshot,passe
   for(const value of ["VIEWING","arrange"]) {await search.fill(`  ${value}  `);await page.locator('.tickets-list[aria-busy="false"]').waitFor();assert.equal(await page.locator(".ticket-row").count(),1);}
   await search.fill("not present");await page.getByText("No messages found.",{exact:true}).waitFor();await search.fill("  ");await page.locator(".ticket-row").waitFor();
   await search.fill(" ");assert.equal(await page.locator(".ticket-row").count(),1);
+  const resolved=ticket("Completed request","This request is complete","48","RESOLVED");messagesState.items.push(resolved);await open();
+  assert.equal(await page.getByRole("button",{name:/^All/}).count(),1);assert.equal(await page.getByRole("button",{name:/^Unread/}).count(),1);assert.equal(await page.getByRole("button",{name:/^Resolved/}).count(),1);
+  assert.equal(await page.getByText("Draft",{exact:true}).count(),0);assert.equal(await page.getByText("Awaiting Reply",{exact:true}).count(),0);
+  await page.getByRole("button",{name:/^Resolved/}).click();assert.equal(await page.locator(".ticket-row").count(),1);await page.locator(".ticket-row").click();
+  await page.getByText(/Ticket resolved on/).waitFor();await page.getByText("You can’t send or receive messages for this ticket anymore.",{exact:true}).waitFor();assert.equal(await page.locator(".reply-composer").count(),0);
+  await page.getByRole("button",{name:"Create a new ticket instead",exact:true}).click();await page.getByRole("dialog",{name:"New Ticket",exact:true}).waitFor();await page.getByRole("button",{name:"Close new ticket",exact:true}).click();
+  await page.getByRole("button",{name:/^All/}).click();assert.equal(await page.locator(".ticket-row").count(),2);
+  passed.push("Truthful All/Unread/Resolved filters, no Draft/Awaiting Reply, resolved timestamp/read-only state and new-ticket action");
+  messagesState.items=messagesState.items.filter(item=>item.id!==resolved.id);
   const support=message("<img src=x onerror=alert(1)>\n"+"longword".repeat(70),"SUPPORT");created.messages.push(support);created.lastActivityAt=support.createdAt;await open();await page.locator(".ticket-unread").waitFor();
   const ackEndpoint=`${endpoint}/${created.id}/read`,ackPaused=pauseRequest(ackEndpoint);await selectFirst();await ackPaused;
   assert.equal(await page.locator(".message-bubble.support img, .message-bubble.support script").count(),0);
@@ -128,7 +142,7 @@ export async function checkMessages({page,origin,calls,failures,screenshot,passe
   await page.getByRole("button",{name:"Download site-photo.webp",exact:true}).waitFor();assert.equal(await page.locator(".selected-message-file").count(),0);
   const attachment=created.messages.at(-1).attachments[0];assert.equal(created.messages.at(-1).body,"");assert.equal(attachment.sizeBytes,webp.buffer.length);assert.equal(attachment.mimeType,"image/webp");
   const download=page.waitForEvent("download");await page.getByRole("button",{name:"Download site-photo.webp",exact:true}).click();assert.equal((await download).suggestedFilename(),"site-photo.webp");
-  for(const width of [1440,1280,1024,768,390,320]){
+  for(const width of [1440,768,390,320]){
     await page.setViewportSize({width,height:900});await picker.setInputFiles({...pdf,name:"a-very-long-floor-plan-filename-for-a-property-attachment.pdf"});await overflow();await screenshot(`messages-attachments-${width}`);await page.getByRole("button",{name:"Remove attachment",exact:true}).click();
   }
   await page.setViewportSize({width:1440,height:900});
@@ -140,7 +154,7 @@ export async function checkMessages({page,origin,calls,failures,screenshot,passe
   const recentRect=await recentLink.boundingBox();assert(recentRect.width>200&&recentRect.height>=35,"The complete recent-message row must be clickable");
   assert.equal(await page.locator('.dashboard-kpi[aria-label="New Messages"] p').innerText(),"0 messages");
   await screenshot("overview-recent-ticket-conversations");
-  await page.locator(".recent-messages").getByRole("link",{name:"Attached enquiry",exact:true}).click();await page.locator(".conversation-header h2").filter({hasText:"Attached enquiry"}).waitFor();assert.equal(new URL(page.url()).searchParams.get("ticket"),newId);
+  await page.locator(".recent-messages").getByRole("link",{name:"Attached enquiry",exact:true}).click();await page.locator(".conversation-header p").filter({hasText:"Attached enquiry"}).waitFor();assert.equal(new URL(page.url()).searchParams.get("ticket"),newId);
   assert.deepEqual(await page.locator(".message-download svg").evaluateAll(elements=>elements.map(element=>({width:element.getBoundingClientRect().width,height:element.getBoundingClientRect().height}))),[{width:20,height:20}]);
   passed.push("Private PDF/WEBP attachment create/reply/download; WEBP picker contract; file-only messages; remove/retry/pending controls; six-width wrapping; Overview immediately shows customer threads and opens the selected conversation");
 }

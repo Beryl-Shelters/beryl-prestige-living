@@ -2,8 +2,9 @@ import { AuthApiError } from "./auth-api";
 
 export type TicketAttachment={id:string;filename:string;mimeType:string;sizeBytes:number};
 export type TicketMessage = { id:string; senderType:"CUSTOMER"|"SUPPORT"; body:string; createdAt:string; readByCustomerAt:string|null; attachments?:TicketAttachment[] };
-export type TicketSummary = { id:string; ticketNumber:string; subject:string; latestMessagePreview:string; lastActivityAt:string; unread:boolean };
-export type TicketDetail = { id:string; ticketNumber:string; subject:string; createdAt:string; lastActivityAt:string; messages:TicketMessage[] };
+export type TicketStatus="OPEN"|"RESOLVED";
+export type TicketSummary = { id:string; ticketNumber:string; subject:string; status:TicketStatus; resolvedAt:string|null; latestMessagePreview:string; lastActivityAt:string; unread:boolean };
+export type TicketDetail = { id:string; ticketNumber:string; subject:string; status:TicketStatus; resolvedAt:string|null; createdAt:string; lastActivityAt:string; messages:TicketMessage[] };
 
 export async function messagesRequest<T>(path:string, signal:AbortSignal, body?:object, attempt=0):Promise<T> {
   const base=process.env.NEXT_PUBLIC_API_BASE_URL;

@@ -3,6 +3,7 @@ import type { MediaStorage } from "../listings/media.js";
 import { validateFile } from "../listings/uploads.js";
 import type { TicketsRepository } from "./repository.js";
 import type { TicketUpload } from "./uploads.js";
+import { AuthError } from "../auth/errors.js";
 
 export class TicketAttachmentsService {
   constructor(private readonly repository:TicketsRepository,private readonly storage:MediaStorage){}
@@ -15,7 +16,10 @@ export class TicketAttachmentsService {
     }catch{console.warn(JSON.stringify({event:"ticket_attachment_cleanup_unavailable"}));}
   }
   async save(owner:string,id:string|null,subject:string|null,message:string,file:TicketUpload){
-    if(id)await this.repository.detail(owner,id);
+    if(id){
+      const ticket=await this.repository.detail(owner,id);
+      if(ticket.status==="RESOLVED")throw new AuthError(409,"TICKET_RESOLVED","This ticket has been resolved and cannot receive new attachments.");
+    }
     validateFile(file,true,true);
     await this.cleanup(owner);
     const extension=file.mime==="application/pdf"?"pdf":file.mime==="image/png"?"png":file.mime==="image/webp"?"webp":"jpg";

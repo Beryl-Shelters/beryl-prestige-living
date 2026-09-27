@@ -18,6 +18,12 @@ export async function messagesFixture(t:TestContext) {
   await db.exec(await readFile(new URL("../supabase/migrations/202609110001_customer_tickets.sql",import.meta.url),"utf8"));
   await db.exec(await readFile(new URL("../supabase/migrations/202609120001_ticket_attachments_overview.sql",import.meta.url),"utf8"));
   const owner=randomUUID(),other=randomUUID();await db.query("insert into auth.users values($1),($2)",[owner,other]);
+  const legacyId=randomUUID();
+  await db.query("insert into customer_tickets(id,user_id,subject) values($1,$2,'Existing ticket')",[legacyId,owner]);
+  await db.query("insert into customer_ticket_messages(ticket_id,sender_type,body) values($1,'CUSTOMER','Existing message')",[legacyId]);
+  await db.exec(await readFile(new URL("../supabase/migrations/202609270001_customer_ticket_lifecycle.sql",import.meta.url),"utf8"));
+  const migrationPreservation=(await db.query<{status:string;resolved_at:string|null;messages:number}>("select t.status,t.resolved_at,(select count(*)::integer from customer_ticket_messages m where m.ticket_id=t.id) messages from customer_tickets t where t.id=$1",[legacyId])).rows[0]!;
+  await db.query("delete from customer_tickets where id=$1",[legacyId]);
   async function rpc<T>(name:string,args:unknown[]):Promise<T> {
     try {return (await db.query<{value:T}>(`select public.${name}(${args.map((_,i)=>`$${i+1}`).join(",")}) as value`,args)).rows[0]!.value;}
     catch(error) {checkTicketError(error as {code:string});throw error;}
@@ -53,5 +59,5 @@ export async function messagesFixture(t:TestContext) {
     const response=await fetch(`http://127.0.0.1:${address.port}${path.startsWith("/api/")?path:`/api/v1/messages/tickets${path}`}`,{method,headers:{Cookie:`beryl_account=${raw}`,Origin:config.webOrigin,...(body&&!(body instanceof FormData)?{"Content-Type":"application/json"}:{}),...headers},...(body?{body:body instanceof FormData?body:JSON.stringify(body)}:{})});
     return {response,payload:response.headers.get("content-type")?.includes("application/json")?await response.json():Buffer.from(await response.arrayBuffer())};
   }
-  return {db,owner,other,repository,request,row,profile,storage,stored,removed,storageFailures};
+  return {db,owner,other,repository,request,row,profile,storage,stored,removed,storageFailures,migrationPreservation};
 }
