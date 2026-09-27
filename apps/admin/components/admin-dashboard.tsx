@@ -1,0 +1,5 @@
+"use client";
+import { useCallback,useEffect,useState } from "react";
+import { adminApi,type AdminProfile } from "../lib/api";
+import { InviteAdminDialog } from "./invite-admin-dialog";
+export function AdminDashboard(){const [admin,setAdmin]=useState<AdminProfile|null>(null),[ready,setReady]=useState(false),[open,setOpen]=useState(false);useEffect(()=>{adminApi<{admin:AdminProfile}>("/auth/me").then(data=>setAdmin(data.admin)).catch(()=>{window.location.href="/login";}).finally(()=>setReady(true));},[]);const close=useCallback(()=>setOpen(false),[]);if(!ready)return <main><p>Loading…</p></main>;if(!admin)return null;return <main className="dashboard"><header><div><span className="eyebrow">Beryl Shelter</span><h1>Admin Portal</h1></div><span>{admin.fullName}</span></header><section className="admin-card"><div><h2>Admin management</h2><p>Invite approved administrators with secure, expiring setup links.</p></div>{admin.role==="SUPER_ADMIN"&&<button onClick={()=>setOpen(true)}>Invite Admin</button>}</section><InviteAdminDialog open={open} onClose={close}/></main>;}

@@ -41,10 +41,19 @@ import { publicBuyAssistanceRouter } from "./public-buy-assistance/routes.js";
 import { SupabaseBuyAssistanceRepository, type BuyAssistanceRepository } from "./public-buy-assistance/repository.js";
 import { publicPropertyViewingsRouter } from "./public-viewings/routes.js";
 import { SupabasePropertyViewingsRepository, type PropertyViewingsRepository } from "./public-viewings/repository.js";
+import type { AdminConfig } from "./admin/config.js";
+import { ResendAdminInvitationEmail, type AdminInvitationEmail } from "./admin/email.js";
+import { SupabaseAdminIdentity, type AdminIdentity } from "./admin/identity.js";
+import { SupabaseAdminRepository, type AdminRepository } from "./admin/repository.js";
+import { adminRouter } from "./admin/routes.js";
 
 export interface AppConfig {
   webAppUrl: string | undefined;
   auth?: AuthConfig | undefined;
+  admin?: AdminConfig | undefined;
+  adminRepository?: AdminRepository;
+  adminIdentity?: AdminIdentity;
+  adminEmail?: AdminInvitationEmail;
   gateway?: AuthGateway;
   dashboardRepository?: DashboardRepository;
   analyticsRepository?: AnalyticsRepository;
@@ -74,7 +83,8 @@ export function createApp(config: AppConfig): Express {
   app.disable("x-powered-by");
   app.set("trust proxy", config.trustProxyHops ?? 0);
   app.use(helmet());
-  app.use(cors({ origin: config.auth?.webOrigin ?? config.webAppUrl ?? false, credentials: true, methods: ["GET", "POST", "PATCH", "DELETE"], allowedHeaders: ["Content-Type"] }));
+  const allowedOrigins=new Set([config.auth?.webOrigin,config.webAppUrl,config.admin?.appOrigin].filter((value):value is string=>Boolean(value)));
+  app.use(cors({ origin:(origin,callback)=>callback(null,!origin||allowedOrigins.has(origin)), credentials: true, methods: ["GET", "POST", "PATCH", "DELETE"], allowedHeaders: ["Content-Type"] }));
   app.use(express.json({ limit: "16kb" }));
 
   app.get("/health", (_request, response) => {
@@ -107,7 +117,9 @@ export function createApp(config: AppConfig): Express {
     app.use("/api/v1/dashboard/kyc",kycRouter(config.auth,gateway,config.kycRepository??new SupabaseKycRepository(config.auth),storage));
     app.use("/api/v1/listings", listingsRouter(config.auth, gateway, listings, storage));
     app.use("/api/v1/messages", messagesRouter(config.auth,gateway,tickets,storage));
+    if(config.admin)app.use("/api/v1/admin",adminRouter(config.auth,config.admin,config.adminRepository??new SupabaseAdminRepository(config.auth),config.adminIdentity??new SupabaseAdminIdentity(config.auth),config.adminEmail??new ResendAdminInvitationEmail(config.admin)));
   } else app.use(["/api/v1/auth", "/api/v1/dashboard", "/api/v1/listings", "/api/v1/messages"], (_request, _response, next) => next(unavailable()));
+  if(!config.auth||!config.admin)app.use("/api/v1/admin",(_request,_response,next)=>next(unavailable()));
   app.use(authErrorHandler);
   return app;
 }

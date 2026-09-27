@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Admin Portal",
+  title: "Beryl Shelter Admin",
   description: "Beryl Shelter Admin Portal",
 };
 
