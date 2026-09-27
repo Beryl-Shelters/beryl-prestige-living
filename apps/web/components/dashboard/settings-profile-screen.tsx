@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback,useEffect,useRef,useState } from "react";
 import { toast } from "react-toastify";
 import { AuthApiError } from "../../lib/auth-api";
+import { fetchKyc, type KycView } from "../../lib/kyc-api";
 import { changeSettingsPassword,fetchSettingsProfile,saveSettingsProfile,type SettingsProfile } from "../../lib/settings-api";
 import { validateNewPassword } from "../../lib/password-policy";
 import { BrandLoader } from "../auth/brand-loader";
@@ -20,6 +21,7 @@ export function SettingsProfileScreen(){
   const router=useRouter(),{refreshOverview}=useDashboard(),[profile,setProfile]=useState<SettingsProfile|null>(null),
     [draft,setDraft]=useState<SettingsProfile|null>(null),[file,setFile]=useState<File>(),[failed,setFailed]=useState(false),
     [revision,setRevision]=useState(0),[saving,setSaving]=useState(false),[fileKey,setFileKey]=useState(0),[active,setActive]=useState<"profile"|"password"|"business">("profile"),
+    [verificationStatus,setVerificationStatus]=useState<KycView["status"]|null>(null),
     [passwords,setPasswords]=useState({oldPassword:"",newPassword:"",confirmNewPassword:""}),
     form=useRef<HTMLFormElement>(null);
   const failure=useCallback((error:unknown)=>{
@@ -33,11 +35,14 @@ export function SettingsProfileScreen(){
     }).catch(error=>{if(!controller.signal.aborted){setFailed(true);failure(error);}});
     return()=>controller.abort();
   },[failure,revision]);
+  useEffect(()=>{const controller=new AbortController();fetchKyc(controller.signal).then(value=>{if(!controller.signal.aborted)setVerificationStatus(value.status);}).catch(()=>{});return()=>controller.abort();},[]);
   if(!draft)return <section className="settings-page"><h1>Account Settings</h1>{failed?
     <button className="button button-primary" onClick={()=>{setFailed(false);setRevision(value=>value+1);}}>Try again</button>:
     <BrandLoader/>}</section>;
   const set=(key:keyof SettingsProfile,value:string)=>setDraft(current=>current?{...current,[key]:value}:current);
   const initials=`${draft.firstName[0]??""}${draft.lastName[0]??""}`.toUpperCase();
+  const fullName=[draft.firstName,draft.lastName].filter(Boolean).join(" ")||"Customer";
+  const verificationLabel=verificationStatus==="APPROVED"?"Account Verified":verificationStatus==="PENDING_REVIEW"?"Verification Pending":"Verify Account";
   const avatar=(large=false)=><div className={`settings-avatar${large?" large":""}${draft.profileImageUrl?" has-image":""}`}>
     {draft.profileImageUrl?<img src={draft.profileImageUrl} alt="Profile"/>:initials}
   </div>;
@@ -63,7 +68,7 @@ export function SettingsProfileScreen(){
       <button type="button" role="tab" aria-selected={active==="business"} onClick={()=>setActive("business")}>Business</button>
     </div>
     {active==="profile"?<form ref={form} onSubmit={save} className="dashboard-card settings-card">
-      <header className="settings-identity">{avatar()}<strong>{label(draft.accountType)}</strong><Link href="/dashboard/kyc">Verify Account</Link></header>
+      <header className="settings-identity">{avatar()}<div className="settings-person-title"><strong>{fullName}</strong><span>{label(draft.accountType)}</span></div><Link href="/dashboard/kyc">{verificationLabel}</Link></header>
       <SettingsSection title="Personal Information" copy="Manage and update your personal details to keep your account secure and up to date.">
         <div className="settings-fields two">
           <Field label="First Name" value={draft.firstName} required onChange={value=>set("firstName",value)}/>
@@ -73,10 +78,11 @@ export function SettingsProfileScreen(){
           <label className="wide">Brief Bio<textarea maxLength={1000} value={draft.briefBio} onChange={event=>set("briefBio",event.target.value)} placeholder="Enter a brief bio"/></label>
         </div>
       </SettingsSection>
-      <SettingsSection title="Profile Picture *" copy="Update your profile picture. This will be displayed publicly.">
+      <SettingsSection title="Profile Picture" copy="Update your profile picture. This will be displayed publicly.">
         <div className="settings-picture">{avatar(true)}<label className="settings-upload">Click to upload or drag and drop
           <input key={fileKey} type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" onChange={event=>setFile(event.target.files?.[0])}/>
           <small>{file?.name??"PNG, JPG, WebP (max 2 MiB)"}</small>
+          <span>Upload Picture</span>
         </label></div>
       </SettingsSection>
       <SettingsSection title="Account Information" copy="Update your bank details. This is private and is only visible to Beryl Shelter.">
@@ -97,7 +103,7 @@ export function SettingsProfileScreen(){
       </SettingsSection>
       <footer><button type="button" disabled={saving} onClick={cancel}>Cancel</button><button className="button button-primary" disabled={saving}>{saving?"Saving...":"Save Changes"}</button></footer>
     </form>:active==="password"?<form onSubmit={savePassword} className="dashboard-card settings-card settings-password-card" aria-busy={saving}>
-      <header className="settings-identity">{avatar()}<strong>{label(draft.accountType)}</strong><Link href="/dashboard/kyc">Verify Account</Link></header>
+      <header className="settings-identity">{avatar()}<div className="settings-person-title"><strong>{fullName}</strong><span>{label(draft.accountType)}</span></div><Link href="/dashboard/kyc">{verificationLabel}</Link></header>
       <SettingsSection title="Password" copy="Manage your password here for enhanced security.">
         <div className="settings-fields settings-password-fields">
           <PasswordField label="Old Password" autoComplete="current-password" value={passwords.oldPassword} onChange={oldPassword=>setPasswords(value=>({...value,oldPassword}))}/>
@@ -106,7 +112,7 @@ export function SettingsProfileScreen(){
         </div>
       </SettingsSection>
       <footer><button type="button" disabled={saving} onClick={clearPasswords}>Cancel</button><button className="button button-primary" disabled={saving}>{saving?"Saving...":"Save Changes"}</button></footer>
-    </form>:<SettingsBusinessScreen/>}
+    </form>:<SettingsBusinessScreen verificationLabel={verificationLabel}/>}
   </section>;
 }
 function SettingsSection({title,copy,children}:{title:string;copy:string;children:React.ReactNode}){return <section className="settings-section"><div><h2>{title}</h2><p>{copy}</p></div>{children}</section>;}

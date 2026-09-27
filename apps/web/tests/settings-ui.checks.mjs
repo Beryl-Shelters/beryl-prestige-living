@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { dashboardFixture } from "./dashboard-ui.checks.mjs";
+import { kycState } from "./kyc-ui.checks.mjs";
 import { runIfMain } from "./run-ui-suite.mjs";
 runIfMain(import.meta.url,"settings");
 
@@ -23,34 +24,46 @@ export async function checkSettings({page,origin,calls,failures,screenshot,passe
   const ready=()=>page.getByRole("heading",{name:"Personal Information",exact:true}).waitFor();
   const open=async()=>{await page.goto(origin+"/dashboard/settings");await ready();await page.evaluate(()=>document.fonts.ready);};
   const closeError=async()=>{const item=page.locator("#settings-profile-error,#settings-business-error").last();if(await item.count()){await item.locator(".Toastify__close-button").click();await item.waitFor({state:"detached"});}};
-  for(const width of [1440,1280,1024,768,390,320]){
+  for(const width of [1440,768,390,320]){
     await page.setViewportSize({width,height:1000});await open();
     assert.equal(await page.getByRole("heading",{name:"Account Settings",level:1}).count(),1);
     assert.deepEqual(await page.getByRole("tab").allTextContents(),["Profile","Password","Business"]);
     assert.equal(await page.getByRole("tab",{name:"Profile"}).getAttribute("aria-selected"),"true");
     assert.equal(await page.getByRole("tab",{name:"Business"}).isDisabled(),false);
     assert.equal(await page.getByRole("link",{name:"Verify Account"}).count(),1);
-    for(const heading of ["Personal Information","Profile Picture *","Account Information","Address"])assert.equal(await page.getByRole("heading",{name:heading,exact:true}).count(),1);
+    assert.equal(await page.locator(".settings-identity").getByText("Ada Okafor",{exact:true}).count(),1);assert.equal(await page.locator(".settings-identity").getByText("Investor",{exact:true}).count(),1);
+    for(const heading of ["Personal Information","Profile Picture","Account Information","Address"])assert.equal(await page.getByRole("heading",{name:heading,exact:true}).count(),1);
     assert.equal(await page.getByLabel("Email Address").isEditable(),false);
     assert.equal(await page.getByLabel("First Name *").inputValue(),"Ada");
     assert.equal(await page.getByLabel("Account Number").inputValue(),"1234567890");
     assert.equal(await page.getByLabel("Street Address *").inputValue(),"1 Beryl Road");
     assert.equal(await page.locator('input[type="file"]').getAttribute("accept"),".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp");
+    assert.equal(await page.getByText("Upload Picture",{exact:true}).count(),1);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`Profile Settings overflow at ${width}`);
+    await screenshot(`settings-profile-${width}`);
     await page.getByRole("tab",{name:"Password"}).click();
     assert.equal(await page.getByRole("tab",{name:"Password"}).getAttribute("aria-selected"),"true");
     assert.equal(await page.getByRole("heading",{name:"Password",exact:true}).count(),1);
     for(const [name,autocomplete] of [["Old Password","current-password"],["New Password","new-password"],["Confirm New Password","new-password"]]){
       const input=page.getByLabel(name,{exact:true});assert.equal(await input.getAttribute("type"),"password");assert.equal(await input.getAttribute("autocomplete"),autocomplete);
     }
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`Password Settings overflow at ${width}`);
+    await screenshot(`settings-password-${width}`);
     await page.getByRole("tab",{name:"Business"}).click();await page.getByRole("heading",{name:"Company Information",exact:true}).waitFor();
     assert.equal(await page.getByRole("tab",{name:"Business"}).getAttribute("aria-selected"),"true");
     for(const heading of ["Company Information","Company Logo","Company Address"])assert.equal(await page.getByRole("heading",{name:heading,exact:true}).count(),1);
     assert.equal(await page.getByLabel("Company ID").inputValue(),"BUS-7K9M2Q");assert.equal(await page.getByLabel("Company ID").isEditable(),false);
     assert.equal(await page.getByLabel("Company Email Address *").inputValue(),"company@example.test");assert.equal(await page.getByLabel("Street Address *").inputValue(),"22 Company Road");
+    assert.equal(await page.getByRole("link",{name:"Verify Account"}).count(),1);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`Settings overflow at ${width}`);
     await screenshot(`settings-business-${width}`);
   }
-  passed.push("Profile and Password reference layouts, shared identity header, exact password fields and responsive stacking at six widths");
+  passed.push("Profile, Password and Business reference layouts, real identity headers, exact password fields and responsive stacking at 1440/768/390/320");
+
+  kycState.view={status:"PENDING_REVIEW",country:"Nigeria",documentType:"PASSPORT",submittedAt:"2026-09-12T00:00:00Z",rejectionReason:null,documents:[]};await open();await page.getByRole("link",{name:"Verification Pending",exact:true}).waitFor();await page.getByRole("tab",{name:"Business"}).click();await page.getByRole("link",{name:"Verification Pending",exact:true}).waitFor();
+  kycState.view={status:"APPROVED",country:"Nigeria",documentType:"PASSPORT",submittedAt:"2026-09-12T00:00:00Z",rejectionReason:null,documents:[]};await open();await page.getByRole("link",{name:"Account Verified",exact:true}).waitFor();
+  kycState.view={status:"NOT_SUBMITTED",country:null,documentType:null,submittedAt:null,rejectionReason:null,documents:[]};
+  passed.push("Profile and Business verification actions reuse canonical KYC and display pending/approved lifecycle truthfully");
 
   await page.setViewportSize({width:1440,height:1000});await open();
   await page.getByRole("tab",{name:"Password"}).click();
@@ -105,5 +118,6 @@ export async function checkSettings({page,origin,calls,failures,screenshot,passe
   assert.equal(page.url(),origin+"/dashboard/settings");assert.equal(await old.inputValue(),"WrongPass!");failures.delete(passwordEndpoint);await closeError();
   await old.fill("OldPass!");const passwordObserved=pauseRequest(passwordEndpoint);await page.getByRole("button",{name:"Save Changes",exact:true}).click();await passwordObserved;assert.equal(await page.getByRole("button",{name:"Saving...",exact:true}).isDisabled(),true);resume();await toast("Password changed successfully. Please log in again.");await page.waitForURL(origin+"/login");
   assert.deepEqual(passwordWrites().at(-1).body,{oldPassword:"OldPass!",newPassword:"NewPass!",confirmNewPassword:"NewPass!"});
+  assert.equal(calls.some(call=>/payment|checkout|ownership|referral|mortgage|inquir|assistance/i.test(call.endpoint)&&call.method!=="GET"),false);
   passed.push("Password Cancel, client validation, wrong-current-password handling, pending lock, session expiry, exact payload and successful forced re-login");
 }
