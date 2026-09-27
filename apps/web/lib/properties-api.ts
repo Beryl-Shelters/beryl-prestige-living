@@ -1,14 +1,12 @@
 import { AuthApiError } from "./auth-api";
 
 export type PurchasedProperty = {
-  id: string;
-  propertyTitle: string;
   propertyCode: string;
+  title: string;
   state: string;
-  type: string;
-  subtype: string;
-  price: string;
-  status: string;
+  propertyType: "Residential" | "Commercial";
+  propertySubtype: string | null;
+  priceMinor: number;
   closedAt: string;
 };
 

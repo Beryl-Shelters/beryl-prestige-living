@@ -4,10 +4,10 @@ import { AuthError, expired } from "../auth/errors.js";
 import type { AuthGateway } from "../auth/gateway.js";
 import { AuthSessions } from "../auth/sessions.js";
 import { purchasedPropertiesQuery } from "./model.js";
-import { EmptyPurchasedPropertiesRepository, type PurchasedPropertiesRepository } from "./repository.js";
+import type { PurchasedPropertiesRepository } from "./repository.js";
 import { PurchasedPropertiesService } from "./service.js";
 
-export function purchasedPropertiesRouter(config: AuthConfig, gateway: AuthGateway, repository: PurchasedPropertiesRepository = new EmptyPurchasedPropertiesRepository()) {
+export function purchasedPropertiesRouter(config: AuthConfig, gateway: AuthGateway, repository: PurchasedPropertiesRepository) {
   const router = Router();
   const sessions = new AuthSessions(config, gateway);
   const service = new PurchasedPropertiesService(repository);

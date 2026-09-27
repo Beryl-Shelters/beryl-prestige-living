@@ -16,7 +16,7 @@ import { SupabaseAnalyticsRepository, type AnalyticsRepository, type CategoryPer
 import { messagesRouter } from "./messages/routes.js";
 import { SupabaseTicketsRepository, type TicketsRepository } from "./messages/repository.js";
 import { purchasedPropertiesRouter } from "./properties/routes.js";
-import type { PurchasedPropertiesRepository } from "./properties/repository.js";
+import { SupabasePurchasedPropertiesRepository, type PurchasedPropertiesRepository } from "./properties/repository.js";
 import { referralsRouter } from "./referrals/routes.js";
 import { SupabaseReferralsRepository, type ReferralsRepository } from "./referrals/repository.js";
 import { settingsRouter } from "./settings/routes.js";
@@ -100,7 +100,7 @@ export function createApp(config: AppConfig): Express {
     app.use("/api/v1/auth", authRouter(config.auth, gateway));
     app.use("/api/v1/dashboard", dashboardRouter(config.auth, gateway, config.dashboardRepository ?? new MessagesDashboardRepository(tickets,owner=>listings.recent(owner))));
     app.use("/api/v1/dashboard/analytics", analyticsRouter(config.auth, gateway, config.analyticsRepository ?? new SupabaseAnalyticsRepository(config.auth), config.categoryPerformanceRepository));
-    app.use("/api/v1/dashboard/properties", purchasedPropertiesRouter(config.auth, gateway, config.purchasedPropertiesRepository));
+    app.use("/api/v1/dashboard/properties", purchasedPropertiesRouter(config.auth, gateway, config.purchasedPropertiesRepository ?? new SupabasePurchasedPropertiesRepository(config.auth)));
     app.use("/api/v1/dashboard/referrals", referralsRouter(config.auth,gateway,config.referralsRepository??new SupabaseReferralsRepository(config.auth)));
     app.use("/api/v1/saved-properties", savedPropertiesRouter(config.auth, gateway, config.savedPropertiesRepository ?? new SupabaseSavedPropertiesRepository(config.auth)));
     app.use("/api/v1/dashboard/settings", settingsRouter(config.auth,gateway,config.settingsRepository??new SupabaseSettingsRepository(config.auth),storage));
