@@ -30,6 +30,39 @@ async function ready() {
   throw new Error(`Admin Next server did not start. ${output}`);
 }
 
+async function assertViewportSidePanel(page, label, shouldScroll) {
+  const beforeScroll = await page.evaluate(() => {
+    const visual = document.querySelector(".admin-auth-visual");
+    const intro = document.querySelector(".admin-auth-intro");
+    if (!(visual instanceof HTMLElement) || !(intro instanceof HTMLElement)) return null;
+    const visualRect = visual.getBoundingClientRect();
+    const introRect = intro.getBoundingClientRect();
+    return {
+      visualTop: visualRect.top,
+      visualHeight: visualRect.height,
+      introTop: introRect.top,
+      introBottom: introRect.bottom,
+      viewportHeight: window.innerHeight,
+    };
+  });
+  assert.ok(beforeScroll, `${label} side panel was not rendered`);
+  assert.equal(Math.abs(beforeScroll.visualTop) < 2, true, `${label} side panel did not start at the viewport top`);
+  assert.equal(Math.abs(beforeScroll.visualHeight - beforeScroll.viewportHeight) < 2, true, `${label} side panel did not match viewport height`);
+  assert.equal(beforeScroll.introTop >= 0, true, `${label} side-panel copy started outside the viewport`);
+  assert.equal(beforeScroll.introBottom <= beforeScroll.viewportHeight, true, `${label} side-panel copy ended outside the viewport`);
+
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await page.waitForTimeout(50);
+  const afterScroll = await page.evaluate(() => {
+    const visual = document.querySelector(".admin-auth-visual");
+    if (!(visual instanceof HTMLElement)) return null;
+    return { top: visual.getBoundingClientRect().top, scrollY: window.scrollY };
+  });
+  assert.ok(afterScroll, `${label} side panel disappeared after scrolling`);
+  if (shouldScroll) assert.equal(afterScroll.scrollY > 0, true, `${label} page did not provide the expected form scroll`);
+  assert.equal(Math.abs(afterScroll.top) < 2, true, `${label} side panel did not remain fixed while scrolling`);
+}
+
 const jsonHeaders = {
   "access-control-allow-origin": origin,
   "access-control-allow-credentials": "true",
@@ -169,6 +202,11 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `login horizontal overflow at ${width}`);
   }
 
+  await page.setViewportSize({ width: 1440, height: 667 });
+  await page.goto(`${origin}/login`);
+  await page.getByRole("heading", { name: "Login to your admin account" }).waitFor();
+  await assertViewportSidePanel(page, "login", false);
+
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${origin}/login`);
   await page.getByLabel("Email Address").fill("amina@example.test");
@@ -198,6 +236,12 @@ try {
     assert.equal(await page.getByText("This invitation is invalid or expired.", { exact: true }).count(), 0);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `invitation acceptance horizontal overflow at ${width}`);
   }
+
+  await page.setViewportSize({ width: 1440, height: 667 });
+  await page.goto("about:blank");
+  await page.goto(`${origin}/accept-invitation#token=${validToken}`);
+  await page.getByText("ada@example.test").waitFor();
+  await assertViewportSidePanel(page, "invitation acceptance", true);
 
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("about:blank");

@@ -356,6 +356,17 @@ button.password-toggle:hover {
   width: 100%;
 }
 
+@media (min-width: 901px) {
+  .admin-auth-visual {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    height: 100svh;
+    min-height: 0;
+  }
+}
+
 @media (max-width: 900px) {
   .admin-auth-shell {
     grid-template-columns: minmax(0, 1fr);
