@@ -5,7 +5,7 @@ export type CustomerAnalytics = {
   categoryPerformance: { month: number; label: string; buy: number; sell: number; referral: number }[];
   listingsOverview: { total: number } & Record<"listed" | "pending" | "rejected", { count: number; percentage: number }>;
   bedrooms: Record<1 | 2 | 3 | 4 | 5 | 6, number>;
-  propertyTypes: { commercial: number; detachedHouses: number; flats: number; others: number; residential: number };
+  propertyTypes: { commercial: number; residential: number };
 };
 
 export async function fetchAnalytics(q: string, year: number, signal: AbortSignal, refreshAttempts = 0): Promise<CustomerAnalytics> {

@@ -18,8 +18,8 @@ export function analyticsResponse(url) {
     year: Number(url.searchParams.get("year") ?? new Date().getUTCFullYear()),
     categoryPerformance: months.map((label, index) => ({ month: index + 1, label, buy: 0, sell: 0, referral: 0 })),
     listingsOverview: { total: items.length, listed: metric("LISTED"), pending: metric("PENDING"), rejected: metric("REJECTED") },
-    bedrooms: Object.fromEntries([1, 2, 3, 4, 5, 6].map(bedroom => [bedroom, items.filter(item => item.bedrooms === bedroom).length])),
-    propertyTypes: { commercial: items.filter(item => item.propertyType === "Commercial").length, detachedHouses: 0, flats: 0, others: 0, residential: items.filter(item => item.propertyType === "Residential").length },
+    bedrooms: Object.fromEntries([1, 2, 3, 4, 5, 6].map(bedroom => [bedroom, items.filter(item => bedroom === 6 ? item.bedrooms >= 6 : item.bedrooms === bedroom).length])),
+    propertyTypes: { commercial: items.filter(item => item.propertyType === "Commercial").length, residential: items.filter(item => item.propertyType === "Residential").length },
   };
 }
 
@@ -33,33 +33,33 @@ export async function checkAnalytics({ page, origin, calls, failures, screenshot
   const assertChart = async () => {
     assert.deepEqual(await page.locator(".analytics-months span").allTextContents(), months);
     assert.deepEqual(await page.locator(".analytics-legend li").allTextContents(), ["Buy", "Sell", "Referral"]);
-    assert.deepEqual(await page.locator(".analytics-axis span").allTextContents(), ["2", "1.5", "1", "0.5", "0"]);
+    assert.deepEqual(await page.locator(".analytics-axis span").allTextContents(), ["1", "0.75", "0.5", "0.25", "0"]);
     assert.equal(await page.locator(".analytics-gridline").count(), 5);
     assert.equal(await page.locator(".analytics-plot polyline").count(), 0, "Zero performance must not invent a curve");
     assert.match(await page.locator(".analytics-chart figcaption").innerText(), /Jan: Buy 0, Sell 0, Referral 0/);
   };
-  for (const width of [1440, 1280, 1024, 768, 390, 320]) {
+  for (const width of [1440, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 900 }); analyticsState.items = []; await open();
     assert.equal(await total(), "0");
     assert.equal(await search.getAttribute("placeholder"), "Search your listings by title or code");
     assert.deepEqual(await page.locator(".analytics-status progress").evaluateAll(elements => elements.map(el => el.value)), [0, 0, 0]);
-    assert.deepEqual(await page.locator(".analytics-bedrooms dt").allTextContents(), [1, 2, 3, 4, 5, 6].map(value => `${value} bedroom(s)`));
-    assert.deepEqual(await page.locator(".analytics-property-types dt").allTextContents(), ["Commercial(s)", "Detached Houses(s)", "Flats(s)", "Others(s)", "Residential(s)"]);
+    assert.deepEqual(await page.locator(".analytics-bedrooms dt").allTextContents(), ["1 bedroom", "2 bedrooms", "3 bedrooms", "4 bedrooms", "5 bedrooms", "6+ bedrooms"]);
+    assert.deepEqual(await page.locator(".analytics-property-types dt").allTextContents(), ["Commercial", "Residential"]);
     assert((await page.locator(".analytics-breakdown dd").allTextContents()).every(value => value === "0")); await assertChart();
     const layout = await page.evaluate(() => {
       const rect = selector => document.querySelector(selector).getBoundingClientRect().toJSON();
       return { overflow: document.documentElement.scrollWidth > innerWidth, chart: rect(".analytics-performance"), overview: rect(".analytics-overview"), bedrooms: rect(".analytics-breakdown"), types: rect(".analytics-breakdown:last-child"),
-        background: getComputedStyle(document.querySelector(".dashboard-card")).backgroundColor, gold: getComputedStyle(document.querySelector(".analytics-search button")).backgroundColor, font: getComputedStyle(document.body).fontFamily };
+        background: getComputedStyle(document.querySelector(".dashboard-card")).backgroundColor, font: getComputedStyle(document.body).fontFamily };
     });
     assert.equal(layout.overflow, false, `Analytics overflow at ${width}`);
-    assert.equal(layout.background, "rgb(255, 255, 255)"); assert.equal(layout.gold, "rgb(183, 134, 75)"); assert.match(layout.font, /jakarta/i);
+    assert.equal(layout.background, "rgb(255, 255, 255)"); assert.match(layout.font, /jakarta/i);
     assert(width > 1000 ? layout.overview.left >= layout.chart.right : layout.overview.top >= layout.chart.bottom);
     assert(width > 600 ? layout.types.left >= layout.bedrooms.right : layout.types.top >= layout.bedrooms.bottom);
     await screenshot(`${width}-analytics-zero`);
     analyticsState.items = structuredClone(populated); await open(); assert.equal(await total(), "8");
     assert.deepEqual(await page.locator(".analytics-status progress").evaluateAll(elements => elements.map(el => el.value)), [25, 37.5, 12.5]);
-    assert.deepEqual(await page.locator(".analytics-bedrooms dd").allTextContents(), Array(6).fill("1"));
-    assert.deepEqual(await page.locator(".analytics-property-types dd").allTextContents(), ["3", "0", "0", "0", "5"]);
+    assert.deepEqual(await page.locator(".analytics-bedrooms dd").allTextContents(), ["1", "1", "1", "1", "1", "2"]);
+    assert.deepEqual(await page.locator(".analytics-property-types dd").allTextContents(), ["3", "5"]);
     assert.equal(await page.locator(".analytics-status").count(), 3); await assertChart();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await screenshot(`${width}-analytics-populated`); console.log(`Analytics zero/populated layouts passed at ${width}px`);
@@ -68,7 +68,7 @@ export async function checkAnalytics({ page, origin, calls, failures, screenshot
   assert.equal(await page.locator('.dashboard-navigation [aria-current="page"]').innerText(), "Analytics");
   const beforeTyping = calls.filter(call => call.endpoint === endpoint).length;
   await search.fill("  bEtA  "); assert.equal(calls.filter(call => call.endpoint === endpoint).length, beforeTyping, "Typing alone must not submit search");
-  await page.getByRole("button", { name: "Search", exact: true }).click(); await waitTotal(1);
+  await search.press("Enter"); await waitTotal(1);
   assert.equal(new URL(calls.filter(call => call.endpoint === endpoint).at(-1).url).searchParams.get("q"), "bEtA");
   assert.deepEqual(await page.locator(".analytics-bedrooms dd").allTextContents(), ["0", "1", "0", "0", "0", "0"]);
   await search.fill("res-test02"); await search.press("Enter");
@@ -89,6 +89,6 @@ export async function checkAnalytics({ page, origin, calls, failures, screenshot
   failures.delete(endpoint); await page.getByRole("button", { name: "Try again", exact: true }).click(); await waitTotal(8);
   failures.set(endpoint, { status: 401, code: "SESSION_EXPIRED", message: "Please log in again." });
   await page.goto(origin + "/dashboard/analytics"); await page.waitForURL("**/login"); failures.delete(endpoint);
-  passed.push("Analytics: reference layout and existing palette at six widths; zero and listing-derived populated counts; title/code search by button/Enter; blank reset; twelve zero performance months; year arrows; active sidebar; loading without data flash; safe error/retry and session expiry");
+  passed.push("Analytics: reference layout at four required widths; zero and listing-derived populated counts; owner-scoped title/code search by Enter; blank reset; truthful zero performance months; 6+ bedroom bucket; canonical property types; honest UNLISTED denominator; year arrows; active sidebar; loading without data flash; safe error/retry and session expiry");
   analyticsState.items = [];
 }

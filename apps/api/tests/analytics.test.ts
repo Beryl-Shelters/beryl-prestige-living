@@ -30,7 +30,7 @@ function counts(customerId: string, search: string): AnalyticsCounts {
     listed: matches.filter(row => row.status === "LISTED").length,
     pending: matches.filter(row => row.status === "PENDING").length,
     rejected: matches.filter(row => row.status === "REJECTED").length,
-    bedrooms: Object.fromEntries(bedroomBuckets.map(bedroom => [bedroom, matches.filter(row => row.bedrooms === bedroom).length])) as AnalyticsCounts["bedrooms"],
+    bedrooms: Object.fromEntries(bedroomBuckets.map(bedroom => [bedroom, matches.filter(row => bedroom === 6 ? row.bedrooms >= 6 : row.bedrooms === bedroom).length])) as AnalyticsCounts["bedrooms"],
     commercial: matches.filter(row => row.property_type === "Commercial").length,
     residential: matches.filter(row => row.property_type === "Residential").length,
   };
@@ -106,13 +106,13 @@ test("analytics cannot discover a foreign customer's title or display code", asy
   const { request } = await fixture(t);
   for (const q of ["Private", "RES-SECRET"]) assert.equal((await request(`?q=${q}`)).data.listingsOverview.total, 0);
 });
-test("analytics returns exactly bedroom buckets 1 through 6, excluding zero and 7+", async t => {
+test("analytics returns bedroom buckets 1 through 5 and combines supported higher values into 6+", async t => {
   const { request } = await fixture(t); const { data } = await request();
-  assert.deepEqual(data.bedrooms, { 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1 });
+  assert.deepEqual(data.bedrooms, { 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 2 });
 });
-test("analytics counts Residential/Commercial without inventing legacy subtype mappings", async t => {
+test("analytics counts only canonical Residential and Commercial property types", async t => {
   const { request } = await fixture(t);
-  assert.deepEqual((await request()).data.propertyTypes, { commercial: 3, residential: 5, detachedHouses: 0, flats: 0, others: 0 });
+  assert.deepEqual((await request()).data.propertyTypes, { commercial: 3, residential: 5 });
 });
 test("analytics always returns twelve ordered legitimate zero monthly buckets, regardless of year or listings", async t => {
   const { request } = await fixture(t);
@@ -168,7 +168,7 @@ test("production analytics uses twelve exact owner-scoped HEAD counts, not a tru
   const result = await new SupabaseAnalyticsRepository(config, fetcher).counts(owner, "Alpha");
   assert.equal(result.total, 2501); assert.equal(calls.length, 12);
   assert(calls.every(url => url.searchParams.get("or") === '(title.ilike."%Alpha%",listing_code.ilike."%Alpha%")'));
-  assert.deepEqual(calls.map(url => url.searchParams.get("bedrooms")).filter(Boolean).sort(), bedroomBuckets.map(value => `eq.${value}`));
+  assert.deepEqual(calls.map(url => url.searchParams.get("bedrooms")).filter(Boolean).sort(), ["eq.1", "eq.2", "eq.3", "eq.4", "eq.5", "gte.6"]);
   assert.deepEqual(calls.map(url => url.searchParams.get("property_type")).filter(Boolean).sort(), ["eq.Commercial", "eq.Residential"]);
 });
 test("production analytics quotes filter grammar and escapes search wildcards without removing owner scope", async () => {

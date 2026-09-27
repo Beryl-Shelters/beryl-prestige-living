@@ -17,5 +17,5 @@ export type CustomerAnalytics = {
   categoryPerformance: { month: number; label: string; buy: number; sell: number; referral: number }[];
   listingsOverview: { total: number } & Record<"listed" | "pending" | "rejected", { count: number; percentage: number }>;
   bedrooms: BedroomCounts;
-  propertyTypes: { commercial: number; detachedHouses: number; flats: number; others: number; residential: number };
+  propertyTypes: { commercial: number; residential: number };
 };

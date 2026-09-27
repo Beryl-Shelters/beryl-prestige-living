@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { AuthApiError } from "../../lib/auth-api";
 import { fetchAnalytics, type CustomerAnalytics } from "../../lib/analytics-api";
@@ -12,7 +12,8 @@ const labels = { buy: "Buy", sell: "Sell", referral: "Referral" };
 
 function CategoryPerformance({ analytics, changeYear }: { analytics: CustomerAnalytics; changeYear: (year: number) => void }) {
   const points = analytics.categoryPerformance;
-  const ceiling = Math.max(2, Math.ceil(Math.max(0, ...points.flatMap(point => series.map(key => point[key])))));
+  const ceiling = Math.max(1, Math.ceil(Math.max(0, ...points.flatMap(point => series.map(key => point[key])))));
+  const hasPerformance = points.some(point => series.some(key => point[key] > 0));
   return <section className="dashboard-card analytics-performance" aria-labelledby="category-performance-title">
     <div className="analytics-chart-heading">
       <h2 id="category-performance-title">Category Performance</h2>
@@ -30,6 +31,7 @@ function CategoryPerformance({ analytics, changeYear }: { analytics: CustomerAna
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           {series.filter(key => points.some(point => point[key] !== 0)).map(key => <polyline key={key} className={`analytics-series-${key}`} points={points.map((point, index) => `${index / 11 * 100},${100 - point[key] / ceiling * 100}`).join(" ")} fill="none" strokeWidth="2" vectorEffect="non-scaling-stroke" />)}
         </svg>
+        {!hasPerformance && <span className="analytics-chart-empty">No activity recorded</span>}
       </div>
       <div className="analytics-months">{points.map(point => <span key={point.month}>{point.label}</span>)}</div>
       <figcaption className="dashboard-sr-only">{points.map(point => `${point.label}: Buy ${point.buy}, Sell ${point.sell}, Referral ${point.referral}`).join("; ")}</figcaption>
@@ -53,16 +55,17 @@ function AnalyticsCards({ q, year, changeYear, retry }: { q: string; year: numbe
     return () => controller.abort();
   }, [q, year, router]);
   if (!analytics) return failed ? <div className="analytics-retry"><button className="button button-primary" onClick={retry}>Try again</button></div> : <BrandLoader />;
+  const represented = Math.min(100, analytics.listingsOverview.listed.percentage + analytics.listingsOverview.pending.percentage + analytics.listingsOverview.rejected.percentage);
   return <div className="analytics-results">
     <div className="analytics-upper">
       <CategoryPerformance analytics={analytics} changeYear={changeYear} />
       <section className="dashboard-card analytics-overview" aria-labelledby="listings-overview-title">
         <h2 id="listings-overview-title">Listings Overview</h2>
-        <div className="analytics-total"><strong>{analytics.listingsOverview.total}</strong><span>Total Listings</span></div>
+        <div className="analytics-total" style={{ "--analytics-represented": `${represented}%` } as CSSProperties}><div><strong>{analytics.listingsOverview.total}</strong><span>Total Listings</span></div></div>
         <div className="analytics-statuses">{(["listed", "pending", "rejected"] as const).map(status => {
           const metric = analytics.listingsOverview[status];
           const label = status.charAt(0).toUpperCase() + status.slice(1);
-          return <div className="analytics-status" key={status}><div><span>{label}</span><span>{metric.percentage.toFixed(2)}%</span></div>
+          return <div className="analytics-status" key={status}><div><span>{label}</span><span>{new Intl.NumberFormat("en", { maximumFractionDigits: 2 }).format(metric.percentage)}%</span></div>
             <progress value={metric.percentage} max={100} aria-label={`${label}: ${metric.count} listings, ${metric.percentage}%`} />
           </div>;
         })}</div>
@@ -71,12 +74,12 @@ function AnalyticsCards({ q, year, changeYear, retry }: { q: string; year: numbe
     <div className="analytics-lower">
       <section className="dashboard-card analytics-breakdown" aria-labelledby="analytics-bedrooms-title">
         <h2 id="analytics-bedrooms-title">Bedrooms contained in the properties</h2>
-        <dl className="analytics-bedrooms">{([1, 2, 3, 4, 5, 6] as const).map(bedroom => <div key={bedroom}><dt>{bedroom} bedroom(s)</dt><dd>{analytics.bedrooms[bedroom]}</dd></div>)}</dl>
+        <dl className="analytics-bedrooms">{([1, 2, 3, 4, 5, 6] as const).map(bedroom => <div key={bedroom}><dt>{bedroom === 1 ? "1 bedroom" : bedroom === 6 ? "6+ bedrooms" : `${bedroom} bedrooms`}</dt><dd>{analytics.bedrooms[bedroom]}</dd></div>)}</dl>
       </section>
       <section className="dashboard-card analytics-breakdown" aria-labelledby="analytics-property-types-title">
         <h2 id="analytics-property-types-title">Property Type</h2>
         <dl className="analytics-property-types">{([
-          ["commercial", "Commercial(s)"], ["detachedHouses", "Detached Houses(s)"], ["flats", "Flats(s)"], ["others", "Others(s)"], ["residential", "Residential(s)"],
+          ["commercial", "Commercial"], ["residential", "Residential"],
         ] as const).map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{analytics.propertyTypes[key]}</dd></div>)}</dl>
       </section>
     </div>
@@ -93,7 +96,7 @@ export function AnalyticsScreen({ initialYear }: { initialYear: number }) {
     <form className="analytics-search" role="search" onSubmit={event => { event.preventDefault(); setQ(search.trim()); }}>
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="8" cy="8" r="4.5" /><path d="m11.5 11.5 4 4" /></svg>
       <input aria-label="Search your listings by title or code" placeholder="Search your listings by title or code" maxLength={100} value={search} onChange={event => setSearch(event.target.value)} />
-      <button className="button button-primary" type="submit">Search</button>
+      <button className="dashboard-sr-only" type="submit">Search</button>
     </form>
     <AnalyticsCards key={JSON.stringify([q, year, attempt])} q={q} year={year} changeYear={setYear} retry={() => setAttempt(value => value + 1)} />
   </section>;

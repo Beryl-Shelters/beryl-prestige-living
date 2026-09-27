@@ -8,9 +8,9 @@ import {listingDate,listingsRequest,type Listing,type ListingOptions} from "../.
 import {useListingError,useListingRequest} from "./use-listing-request";
 
 function Overlay({children,close,variant="modal",title}:{children:ReactNode;close:()=>void;variant?:"modal"|"drawer"|"review";title:string}) {
-  const dialog=useRef<HTMLDialogElement>(null);const closeRef=useRef(close);closeRef.current=close;
-  useEffect(()=>{const overflow=document.body.style.overflow;const focus=document.activeElement instanceof HTMLElement?document.activeElement:null;document.body.style.overflow="hidden";dialog.current?.showModal();return()=>{document.body.style.overflow=overflow;if(dialog.current?.open)dialog.current.close();focus?.focus();};},[]);
-  return <dialog ref={dialog} className={`listing-dialog listing-dialog-${variant}`} aria-label={title} onCancel={event=>{event.preventDefault();closeRef.current();}} onClick={event=>{if(event.target===event.currentTarget)closeRef.current();}}>{children}</dialog>;
+  const dialog=useRef<HTMLDialogElement>(null);
+  useEffect(()=>{const element=dialog.current;const overflow=document.body.style.overflow;const focus=document.activeElement instanceof HTMLElement?document.activeElement:null;document.body.style.overflow="hidden";element?.showModal();return()=>{document.body.style.overflow=overflow;if(element?.open)element.close();focus?.focus();};},[]);
+  return <dialog ref={dialog} className={`listing-dialog listing-dialog-${variant}`} aria-label={title} onCancel={event=>{event.preventDefault();close();}} onClick={event=>{if(event.target===event.currentTarget)close();}}>{children}</dialog>;
 }
 
 function CloseButton({close,disabled=false,label="Close"}:{close:()=>void;disabled?:boolean;label?:string}) {return <button type="button" className="listing-dialog-close" aria-label={label} disabled={disabled} onClick={close}>×</button>;}

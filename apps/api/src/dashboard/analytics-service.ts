@@ -16,8 +16,8 @@ export class AnalyticsService {
       categoryPerformance: months.map((label, index) => ({ month: index + 1, label, buy: series.buy[index]!, sell: series.sell[index]!, referral: series.referral[index]! })),
       listingsOverview: { total: counts.total, listed: metric(counts.listed), pending: metric(counts.pending), rejected: metric(counts.rejected) },
       bedrooms: counts.bedrooms,
-      // The current subtype taxonomy cannot establish these legacy categories.
-      propertyTypes: { commercial: counts.commercial, detachedHouses: 0, flats: 0, others: 0, residential: counts.residential },
+      // Keep one semantic dimension: canonical top-level property_type.
+      propertyTypes: { commercial: counts.commercial, residential: counts.residential },
     };
   }
 }

@@ -28,20 +28,22 @@ export class SupabaseAnalyticsRepository implements AnalyticsRepository {
   async counts(customerId: string, search: string): Promise<AnalyticsCounts> {
     // HEAD/count queries avoid downloading rows, media, or a capped first page.
     // Every query, including every optional filter, retains the session owner.
-    const count = async (column?: "listing_status" | "bedrooms" | "property_type", value?: string | number) => {
+    const count = async (column?: "listing_status" | "bedrooms" | "property_type", value?: string | number, comparison: "eq" | "gte" = "eq") => {
       let query = this.db.from("customer_listings").select("id", { count: "exact", head: true }).eq("user_id", customerId);
       if (search) {
         const literal = search.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[%_*]/g, character => `\\${character}`);
         query = query.or(`title.ilike."%${literal}%",listing_code.ilike."%${literal}%"`);
       }
-      if (column !== undefined && value !== undefined) query = query.eq(column, value);
+      if (column !== undefined && value !== undefined) query = comparison === "gte" ? query.gte(column, value) : query.eq(column, value);
       const { count: result, error } = await query;
       if (error || result === null || !Number.isSafeInteger(result) || result < 0) throw new Error("Analytics count unavailable");
       return result;
     };
     const [total, listed, pending, rejected, bedrooms, commercial, residential] = await Promise.all([
       count(), count("listing_status", "LISTED"), count("listing_status", "PENDING"), count("listing_status", "REJECTED"),
-      Promise.all(bedroomBuckets.map(async bedroom => [bedroom, await count("bedrooms", bedroom)] as const)),
+      // The final display bucket is 6+, preserving the seller model's support
+      // for bedroom counts above the reference design's six-row example.
+      Promise.all(bedroomBuckets.map(async bedroom => [bedroom, await count("bedrooms", bedroom, bedroom === 6 ? "gte" : "eq")] as const)),
       count("property_type", "Commercial"), count("property_type", "Residential"),
     ]);
     return { total, listed, pending, rejected, bedrooms: Object.fromEntries(bedrooms) as BedroomCounts, commercial, residential };
