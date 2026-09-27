@@ -5,6 +5,7 @@ export type Listing = {
   has_lien:boolean; bedrooms:number; bathrooms:number; parking_spaces:number; toilet_count:number|null; units:number|null; land_area:number|null; year_built:number|null; facilities:string[];
   property_cost_minor:number; minimum_down_payment_minor:number; location:string; state:string; city:string; longitude:number|null; latitude:number|null;
   listing_status:ListingStatus; property_status:"AVAILABLE"; version:number; created_at:string; updated_at:string; listed_at:string|null; requested_at?:string|null;
+  rejection_reason:string|null; rejected_at:string|null;
   completeness:number; leads:number; views:number; time_on_market:number|null; referral_url:string;
   images:{id:string;url:string;sort_order:number}[];
   documents:{id:string;batch_id:string;title:string;document_type:string;description:string;sort_order:number}[];
@@ -12,7 +13,8 @@ export type Listing = {
   additional_information?:string|null;
   owner?:{full_name:string;email:string;phone:string|null};
 };
-export type ListingsPage = {items:Listing[];page:number;page_size:number;total:number;total_pages:number};
+export type ListingCounts = {all:number} & Record<ListingStatus,number>;
+export type ListingsPage = {items:Listing[];page:number;page_size:number;total:number;total_pages:number;counts:ListingCounts};
 export type ListingOptions = {occupancy_type:string[];ownership_type:string[];property_type:string[];property_subtype:string[];facilities:string[];document_type:string[];state:string[]};
 export async function listingsRequest<T>(path:string, options:{method?:string;body?:FormData|object;signal?:AbortSignal}={},attempt=0):Promise<T> {
   const base=process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -31,7 +33,7 @@ export function formatMoney(minor:number,fraction=true) {
   return `₦${whole.toLocaleString("en-NG")}${fraction?`.${cents}`:""}`;
 }
 export function commaInput(value:string) {const [whole="",fraction]=value.split(".");return whole.replace(/\B(?=(\d{3})+(?!\d))/g,",")+(fraction===undefined?"":`.${fraction}`);}
-export function statusLabel(value:string) {return value.charAt(0)+value.slice(1).toLowerCase();}
+export function statusLabel(value:string) {return value==="LISTED"?"Approved":value.charAt(0)+value.slice(1).toLowerCase();}
 export function listingDate(value:string|null) {return value?new Date(value).toLocaleDateString("en-GB"):"-";}
 
 export type MandateDocument = {

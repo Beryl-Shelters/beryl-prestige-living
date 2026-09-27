@@ -435,7 +435,7 @@ function ListingWizard({
           aria-busy={pending}
         >
           <div className="listings-title">
-            <h1>{savedListing || listing ? "Edit Listing" : "List a Property"}</h1>
+            <h1>{savedListing || listing ? "Edit Listing" : "Create Listing"}</h1>
           </div>
 
           <div className="listing-editor-columns">

@@ -2,12 +2,12 @@ import { createClient } from "@supabase/supabase-js";
 import type { AuthConfig } from "../auth/config.js";
 import type { RecentListing } from "../dashboard/repository.js";
 import { AuthError } from "../auth/errors.js";
-import type { Listing, ListingContent, ListingDocument, ListingImage, ListingQuery, MandateContent, MandateDocumentInput, MediaAsset, SalesMandate } from "./model.js";
+import type { Listing, ListingContent, ListingCounts, ListingDocument, ListingImage, ListingQuery, ListingStatus, MandateContent, MandateDocumentInput, MediaAsset, SalesMandate } from "./model.js";
 
 export type Mutation = { action: "CREATE" | "EDIT" | "DELETE" | "REQUEST_APPROVAL" | "UNLIST" | "DOCUMENTS"; id: string | null; version: number | null; content?: ListingContent; images?: ListingImage[]; documents?: Omit<ListingDocument, "id" | "batch_id">[] };
 export type CleanupAsset = Pick<MediaAsset, "public_id" | "resource_type" | "delivery_type">;
 export interface ListingsRepository {
-  list(owner: string, query: ListingQuery): Promise<{ items: Listing[]; total: number }>;
+  list(owner: string, query: ListingQuery): Promise<{ items: Listing[]; total: number; counts: ListingCounts }>;
   get(owner: string, id: string): Promise<Listing | null>;
   mutate(owner: string, value: Mutation): Promise<string>;
   recent(owner: string): Promise<RecentListing[]>;
@@ -19,6 +19,7 @@ export interface ListingsRepository {
   mandate(owner: string, id: string): Promise<SalesMandate | null>;
   mutateMandate(owner: string, listingId: string, content: MandateContent, documents: MandateDocumentInput[]): Promise<string>;
   submit(owner: string, listingId: string): Promise<string>;
+  unlist(owner: string, listingId: string, version: number): Promise<string>;
 }
 export const notFound = () => new AuthError(404, "LISTING_NOT_FOUND", "Listing not found.");
 export const conflict = () => new AuthError(409, "LISTING_CHANGED", "This listing has changed. Refresh and try again.");
@@ -41,9 +42,23 @@ export class SupabaseListingsRepository implements ListingsRepository {
     if (query.status) request = request.eq("listing_status", query.status);
     // Quoted PostgREST values prevent filter grammar injection; wildcard input
     // is escaped, so search is literal rather than an arbitrary filter language.
-    if (query.q) { const value = query.q.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[%_*]/g, c => `\\${c}`); request = request.or(`title.ilike."%${value}%",listing_code.ilike."%${value}%"`); }
+    const search = query.q ? query.q.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[%_*]/g, c => `\\${c}`) : "";
+    const searchFilter = search ? `title.ilike."%${search}%",listing_code.ilike."%${search}%",location.ilike."%${search}%",state.ilike."%${search}%",city.ilike."%${search}%"` : "";
+    if (searchFilter) request = request.or(searchFilter);
     const { data, count, error } = await request.order("created_at", { ascending: false }).order("id", { ascending: false }).range((query.page-1)*query.page_size, query.page*query.page_size-1);
-    check(error); return { items: (data as unknown as Listing[]).map(ordered), total: count ?? 0 };
+    check(error);
+    const countStatus = async (status?: ListingStatus) => {
+      let countRequest = this.db.from("customer_listings").select("id", { count: "exact", head: true }).eq("user_id", owner);
+      if (searchFilter) countRequest = countRequest.or(searchFilter);
+      if (status) countRequest = countRequest.eq("listing_status", status);
+      const result = await countRequest;
+      check(result.error);
+      return result.count ?? 0;
+    };
+    const [all, UNLISTED, PENDING, LISTED, REJECTED] = await Promise.all([
+      countStatus(), countStatus("UNLISTED"), countStatus("PENDING"), countStatus("LISTED"), countStatus("REJECTED"),
+    ]);
+    return { items: (data as unknown as Listing[]).map(ordered), total: count ?? 0, counts: { all, UNLISTED, PENDING, LISTED, REJECTED } };
   }
   async get(owner: string, id: string) {
     const { data, error } = await this.db.from("customer_listings").select(selection).eq("user_id", owner).eq("id", id).maybeSingle();
@@ -97,5 +112,9 @@ export class SupabaseListingsRepository implements ListingsRepository {
   async submit(owner: string, listingId: string) {
     const { error } = await this.db.rpc("submit_customer_listing", { p_owner: owner, p_id: listingId });
     check(error); return listingId;
+  }
+  async unlist(owner: string, listingId: string, version: number) {
+    const { data, error } = await this.db.rpc("unlist_customer_listing", { p_owner: owner, p_id: listingId, p_version: version });
+    check(error); return data as string;
   }
 }

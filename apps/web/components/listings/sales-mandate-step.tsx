@@ -18,6 +18,7 @@ import {
 import { fetchSettingsProfile } from "../../lib/settings-api";
 import { useListingError } from "./use-listing-request";
 import { SignatureCanvas, type SignatureCanvasHandle } from "./signature-canvas";
+import { ResubmitConfirmation } from "./listing-overlays";
 
 type DocumentItem = {
   id: string;
@@ -49,6 +50,7 @@ export function SalesMandateStep({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
+  const [confirmResubmission, setConfirmResubmission] = useState(false);
 
   // Existing saved mandate
   const [existingMandate, setExistingMandate] = useState<SalesMandate | null>(null);
@@ -455,6 +457,14 @@ export function SalesMandateStep({
       if (isFinalSubmit) setSubmitting(false);
       else setSavingDraft(false);
     }
+  }
+
+  function requestFinalSubmit() {
+    if (listing.listing_status === "REJECTED") {
+      if (validateForm()) setConfirmResubmission(true);
+      return;
+    }
+    void performSaveOrSubmit(true);
   }
 
   if (loading) {
@@ -925,7 +935,7 @@ export function SalesMandateStep({
               type="button"
               className="button button-primary mandate-submit-btn"
               disabled={submitting || savingDraft}
-              onClick={() => void performSaveOrSubmit(true)}
+              onClick={requestFinalSubmit}
             >
               {submitting ? "Submitting Mandate..." : "Submit Mandate"}
             </button>
@@ -957,6 +967,7 @@ export function SalesMandateStep({
           </div>
         </section>
       </div>
+      {confirmResubmission && <ResubmitConfirmation pending={submitting} close={() => setConfirmResubmission(false)} confirm={() => void performSaveOrSubmit(true).finally(() => setConfirmResubmission(false))} />}
     </div>
   );
 }

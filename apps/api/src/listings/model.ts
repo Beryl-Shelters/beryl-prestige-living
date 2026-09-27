@@ -42,7 +42,8 @@ export function parseContent(value: unknown): ListingContent {
 export type MediaAsset = { public_id: string; resource_type: "image" | "raw"; delivery_type: "upload" | "authenticated"; url: string; mime_type: string; size_bytes: number };
 export type ListingImage = MediaAsset & { id: string; sort_order: number };
 export type ListingDocument = MediaAsset & { id: string; batch_id: string; title: string; document_type: string; description: string; sort_order: number };
-export type Listing = ListingContent & { id: string; user_id: string; listing_code: string; listing_status: ListingStatus; property_status: "AVAILABLE"; toilet_count: number | null; version: number; created_at: string; updated_at: string; requested_at: string | null; listed_at: string | null; images: ListingImage[]; documents: ListingDocument[] };
+export type Listing = ListingContent & { id: string; user_id: string; listing_code: string; listing_status: ListingStatus; property_status: "AVAILABLE"; toilet_count: number | null; version: number; created_at: string; updated_at: string; requested_at: string | null; listed_at: string | null; rejection_reason: string | null; rejected_at: string | null; images: ListingImage[]; documents: ListingDocument[] };
+export type ListingCounts = { all: number } & Record<ListingStatus, number>;
 export const listingQuery = z.object({ q: z.string().trim().max(100).default(""), status: z.enum(statuses).optional(), page: z.coerce.number().int().min(1).max(100000).default(1), page_size: z.coerce.number().int().min(1).max(50).default(PAGE_SIZE) }).strict();
 export type ListingQuery = z.output<typeof listingQuery>;
 export const versionInput = z.object({ version: z.number().int().positive() }).strict();
@@ -106,6 +107,8 @@ export function presentListing(listing: Listing, webOrigin: string) {
   const { user_id: _owner, images, documents, ...fields } = listing;
   void _owner;
   return { ...fields,
+    rejection_reason: listing.listing_status === "REJECTED" ? listing.rejection_reason ?? null : null,
+    rejected_at: listing.listing_status === "REJECTED" ? listing.rejected_at ?? null : null,
     registered_title_document: listing.registered_title_document ?? null,
     additional_information: listing.additional_information ?? null,
     images: images.map(({ id, url, sort_order }) => ({ id, url, sort_order })),

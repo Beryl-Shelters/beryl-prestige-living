@@ -67,8 +67,9 @@ export class ListingsService {
     const current=await this.own(owner,id);
     if(current.version!==version) throw conflict();
     if(action==="REQUEST_APPROVAL" && (current.listing_status!=="UNLISTED" || !current.images.length)) throw new AuthError(409,"LISTING_NOT_READY","Complete this unlisted property before requesting approval.");
-    if(action==="UNLIST" && current.listing_status!=="PENDING") throw new AuthError(409,"LISTING_NOT_READY","Only pending listings can be unlisted in this release.");
-    await this.repository.mutate(owner,{id,version,action});
+    if(action==="UNLIST" && current.listing_status!=="LISTED") throw new AuthError(409,"LISTING_NOT_READY","Only approved listings can be unlisted.");
+    if(action==="UNLIST") await this.repository.unlist(owner,id,version);
+    else await this.repository.mutate(owner,{id,version,action});
     await this.cleanup(owner,action==="DELETE"?[...current.images,...current.documents]:[]);
     return action==="DELETE"?null:this.own(owner,id);
   }

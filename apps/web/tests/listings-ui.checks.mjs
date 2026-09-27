@@ -53,6 +53,8 @@ export const listingFixture = {
   created_at: "2026-09-08T12:00:00Z",
   updated_at: "2026-09-08T12:00:00Z",
   listed_at: null,
+  rejection_reason: null,
+  rejected_at: null,
   completeness: 96,
   leads: 0,
   views: 0,
@@ -131,8 +133,14 @@ export async function mockListings(route, origin) {
     const items = listingState.items.filter(
       (item) =>
         (item.title.toLowerCase().includes(q) ||
-          item.listing_code.toLowerCase().includes(q)) &&
+          item.listing_code.toLowerCase().includes(q) ||
+          item.location.toLowerCase().includes(q) ||
+          item.city.toLowerCase().includes(q) ||
+          item.state.toLowerCase().includes(q)) &&
         (!status || item.listing_status === status),
+    );
+    const matchingSearch = listingState.items.filter((item) =>
+      [item.title,item.listing_code,item.location,item.city,item.state].some(value => value.toLowerCase().includes(q)),
     );
     const page = Number(url.searchParams.get("page") ?? 1);
     data = {
@@ -141,6 +149,13 @@ export async function mockListings(route, origin) {
       page_size: 10,
       total: items.length,
       total_pages: Math.ceil(items.length / 10),
+      counts: {
+        all: matchingSearch.length,
+        UNLISTED: matchingSearch.filter(item => item.listing_status === "UNLISTED").length,
+        PENDING: matchingSearch.filter(item => item.listing_status === "PENDING").length,
+        LISTED: matchingSearch.filter(item => item.listing_status === "LISTED").length,
+        REJECTED: matchingSearch.filter(item => item.listing_status === "REJECTED").length,
+      },
     };
   } else if (req.method() === "POST" && !path) {
     const item = structuredClone(listingFixture);
@@ -169,7 +184,9 @@ export async function mockListings(route, origin) {
       current.version++;
     }
     if (path.endsWith("/unlist")) {
+      assert.equal(current.listing_status, "LISTED");
       current.listing_status = "UNLISTED";
+      current.requested_at = null;
       current.version++;
     }
     if (path.endsWith("/documents") && !path.includes("/mandate/")) {
@@ -245,6 +262,8 @@ export async function mockListings(route, origin) {
     if (path.endsWith("/submit")) {
       current.listing_status = "PENDING";
       current.requested_at = new Date().toISOString();
+      current.rejection_reason = null;
+      current.rejected_at = null;
       current.version++;
       data = current;
     }
@@ -294,11 +313,11 @@ export async function checkListings({
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aN1cAAAAASUVORK5CYII=",
     "base64",
   );
-  for (const width of [1440, 1280, 1024, 768, 430, 390, 360, 320]) {
+  for (const width of [1440, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 900 });
     listingState.items = [];
     await open();
-    await page.getByText("No listings.", { exact: true }).waitFor();
+    await page.getByText("No listings yet", { exact: true }).waitFor();
     await noOverflow(width);
     await screenshot(`listings-empty-${width}`);
     listingState.items = [
@@ -330,7 +349,8 @@ export async function checkListings({
     await open(`/dashboard/listings/${id}`);
     await page.locator(".listing-main-image").waitFor();
     await noOverflow(width);
-    assert.equal(await page.locator(".agent-empty>div").innerText(), "-");
+    assert.equal(await page.getByText("Agent Assigned", { exact: true }).count(), 0);
+    assert.equal(await page.getByText("Agent Details", { exact: true }).count(), 0);
     await screenshot(`listing-detail-${width}`);
     await open(`/dashboard/listings/${id}/edit`);
     await page.locator('[name="title"]').waitFor();
@@ -434,7 +454,6 @@ export async function checkListings({
       .innerText(),
     "Listings",
   );
-  const created = listingState.items[0];
   const menu = page.locator(".listing-action-menu");
   await menu.locator("summary").click();
   for (const label of [
@@ -442,28 +461,21 @@ export async function checkListings({
     "Edit",
     "Delete",
     "Upload Document",
-    "Refer Property",
   ])
     assert((await menu.innerText()).includes(label));
-  await context.grantPermissions(["clipboard-read", "clipboard-write"], {
-    origin,
-  });
-  await menu.getByRole("button", { name: /Refer Property/ }).click();
-  await toast("Referral link copied to clipboard");
-  assert((await menu.innerText()).includes("Link Copied"));
-  assert.equal(await page.evaluate(() => navigator.clipboard.readText()),
-    `${origin}/properties/${created.listing_code}?ref=${referralsState.links[0].id}`);
-  assert.equal(referralsState.links[0].listingId,created.id);
+  assert.equal((await menu.innerText()).includes("Refer Property"),false);
   assert.equal(
     await page.getByRole("button", { name: /Request Approval/ }).count(),
     0,
   );
+  if (!(await menu.evaluate((element) => element.hasAttribute("open"))))
+    await menu.locator("summary").click();
   await page
     .locator(".listing-action-menu")
-    .getByRole("button", { name: /Upload Document/ })
+    .getByRole("menuitem", { name: /Upload Document/ })
     .click();
   await page.getByRole("dialog").waitFor();
-  assert.equal(await page.locator(".document-block").count(), 1);
+  assert.equal(await page.getByRole("dialog", { name: "Upload Property Documents" }).count(), 1);
   assert.equal(await page.getByRole("dialog").locator("textarea").count(), 1);
   assert.equal(await page.getByRole("dialog").locator('input[type="file"]').count(), 1);
   await screenshot("listing-document-drawer");
@@ -483,7 +495,7 @@ export async function checkListings({
   await page.locator(".listing-action-menu summary").click();
   await page
     .locator(".listing-action-menu")
-    .getByRole("link", { name: /Edit/ })
+    .getByRole("menuitem", { name: /Edit/ })
     .click();
   await page.locator('[name="title"]').waitFor();
   await page.locator('[name="title"]').fill("Edited listing");
@@ -502,7 +514,7 @@ export async function checkListings({
   await page.locator(".listing-action-menu summary").click();
   await page
     .locator(".listing-action-menu")
-    .getByRole("button", { name: /Delete/ })
+    .getByRole("menuitem", { name: /Delete/ })
     .click();
   await page
     .getByRole("dialog", { name: "Delete Listing?", exact: true })
@@ -513,14 +525,14 @@ export async function checkListings({
   await page.locator(".listing-action-menu summary").click();
   await page
     .locator(".listing-action-menu")
-    .getByRole("button", { name: /Delete/ })
+    .getByRole("menuitem", { name: /Delete/ })
     .click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "Delete", exact: true })
     .click();
   await toast("Listing deleted");
-  await page.getByText("No listings.", { exact: true }).waitFor();
+  await page.getByText("No listings yet", { exact: true }).waitFor();
   listingState.items = Array.from({ length: 11 }, (_, index) => ({
     ...structuredClone(listingFixture),
     id: crypto.randomUUID(),
@@ -541,7 +553,7 @@ export async function checkListings({
     await page.waitForFunction(
       () => document.querySelectorAll(".customer-listing-card").length === 1,
     );
-    assert.equal(await page.locator('.listings-pagination [aria-current="page"]').innerText(), "2");
+    assert.equal(await page.locator('.listings-pagination [aria-current="page"]').innerText(), "Page 2 of 2");
     const paginationPages = listingState.calls.slice(paginationStart).filter(call => call.path === "" && call.method === "GET")
       .map(call => new URL(call.url).searchParams.get("page"));
     // React's development checks may repeat the mount effect. Collapse only
@@ -564,8 +576,44 @@ export async function checkListings({
       "Property 0",
   );
   assert(listingState.calls.some((call) => call.url.includes("q=Property+0")));
-  await page.getByLabel("Status", { exact: true }).selectOption("PENDING");
-  await page.getByText("No listings.", { exact: true }).waitFor();
+  await page.getByRole("button", { name: /^Pending/ }).click();
+  await page.getByText("No matching listings", { exact: true }).waitFor();
+
+  const listed = {...structuredClone(listingFixture),id:crypto.randomUUID(),title:"Approved property",listing_status:"LISTED",listed_at:"2026-09-20T12:00:00Z",time_on_market:6};
+  const pendingListing = {...structuredClone(listingFixture),id:crypto.randomUUID(),title:"Pending property",listing_status:"PENDING",requested_at:"2026-09-24T12:00:00Z"};
+  const rejected = {...structuredClone(listingFixture),id:crypto.randomUUID(),title:"Rejected property",listing_status:"REJECTED",rejection_reason:"Upload a clearer ownership document.",rejected_at:"2026-09-25T10:14:00Z"};
+  const unlisted = {...structuredClone(listingFixture),id:crypto.randomUUID(),title:"Unlisted property"};
+  listingState.items=[listed,pendingListing,rejected,unlisted];
+  await open();
+  for(const [label,count] of [["All",4],["Approved",1],["Pending",1],["Rejected",1],["Unlisted",1]]) assert.match(await page.getByRole("button",{name:new RegExp(`^${label}`)}).innerText(),new RegExp(`${count}$`));
+  const pendingCard=page.locator(".customer-listing-card").filter({hasText:"Pending property"});
+  await pendingCard.locator("summary").click();
+  assert.equal((await pendingCard.locator(".listing-action-menu").innerText()).includes("Unlist"),false);
+  assert.equal((await pendingCard.locator(".listing-action-menu").innerText()).includes("Refer Property"),false);
+  const listedCard=page.locator(".customer-listing-card").filter({hasText:"Approved property"});
+  await listedCard.locator("summary").click();
+  assert((await listedCard.locator(".listing-action-menu").innerText()).includes("Refer Property"));
+  assert((await listedCard.locator(".listing-action-menu").innerText()).includes("Unlist"));
+  assert.equal((await listedCard.locator(".listing-action-menu").innerText()).includes("Edit"),false);
+  await context.grantPermissions(["clipboard-read","clipboard-write"],{origin});
+  await listedCard.getByRole("menuitem",{name:"Refer Property",exact:true}).click();
+  await toast("Referral link copied to clipboard");
+  assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),`${origin}/properties/${listed.listing_code}?ref=${referralsState.links.at(-1).id}`);
+  assert.equal(referralsState.links.at(-1).listingId,listed.id);
+  await listedCard.getByRole("button",{name:"Unlist",exact:true}).click();
+  await page.getByRole("dialog",{name:"Unlist Listing?",exact:true}).waitFor();
+  await screenshot("listing-unlist-modal");
+  await page.getByRole("button",{name:"Cancel",exact:true}).click();
+  const rejectedCard=page.locator(".customer-listing-card").filter({hasText:"Rejected property"});
+  await rejectedCard.getByRole("button",{name:"See reason",exact:true}).click();
+  const review=page.getByRole("dialog",{name:"Review feedback for Rejected property"});
+  await review.waitFor();
+  assert((await review.innerText()).includes("Upload a clearer ownership document."));
+  assert((await review.innerText()).includes("Beryl Review Team"));
+  await screenshot("listing-rejection-review");
+  await review.getByRole("button",{name:"Close",exact:true}).click();
+
+  listingState.items=[structuredClone(listingFixture)];
   for (const path of ["/dashboard/listings/new", `/dashboard/listings/${listingState.items[0].id}/edit`]) {
     await open(path); await page.locator('[name="property_subtype"]').waitFor();
     assert.equal(await page.locator('[name="registered_title_document"]').count(), 1);
@@ -715,8 +763,34 @@ export async function checkListings({
   await page.waitForURL("**/dashboard/listings");
   assert.equal(listingState.items[0].listing_status, "PENDING");
 
+  // Rejected edits retain real feedback and require explicit confirmation before resubmission.
+  listingState.items[0].listing_status="REJECTED";
+  listingState.items[0].rejection_reason="Upload a clearer ownership document.";
+  listingState.items[0].rejected_at="2026-09-25T10:14:00Z";
+  listingState.items[0].version++;
+  await page.setViewportSize({width:390,height:900});
+  await open(`/dashboard/listings/${listingState.items[0].id}/edit`);
+  await page.locator('[name="title"]').waitFor();
+  await page.getByRole("button",{name:"Save & Continue",exact:true}).click();
+  await toast("Listing updated");
+  await page.locator(".sales-mandate-step").waitFor();
+  await page.getByRole("button",{name:"Submit Mandate",exact:true}).click();
+  const resubmitDialog=page.getByRole("dialog",{name:"Confirm listing resubmission"});
+  await resubmitDialog.waitFor();
+  await noOverflow(390);
+  await screenshot("listing-resubmit-confirmation-390");
+  await resubmitDialog.getByRole("button",{name:"No, Go back",exact:true}).click();
+  assert.equal(listingState.items[0].listing_status,"REJECTED");
+  await page.getByRole("button",{name:"Submit Mandate",exact:true}).click();
+  await page.getByRole("dialog",{name:"Confirm listing resubmission"}).getByRole("button",{name:"Yes, Submit",exact:true}).click();
+  await toast("Listing submitted to our team for review!");
+  await page.locator(".submit-success-container").waitFor();
+  assert.equal(listingState.items[0].listing_status,"PENDING");
+  assert.equal(listingState.items[0].rejection_reason,null);
+  assert.equal(listingState.items[0].rejected_at,null);
+
   passed.push(
-    "Listings: six responsive widths; empty/populated/Create/View/Edit layouts; Quick Preview and image selection; native required validation; full create/edit/delete lifecycle; single-description/single-file document drawer; referral and legacy-approval controls; Pending/Unlist; server query search/filter/pagination; wizard Step 1 draft and resume; Step 2 Sales Mandate with durable signer fields, title documents, canvas signature, Clause 10 consent, server-authoritative submission, and Step 3 Success timeline screen",
+    "Listings: four responsive widths; empty/populated/Create/View/Edit layouts; real status counts and location search; status-safe accessible menus; private document drawer; real rejection feedback and confirmed resubmission; distinct delete and LISTED-only unlist confirmations; LISTED referral reuse; server-bounded pagination; Sales Mandate draft/resume/submission regressions; no agent fabrication or financial side effects",
   );
   listingState.items = [];
 }

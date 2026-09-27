@@ -27,7 +27,7 @@ test("Listings API and actual local migration transactions",async t=>{
   await t.test("required fields, amounts, coordinates, owner and moderation spoofing are rejected before storage",async()=>{const count=f.uploaded.length;for(const change of [{title:""},{property_cost:"0"},{minimum_down_payment:"60000000"},{minimum_down_payment:"-1"},{property_cost:"1e9"},{longitude:181},{latitude:-91},{user_id:f.other},{listing_status:"LISTED"},{listing_status:"REJECTED"},{listing_code:"FORGED"},{completeness:100},{year_built:3000}])assert.equal((await f.request("","POST",listingForm({...validContent,...change}))).response.status,400);assert.equal(f.uploaded.length,count);});
   await t.test("foreign ownership is hidden for read, edit, delete, approval and uploads",async()=>{const asset={...f.uploaded[0]!,public_id:`foreign-${randomUUID()}`,id:randomUUID(),sort_order:0};await f.repository.journal(f.other,asset);const foreign=await f.repository.mutate(f.other,{action:"CREATE",id:null,version:null,content:parseContent(validContent),images:[asset]});for(const [path,method,body] of [[`/${foreign}`,"GET",undefined],[`/${foreign}`,"PATCH",listingForm(validContent,[],{version:1})],[`/${foreign}`,"DELETE",{version:1}],[`/${foreign}/request-approval`,"POST",{version:1}],[`/${foreign}/documents`,"POST",listingForm()]] as const)assert.equal((await f.request(path,method,body)).response.status,404);const list=await f.request();assert.deepEqual(list.payload.data.items.map((v:{id:string})=>v.id),[id]);assert.equal((await f.request("?user_id="+f.other)).response.status,400);});
   await t.test("editing retains omitted existing images; explicit removal keeps deterministic order",async()=>{const before=await f.repository.get(f.owner,id);const edited=await f.request(`/${id}`,"PATCH",listingForm({...validContent,title:"Updated property"},[],{version}));assert.equal(edited.response.status,200);version=edited.payload.data.version;assert.deepEqual(edited.payload.data.images.map((i:{id:string})=>i.id),before!.images.map(i=>i.id));assert.equal(edited.payload.data.listing_code,before!.listing_code);const keep=edited.payload.data.images[1].id;const removed=await f.request(`/${id}`,"PATCH",listingForm(validContent,[],{version,retained_images:[keep]}));assert.equal(removed.response.status,200);version=removed.payload.data.version;assert.equal(removed.payload.data.images.length,1);assert.equal(removed.payload.data.images[0].sort_order,0);assert(f.removed.includes(before!.images[0]!.public_id));});
-  await t.test("approval, stale version, pending edit protection and unlist transitions",async()=>{
+  await t.test("approval, stale version, pending protection and LISTED-only unlist transitions",async()=>{
     assert.equal((await f.request(`/${id}/request-approval`,"POST",{version})).response.status,409);
     const sigAsset=await f.storage.upload({field:"signature",mime:"image/png",bytes:imageBytes},planAsset({field:"signature",mime:"image/png",bytes:imageBytes},false,true));
     await f.repository.journal(f.owner,sigAsset);
@@ -39,18 +39,23 @@ test("Listings API and actual local migration transactions",async t=>{
     assert.equal(approved.payload.data.listing_status,"PENDING");
     assert(approved.payload.data.requested_at);
     version=approved.payload.data.version;
-    assert.equal((await f.request(`/${id}/unlist`,"POST",{version:version-1})).response.status,409);
+    assert.equal((await f.request(`/${id}/unlist`,"POST",{version})).response.status,409);
     assert.equal((await f.request(`/${id}`,"PATCH",listingForm(validContent,[],{version}))).response.status,409);
     assert.equal((await f.request(`/${id}/submit`,"POST",{})).response.status,409);
+    await f.db.query("update public.customer_listings set listing_status='LISTED',listed_at=clock_timestamp() where id=$1",[id]);
+    const publicListing=await f.request(`/${id}`);
+    assert.equal(publicListing.payload.data.listing_status,"LISTED");
+    version=publicListing.payload.data.version;
+    assert.equal((await f.request(`/${id}/unlist`,"POST",{version:version-1})).response.status,409);
     const unlisted=await f.request(`/${id}/unlist`,"POST",{version});
     assert.equal(unlisted.response.status,200);
     assert.equal(unlisted.payload.data.listing_status,"UNLISTED");
     version=unlisted.payload.data.version;
   });
   await t.test("private single-document upload and owner download",async()=>{const body=new FormData();body.set("data",JSON.stringify({title:"Ownership papers",document_type:"Ownership",description:"First document",version}));body.set("document",new Blob(["%PDF-1.4 test"],{type:"application/pdf"}),"../../unsafe.pdf");const result=await f.request(`/${id}/documents`,"POST",body);assert.equal(result.response.status,201,JSON.stringify(result.payload));version=result.payload.data.version;const docs=result.payload.data.documents;assert.equal(docs.length,1);assert.equal(docs[0].description,"First document");assert.equal(docs[0].sort_order,0);assert(!JSON.stringify(docs).includes("public_id"));assert(!JSON.stringify(docs).includes("url"));assert(f.uploaded.filter(v=>v.resource_type==="raw").every(v=>v.delivery_type==="authenticated"));const download=await f.request(`/${id}/documents/${docs[0].id}`);assert.equal(download.response.status,200);assert.match(download.response.headers.get("content-disposition")??"",/^attachment;/);});
-  await t.test("search, status, pagination and Dashboard recent listings are owner scoped",async()=>{const listed=await f.request("?q=Duplex&page_size=1");assert.equal(listed.payload.data.total,1);assert.equal(listed.payload.data.page_size,1);assert.equal((await f.request("?status=PENDING")).payload.data.total,0);const code=(await f.repository.get(f.owner,id))!.listing_code;assert.equal((await f.request(`?q=${code}`)).payload.data.total,1);assert.equal((await f.request("?page=2&page_size=1")).payload.data.items.length,0);const dashboard=await f.request("/api/v1/dashboard/overview");assert.deepEqual(dashboard.payload.data.recent_property_listings.map((v:{id:string})=>v.id),[id]);assert.equal(dashboard.payload.data.summary.total_investments,0);});
+  await t.test("search, status counts, pagination and Dashboard recent listings are owner scoped",async()=>{const listed=await f.request("?q=Duplex&page_size=1");assert.equal(listed.payload.data.total,1);assert.equal(listed.payload.data.page_size,1);assert.deepEqual(listed.payload.data.counts,{all:1,UNLISTED:1,PENDING:0,LISTED:0,REJECTED:0});assert.equal((await f.request("?q=Ikoyi")).payload.data.total,1);assert.equal((await f.request("?q=Lagos")).payload.data.total,1);assert.equal((await f.request("?status=PENDING")).payload.data.total,0);const code=(await f.repository.get(f.owner,id))!.listing_code;assert.equal((await f.request(`?q=${code}`)).payload.data.total,1);assert.equal((await f.request("?page=2&page_size=1")).payload.data.items.length,0);const dashboard=await f.request("/api/v1/dashboard/overview");assert.deepEqual(dashboard.payload.data.recent_property_listings.map((v:{id:string})=>v.id),[id]);assert.equal(dashboard.payload.data.summary.total_investments,0);});
   await t.test("hard deletion cascades rows; provider failure leaves durable cleanup without failing deletion",async()=>{f.failures.remove=true;const result=await f.request(`/${id}`,"DELETE",{version});assert.equal(result.response.status,200);assert.equal((await f.request(`/${id}`)).response.status,404);assert.equal((await f.db.query("select id from public.customer_listing_documents where listing_id=$1",[id])).rows.length,0);const queued=await f.db.query("select * from public.customer_listing_media_cleanup where user_id=$1",[f.owner]);assert.equal(queued.rows.length,4);await f.db.query("update public.customer_listing_media_cleanup set created_at=clock_timestamp()-interval '2 hours' where user_id=$1",[f.owner]);f.failures.remove=false;await new ListingsService(f.repository,f.storage).cleanup(f.owner);assert.equal((await f.db.query("select * from public.customer_listing_media_cleanup where user_id=$1",[f.owner])).rows.length,0);});
-  await t.test("SQL rollback, immutable identity, constraints, RLS and service-only function permissions",async()=>{const content=parseContent(validContent);await assert.rejects(()=>f.repository.mutate(f.owner,{action:"CREATE",id:null,version:null,content,images:[]}));assert.equal((await f.repository.list(f.owner,{q:"",page:1,page_size:10})).total,0);const {rows}=await f.db.query<{enabled:boolean;table_name:string}>("select relname as table_name,relrowsecurity as enabled from pg_class where relname in ('customer_listings','customer_listing_images','customer_listing_documents','customer_listing_media_cleanup','sales_mandates','sales_mandate_documents')");assert.equal(rows.length,6);assert(rows.every(r=>r.enabled));for(const role of ["anon","authenticated"]){for(const table of ["customer_listings","sales_mandates","sales_mandate_documents"]){const privilege=await f.db.query<{allowed:boolean}>("select has_table_privilege($1,$2,'select') as allowed",[role,`public.${table}`]);assert.equal(privilege.rows[0]!.allowed,false);}for(const signature of ["public.mutate_customer_listing(uuid,uuid,text,integer,jsonb,jsonb,jsonb)","public.mutate_sales_mandate(uuid,uuid,jsonb,jsonb)","public.submit_customer_listing(uuid,uuid)"]){const execute=await f.db.query<{allowed:boolean}>("select has_function_privilege($1,$2,'execute') as allowed",[role,signature]);assert.equal(execute.rows[0]!.allowed,false);}}const foreign=(await f.repository.list(f.other,{q:"",page:1,page_size:10})).items[0]!;await assert.rejects(()=>f.db.query("update public.customer_listings set listing_code='FORGED' where id=$1",[foreign.id]));await assert.rejects(()=>f.db.query("update public.customer_listings set minimum_down_payment_minor=property_cost_minor+1 where id=$1",[foreign.id]));});
+  await t.test("SQL rollback, immutable identity, lifecycle constraints, RLS and service-only function permissions",async()=>{const content=parseContent(validContent);await assert.rejects(()=>f.repository.mutate(f.owner,{action:"CREATE",id:null,version:null,content,images:[]}));assert.equal((await f.repository.list(f.owner,{q:"",page:1,page_size:10})).total,0);const {rows}=await f.db.query<{enabled:boolean;table_name:string}>("select relname as table_name,relrowsecurity as enabled from pg_class where relname in ('customer_listings','customer_listing_images','customer_listing_documents','customer_listing_media_cleanup','sales_mandates','sales_mandate_documents')");assert.equal(rows.length,6);assert(rows.every(r=>r.enabled));for(const role of ["anon","authenticated"]){for(const table of ["customer_listings","sales_mandates","sales_mandate_documents"]){const privilege=await f.db.query<{allowed:boolean}>("select has_table_privilege($1,$2,'select') as allowed",[role,`public.${table}`]);assert.equal(privilege.rows[0]!.allowed,false);}for(const signature of ["public.mutate_customer_listing(uuid,uuid,text,integer,jsonb,jsonb,jsonb)","public.mutate_sales_mandate(uuid,uuid,jsonb,jsonb)","public.submit_customer_listing(uuid,uuid)","public.unlist_customer_listing(uuid,uuid,integer)"]){const execute=await f.db.query<{allowed:boolean}>("select has_function_privilege($1,$2,'execute') as allowed",[role,signature]);assert.equal(execute.rows[0]!.allowed,false);}}const foreign=(await f.repository.list(f.other,{q:"",page:1,page_size:10})).items[0]!;await assert.rejects(()=>f.db.query("update public.customer_listings set listing_code='FORGED' where id=$1",[foreign.id]));await assert.rejects(()=>f.db.query("update public.customer_listings set minimum_down_payment_minor=property_cost_minor+1 where id=$1",[foreign.id]));});
 });
 
 test("listing completeness and exact money are deterministic, bounded and not browser-authoritative",()=>{assert.equal(minorUnits("9999999999999.99"),999999999999999);assert.equal(minorUnits("0.01"),1);assert.throws(()=>minorUnits("1.001"));const listing={...parseContent(validContent),images:[{}],facilities:[]} as Parameters<typeof completeness>[0];assert.equal(completeness(listing),80);assert.equal(completeness({...listing,units:2,land_area:100,year_built:2020,longitude:0,latitude:0,facilities:["CCTV"]}),100);});
@@ -234,10 +239,11 @@ test("sales mandate uploads, submission constraints, privacy, and cleanup", asyn
   assert.equal(downloadDoc.response.status, 200);
 
   // 6. Signature replacement order and compensation
-  // Unlist property first to allow edits
-  const unlistReq = await f.request(`/${id}/unlist`, "POST", { version: submit.payload.data.version });
+  // Admin approval makes the property public; only then may the owner unlist it.
+  await f.db.query("update public.customer_listings set listing_status='LISTED',listed_at=clock_timestamp() where id=$1", [id]);
+  const listedForEdit = await f.request(`/${id}`, "GET");
+  const unlistReq = await f.request(`/${id}/unlist`, "POST", { version: listedForEdit.payload.data.version });
   assert.equal(unlistReq.response.status, 200);
-  const unlistedVersion = unlistReq.payload.data.version;
 
   // Upload new signature
   const newSigBody = new FormData();
@@ -322,13 +328,17 @@ test("sales mandate uploads, submission constraints, privacy, and cleanup", asyn
   assert.equal((await f.repository.mandate(f.owner, id))!.signature_public_id, newSigAsset.public_id);
 
   // 7. REJECTED resubmission flow
-  // Simulate admin rejection in DB
-  await f.db.query("update public.customer_listings set listing_status='REJECTED' where id=$1", [id]);
+  // Simulate a submitted listing and a real Admin rejection in DB.
+  const submittedAgain = await f.request(`/${id}/submit`, "POST", {});
+  assert.equal(submittedAgain.response.status, 201);
+  await f.db.query("update public.customer_listings set listing_status='REJECTED',rejection_reason='Upload a clearer ownership document.',rejected_at=clock_timestamp() where id=$1", [id]);
   const rejectedListing = await f.request(`/${id}`, "GET");
   assert.equal(rejectedListing.payload.data.listing_status, "REJECTED");
+  assert.equal(rejectedListing.payload.data.rejection_reason, "Upload a clearer ownership document.");
+  assert.ok(rejectedListing.payload.data.rejected_at);
 
   // Seller edits rejected listing
-  const editRejected = await f.request(`/${id}`, "PATCH", listingForm({ ...validContent, title: "Updated After Rejection" }, [], { version: unlistedVersion + 1 }));
+  const editRejected = await f.request(`/${id}`, "PATCH", listingForm({ ...validContent, title: "Updated After Rejection" }, [], { version: rejectedListing.payload.data.version }));
   assert.equal(editRejected.response.status, 200);
   assert.equal(editRejected.payload.data.title, "Updated After Rejection");
 
@@ -336,4 +346,6 @@ test("sales mandate uploads, submission constraints, privacy, and cleanup", asyn
   const resubmit = await f.request(`/${id}/submit`, "POST", {});
   assert.equal(resubmit.response.status, 201);
   assert.equal(resubmit.payload.data.listing_status, "PENDING");
+  assert.equal(resubmit.payload.data.rejection_reason, null);
+  assert.equal(resubmit.payload.data.rejected_at, null);
 });
