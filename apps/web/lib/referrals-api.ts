@@ -1,8 +1,8 @@
 import { AuthApiError } from "./auth-api";
 
-export type ReferralItem={id:string;referralType:"PROPERTY"|"SELLER";budget:number|null;buyerEntityType:string|null;ownershipType:string|null;contactMethod:string|null;propertyCode:string|null;earnings:number;status:string};
+export type ReferralItem={id:string;referralType:"PROPERTY"|"SELLER";saleAmount:number;propertyCode:string;earnings:number;status:"COMPLETED";completedAt:string};
 export type ReferralPage={program:{commissionRateBasisPoints:number};summary:{availableBalance:number;totalEarnings:number;referrals:number;propertiesSold:number};items:ReferralItem[];page:number;pageSize:number;total:number;totalPages:number};
-export type CreatedReferral=Pick<ReferralItem,"id"|"referralType"|"propertyCode">&{referralUrl:string};
+export type CreatedReferral={id:string;referralType:"PROPERTY"|"SELLER";propertyCode:string|null;referralUrl:string};
 
 const base=()=>{const value=process.env.NEXT_PUBLIC_API_BASE_URL;if(!value)throw new AuthApiError("CONFIGURATION_UNAVAILABLE","Dashboard services are not configured. Please try again later.");return value.replace(/\/$/,"");};
 async function parse<T>(response:Response){let payload:{success:boolean;data:T;error?:{code:string;message:string}};try{payload=await response.json();}catch{throw new AuthApiError("INVALID_RESPONSE","Referrals are temporarily unavailable. Please try again.");}if(!response.ok||!payload.success)throw new AuthApiError(payload.error?.code??"REFERRALS_UNAVAILABLE",payload.error?.message??"Referrals are temporarily unavailable. Please try again.",response.status);return payload.data;}
