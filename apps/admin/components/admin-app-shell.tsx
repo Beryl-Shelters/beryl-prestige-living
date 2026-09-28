@@ -91,6 +91,7 @@ export function AdminAppShell({ children }: { children: ReactNode }) {
   if (!admin) return null;
 
   const usersActive = pathname.startsWith("/dashboard/users");
+  const propertiesActive = pathname.startsWith("/dashboard/properties");
   return (
     <AdminAccountContext.Provider value={admin}>
       <div className="admin-app-shell">
@@ -113,9 +114,9 @@ export function AdminAppShell({ children }: { children: ReactNode }) {
             <Link className={usersActive ? "is-active" : ""} href="/dashboard/users" onClick={closeMenu}>
               <Icon kind="users"/><span>Users</span>
             </Link>
-            <span aria-disabled="true" title="Properties is coming next">
-              <Icon kind="properties"/><span>Properties</span><small>Soon</small>
-            </span>
+            <Link className={propertiesActive ? "is-active" : ""} href="/dashboard/properties" onClick={closeMenu}>
+              <Icon kind="properties"/><span>Properties</span>
+            </Link>
             <span aria-disabled="true" title="Leads is coming later">
               <Icon kind="leads"/><span>Leads</span><small>Soon</small>
             </span>

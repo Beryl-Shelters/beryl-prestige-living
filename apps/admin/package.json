@@ -9,7 +9,8 @@
     "type-check": "tsc --noEmit",
     "lint": "eslint .",
     "test:invitations": "node tests/admin-invitations-ui.checks.mjs",
-    "test:users": "node tests/admin-users-ui.checks.mjs"
+    "test:users": "node tests/admin-users-ui.checks.mjs",
+    "test:properties": "node tests/admin-properties-ui.checks.mjs"
   },
   "dependencies": {
     "next": "^16.3.0",

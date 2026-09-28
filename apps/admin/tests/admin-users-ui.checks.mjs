@@ -86,7 +86,7 @@ try {
   const navigation = page.getByRole("navigation", { name: "Admin navigation" });
   for (const name of ["Dashboard", "Users", "Properties", "Leads"]) assert.equal(await navigation.getByText(name, { exact: true }).count(), 1);
   for (const obsolete of ["My Listings", "Payments", "Subaccounts", "Save-as-you-earn", "Invest", "Refer & earn", "Support", "Settings"]) assert.equal(await navigation.getByText(obsolete, { exact: true }).count(), 0);
-  assert.equal(await navigation.getByText("Properties", { exact: true }).locator("..").getAttribute("aria-disabled"), "true");
+  assert.equal(await navigation.getByRole("link", { name: "Properties" }).getAttribute("href"), "/dashboard/properties");
   assert.equal(await page.getByRole("button", { name: "Invite Admin" }).isVisible(), true);
 
   await navigation.getByRole("link", { name: "Users" }).click();
