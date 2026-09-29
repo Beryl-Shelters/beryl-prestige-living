@@ -19,9 +19,9 @@ Status meanings: **Complete** is implemented and validated, **Foundation** is ro
 | Buy marketplace | `/buy` | `GET /api/v1/public/properties` | Public | `/(tabs)/properties` | 2 | Complete | Server search/filter/sort, state/FCT, subtype, 7+, conveniences, pull-to-refresh and paginated load-more. |
 | Property detail | `/buy/[propertyCode]` | `GET /api/v1/public/properties/:code` | Public | `/properties/[propertyCode]` | 2 | Complete | Public code deep link, gallery, metadata, location, save/share, mortgage connection and similar `LISTED` properties. |
 | Contextual help | Shared public UI | None | Public | Contextual native help | 3/5 | Planned | Mobile modal/sheet; no duplicate backend. |
-| Real Estate Inquiry | Property/contextual modal | `POST /api/v1/public/inquiries` | Public | Property detail inquiry | 3 | Planned | Existing public submission contract. |
-| Buy Assistance | `/buy/assistance` | `POST /api/v1/public/buy-assistance` | Public | Properties → Assistance | 3 | Planned | Optional PDF mandate requires document picker. |
-| Sell Assistance | `/sell/assistance` | `POST /api/v1/public/sell-assistance` | Public | List → Assistance | 3 | Planned | Images and authorization file require image/document pickers. |
+| Real Estate Inquiry | Property/contextual modal | `POST /api/v1/public/inquiries` | Public | Property detail inquiry | 3 | Complete | Contextual and standalone modal submitting to canonical inquiries API. |
+| Buy Assistance | `/buy/assistance` | `POST /api/v1/public/buy-assistance` | Public | Properties → Assistance | 3 | Complete | Customer advisory request with optional PDF mandate document picker. |
+| Sell Assistance | `/sell/assistance` | `POST /api/v1/public/sell-assistance` | Public | List → Assistance | 3 | Complete | Full assistance form with images and authorization document picker. |
 | Register | `/register` | `POST /api/v1/auth/register` | Public | `/(auth)/register` | 1 | Foundation | Uses canonical account/profile classifications. |
 | Email verification | `/verify-email` | context, verify and resend under `/api/v1/auth` | Challenge | `/(auth)/verify-email` | 1 | Foundation | Six-digit OTP; opaque verification token in SecureStore. |
 | Login | `/login` | `POST /api/v1/auth/login`; `GET /me` | Public/session | `/(auth)/login` | 1 | Foundation | Email or phone; same Beryl customer session rows as Web. |
@@ -32,15 +32,15 @@ Status meanings: **Complete** is implemented and validated, **Foundation** is ro
 | Saved Properties | `/saved-properties` | `GET/POST/DELETE /api/v1/saved-properties`; `/states` | Account | `/saved-properties` | 2 | Complete | Session owner only; search, pagination, empty/error states and shared bookmark state. |
 | Compare Properties | `/compare-properties*` | `GET /api/v1/saved-properties/compare` | Account | `/compare-properties` | 2 | Complete | In-session public-code selection, saved `LISTED` properties only, 2 minimum/3 maximum, horizontal native columns. |
 | Mortgage Calculator | `/mortgage-calculator` | None | Public | `/(tabs)/mortgage` | 2 | Complete | Exact Web fixed-rate formula, zero-interest branch, formatted money inputs and optional public property prefill; no financial mutation. |
-| Property Viewing | Property detail | `POST /api/v1/public/property-viewings` | Public | Property detail | 3 | Planned | Request only; no property payment. |
+| Property Viewing | Property detail | `POST /api/v1/public/property-viewings` | Public | Property detail | 3 | Complete | Free physical viewing scheduling modal using canonical property code. |
 | Property sharing | Property detail | Canonical public code/URL; `POST /api/v1/dashboard/referrals/public-property` for authenticated referral links | Public/account | Native Share | 2 | Complete | Plain `/buy/[propertyCode]` HTTPS links; canonical API-produced referral URLs; no UUID/private media. |
-| Sell entry | `/sell` | Auth check | Mixed | `/(tabs)/list` | 3 | Foundation auth gate | Signed-out users go to customer login. |
-| Create/edit listing | `/dashboard/listings/new`, `/:id/edit` | `GET /options`; `POST/PATCH /api/v1/listings` | Account | List/Listing editor | 3 | Planned | Lifecycle remains `UNLISTED → PENDING → LISTED/REJECTED`. |
-| Listing photos | Listing editor | multipart listing endpoints | Account | Listing editor | 3 | Planned | Image picker/camera decision deferred; no permission requested in Phase 1. |
-| Listing documents | Listing editor | `/listings/:id/documents` and download | Account | Listing editor | 3 | Planned | Image/PDF document picker. |
-| Sales Mandate | Listing editor | `/listings/:id/mandate*` | Account | Listing editor | 3 | Planned | Documents, signature, mandate record and submit; no payment. |
-| Signature | Sales Mandate | `POST /listings/:id/mandate/signature` | Account | Listing editor | 3 | Planned | Future touch signature surface and private upload. |
-| Listing submission | Listing editor | `POST /listings/:id/submit` | Account | Listing editor | 3 | Planned | Canonical optimistic version checks. |
+| Sell entry | `/sell` | Auth check | Mixed | `/(tabs)/list` | 3 | Complete | Signed-out customer login gate; signed-in listing wizard entry. |
+| Create/edit listing | `/dashboard/listings/new`, `/:id/edit` | `GET /options`; `POST/PATCH /api/v1/listings` | Account | List/Listing editor | 3 | Complete | Step 1 property data + Step 2 Sales Mandate; lifecycle `UNLISTED → PENDING`. |
+| Listing photos | Listing editor | multipart listing endpoints | Account | Listing editor | 3 | Complete | Image library picker with 5MB cap and previews. |
+| Listing documents | Listing editor | `/listings/:id/documents` and download | Account | Listing editor | 3 | Complete | Registered title document uploads with PDF/image support. |
+| Sales Mandate | Listing editor | `/listings/:id/mandate*` | Account | Listing editor | 3 | Complete | Part 1 vendor details, Part 2 10 legal clauses, 5% commission, 180 days, consent. |
+| Signature | Sales Mandate | `POST /listings/:id/mandate/signature` | Account | Listing editor | 3 | Complete | Native touch drawing canvas with SVG path tracking and PNG export. |
+| Listing submission | Listing editor | `POST /listings/:id/submit` | Account | Listing editor | 3 | Complete | Optimistic lock submit transitioning UNLISTED to PENDING with success step. |
 | Listing rejection/resubmit | Dashboard listing | read/edit/request approval | Account | Listing detail/editor | 3/4 | Planned | Show canonical rejection reason; resubmit to `PENDING`. |
 | Dashboard Overview | `/dashboard` | `GET /api/v1/dashboard/overview` | Account | `/dashboard` | 4 | Foundation route | Real counts/recent activity only. |
 | Dashboard Listings | `/dashboard/listings*` | list/read/unlist/delete under `/api/v1/listings` | Account | `/dashboard/listings` | 4 | Foundation route | Search/filter and lifecycle actions from current API. |
@@ -94,13 +94,13 @@ Web used HTTP-only cookies plus exact-origin CSRF checks. React Native cannot re
 | Referral payout receipt | Admin-only Web flow | Excluded from Mobile | None |
 | Property/referral share | Canonical public URLs | React Native `Share` | Built-in abstraction; no permission |
 
-Phase 1 requests no camera, photo-library, document or biometric permissions.
+Phase 1 requested no media permissions. Phase 3 adds `expo-image-picker`, `expo-document-picker`, and `react-native-svg` for property media, title documents, and touch signature capture.
 
 ## Delivery phases
 
 1. **Foundation (complete here):** parity audit, Expo Router shell, bottom tabs, customer auth/session/API transport, SecureStore, reusable design system, errors, sharing/deep-link routes.
-2. **Discovery (complete):** Home, Buy, property details, Saved, Compare, Mortgage, property sharing and referral-aware property navigation. Viewing submission remains Phase 3 by design.
-3. **Property actions:** Sell/List editor, media/documents, Sales Mandate/signature/submission, Sell Assistance, Buy Assistance, viewings and inquiries.
+2. **Discovery (complete):** Home, Buy, property details, Saved, Compare, Mortgage, property sharing and referral-aware property navigation.
+3. **Property actions (complete):** Sell/List editor, media/documents, Sales Mandate/signature/submission, Sell Assistance, Buy Assistance, viewings and inquiries.
 4. **Customer operations:** Dashboard Overview, Listings management, Analytics and Purchased Properties.
 5. **Communication and earnings:** Messages/Tickets, Support, Referrals and Withdrawal Requests.
 6. **Account:** Profile/avatar, Business, bank details, password/recovery, KYC and native Google-auth decision.

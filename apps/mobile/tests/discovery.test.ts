@@ -59,6 +59,6 @@ test("privacy and business invariants remain explicit in Mobile and API public r
   assert.match(repository,/eq\("listing_status", "LISTED"\)/);assert.doesNotMatch(repository,/customer_listing_documents|sales_mandate_documents|public_id/);assert.doesNotMatch(source,/\b4%\b|400\s*bps|paystack|flutterwave|Buy Now|\/api\/v1\/admin/i);assert.match(source,/2%/);assert.match(source,/offline/i);assert.match(source,/no online checkout/i);
 });
 
-test("parity records completed Phase 2 without marking viewing, Sell, Dashboard or withdrawals complete",()=>{
-  const parity=read("V2_MOBILE_PARITY.md");assert.match(parity,/Discovery \(complete\)/);assert.match(parity,/there is no canonical featured flag/i);assert.match(parity,/2% \/ 200 bps/);assert.match(parity,/Property Viewing[^\n]+Planned/);assert.match(parity,/Create\/edit listing[^\n]+Planned/);assert.match(parity,/Submit withdrawal[^\n]+Planned/);assert.match(parity,/Admin functionality is Web-only/);
+test("parity records completed Phase 2 and Phase 3 without marking Dashboard or withdrawals complete",()=>{
+  const parity=read("V2_MOBILE_PARITY.md");assert.match(parity,/Discovery \(complete\)/);assert.match(parity,/Property actions \(complete\)/);assert.match(parity,/there is no canonical featured flag/i);assert.match(parity,/2% \/ 200 bps/);assert.match(parity,/Property Viewing[^\n]+Complete/);assert.match(parity,/Create\/edit listing[^\n]+Complete/);assert.match(parity,/Submit withdrawal[^\n]+Planned/);assert.match(parity,/Admin functionality is Web-only/);
 });

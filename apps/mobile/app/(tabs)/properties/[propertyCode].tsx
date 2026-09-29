@@ -4,6 +4,8 @@ import { FlatList, Image, Linking, Pressable, ScrollView, StyleSheet, Text, useW
 import { Button, Card, LoadingState, ScreenState, SectionHeading } from "@/components/ui";
 import { PropertyCard } from "@/components/property-card";
 import { AppIcon, type AppIconName } from "@/components/app-icon";
+import { ViewingModal } from "@/components/viewing-modal";
+import { InquiryModal } from "@/components/inquiry-modal";
 import { friendlyError, MobileApiError } from "@/lib/api-error";
 import { formatNaira } from "@/lib/money";
 import { canonicalPropertyUrl, isValidPropertyCode } from "@/lib/property-links";
@@ -16,8 +18,8 @@ import { colors, radius, spacing, typography } from "@/theme/tokens";
 
 export default function PropertyDetailRoute(){
   const raw=useLocalSearchParams<{propertyCode?:string;ref?:string}>();const propertyCode=typeof raw.propertyCode==="string"?raw.propertyCode:"";const referralCode=typeof raw.ref==="string"?raw.ref.trim():undefined;
-  const {width}=useWindowDimensions();const galleryWidth=Math.max(280,width-32);const {status}=useAuth();const {savedCodes,refreshSaved,setSaved}=usePropertyState();
-  const [property,setProperty]=useState<PublicPropertyDetail|null>(null);const [similar,setSimilar]=useState<PublicProperty[]>([]);const [loading,setLoading]=useState(true);const [error,setError]=useState("");const [notFound,setNotFound]=useState(false);const [retry,setRetry]=useState(0);const [imageIndex,setImageIndex]=useState(0);const [saving,setSaving]=useState(false);const [sharing,setSharing]=useState(false);const [referring,setReferring]=useState(false);const listRef=useRef<FlatList<string>>(null);
+  const {width}=useWindowDimensions();const galleryWidth=Math.max(280,width-32);const {status,customer}=useAuth();const {savedCodes,refreshSaved,setSaved}=usePropertyState();
+  const [property,setProperty]=useState<PublicPropertyDetail|null>(null);const [similar,setSimilar]=useState<PublicProperty[]>([]);const [loading,setLoading]=useState(true);const [error,setError]=useState("");const [notFound,setNotFound]=useState(false);const [retry,setRetry]=useState(0);const [imageIndex,setImageIndex]=useState(0);const [saving,setSaving]=useState(false);const [sharing,setSharing]=useState(false);const [referring,setReferring]=useState(false);const [viewingOpen,setViewingOpen]=useState(false);const [inquiryOpen,setInquiryOpen]=useState(false);const listRef=useRef<FlatList<string>>(null);
   useEffect(()=>{let active=true;if(!isValidPropertyCode(propertyCode))return()=>{active=false};void propertiesApi.detail(propertyCode).then(result=>{if(!active)return;setProperty(result.property);setSimilar(result.similar);setImageIndex(0);}).catch(failure=>{if(!active)return;if(failure instanceof MobileApiError&&failure.kind==="not_found")setNotFound(true);else setError(friendlyError(failure));}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[propertyCode,retry]);
   useEffect(()=>{if(status==="signedIn"&&property)queueMicrotask(()=>void refreshSaved([property.code]).catch(()=>{}))},[status,property,refreshSaved]);
   const mapUrl=useMemo(()=>property?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${property.location}, ${property.city}, ${property.state}, Nigeria`)}`:"",[property]);
@@ -38,11 +40,54 @@ export default function PropertyDetailRoute(){
     {property.facilities.length?<Card><SectionHeading title="Facilities and features"/><View style={styles.chips}>{property.facilities.map(item=><View key={item} style={styles.chip}><AppIcon name="checkmark" size={15} color={colors.success}/><Text style={styles.chipText}>{item}</Text></View>)}</View></Card>:null}
     <Card><SectionHeading title="Property location"/><Text style={styles.body}>{property.location}</Text><DetailRow label="City" value={property.city}/><DetailRow label="State" value={property.state}/><Button label="Open property in Maps" variant="secondary" onPress={()=>void Linking.openURL(mapUrl)}/><Text style={styles.caption}>This opens the property address externally. Beryl Shelter does not request your device location.</Text></Card>
     <Card><SectionHeading title="Payment information"/><DetailRow label="Property cost" value={formatNaira(property.priceMinor)}/><DetailRow label="Minimum down payment" value={formatNaira(property.minimumDownPaymentMinor)}/><Text style={styles.notice}>Information only. Property purchases are completed offline with Beryl Shelter. There is no online checkout or property payment in this app.</Text><Button label="Estimate a mortgage" onPress={()=>router.push({pathname:"/mortgage",params:{code:property.code,priceMinor:String(property.priceMinor)}})}/></Card>
-    <Card><SectionHeading title="Interested in a viewing?" description="The complete viewing request form belongs to Phase 3."/><Text style={styles.body}>You can review this public property now. No viewing has been submitted from this screen.</Text><Button label="Viewing requests arrive in Phase 3" disabled onPress={()=>{}}/></Card>
+
+    {/* Property Viewing Request */}
+    <Card>
+      <SectionHeading title="Schedule a Viewing" description="Request an in-person inspection of this property. No payment required." />
+      <Text style={styles.body}>Schedule an appointment to inspect this property physically with our agents.</Text>
+      <Button label="Schedule Property Viewing" onPress={()=>setViewingOpen(true)} />
+    </Card>
+
+    {/* Real Estate Inquiry */}
+    <Card>
+      <SectionHeading title="Have a Question?" description="Speak with a Beryl Shelter real estate expert." />
+      <Text style={styles.body}>Send our team an inquiry about this property or call 0704 205 5678.</Text>
+      <Button label="Inquire About This Property" variant="secondary" onPress={()=>setInquiryOpen(true)} />
+    </Card>
+
+    {/* Buy Assistance Callout */}
+    <Card style={styles.buyAssistanceCard}>
+      <View style={styles.buyAssistanceHeader}>
+        <AppIcon name="compass-outline" size={24} color={colors.brandDark} />
+        <Text style={styles.buyAssistanceTitle}>Looking for tailored properties?</Text>
+      </View>
+      <Text style={styles.body}>Tell us your requirements and budget, and our advisory team will source matching options for you.</Text>
+      <Button label="Request Buy Assistance" variant="secondary" onPress={()=>router.push("/buy-assistance")} />
+    </Card>
+
     <Card><SectionHeading title="Share this property" description="Opening or sharing a link does not create commission."/><Button label="Share public property" loading={sharing} onPress={()=>void share()}/><Button label={status==="signedIn"?"Share my referral link":"Log in to create a referral link"} variant="secondary" loading={referring} onPress={()=>void shareReferral()}/><Text style={styles.caption}>The canonical referral rate is 2%. Earnings arise only after verified attribution to a completed offline sale.</Text></Card>
     <SectionHeading title="Similar properties" description="Other currently listed properties with related type and location details."/>{similar.length?<FlatList horizontal data={similar} keyExtractor={item=>item.code} renderItem={({item})=><View style={styles.similar}><PropertyCard property={item} referralCode={referralCode}/></View>} contentContainerStyle={styles.similarList} showsHorizontalScrollIndicator={false}/>:<Text style={styles.muted}>No similar listed properties are available right now.</Text>}
+
+    {/* Viewing Modal */}
+    <ViewingModal
+      visible={viewingOpen}
+      propertyCode={property.code}
+      propertyTitle={property.title}
+      propertyPriceMinor={property.priceMinor}
+      propertyImage={property.images[0]}
+      initialUser={customer ? { firstName: customer.first_name ?? undefined, lastName: customer.last_name ?? undefined, email: customer.email, phone: customer.phone_number_normalized ?? undefined } : null}
+      onClose={()=>setViewingOpen(false)}
+    />
+
+    {/* Inquiry Modal */}
+    <InquiryModal
+      visible={inquiryOpen}
+      sourcePage={`property_${property.code}`}
+      initialUser={customer ? { name: [customer.first_name, customer.last_name].filter(Boolean).join(" "), email: customer.email, phone: customer.phone_number_normalized ?? undefined } : null}
+      onClose={()=>setInquiryOpen(false)}
+    />
   </ScrollView>
 }
 function Fact({icon,label}:{icon:AppIconName;label:string}){return <View style={styles.fact}><AppIcon name={icon} size={17} color={colors.brandDark}/><Text style={styles.factText}>{label}</Text></View>}
 function DetailRow({label,value}:{label:string;value:string}){return <View style={styles.detailRow}><Text style={styles.detailLabel}>{label}</Text><Text style={styles.detailValue}>{value||"—"}</Text></View>}
-const styles=StyleSheet.create({screen:{flex:1,backgroundColor:colors.background},content:{padding:spacing.lg,paddingBottom:spacing.xxl,gap:spacing.lg},state:{flex:1,backgroundColor:colors.background},actions:{flexDirection:"row",justifyContent:"flex-end",gap:spacing.sm},iconButton:{width:46,height:46,borderRadius:radius.pill,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,alignItems:"center",justifyContent:"center"},gallery:{borderRadius:radius.lg,overflow:"hidden",backgroundColor:colors.surfaceMuted,position:"relative"},placeholder:{alignItems:"center",justifyContent:"center",gap:spacing.sm},galleryCount:{position:"absolute",right:spacing.md,top:spacing.md,backgroundColor:colors.overlay,paddingHorizontal:spacing.sm,paddingVertical:spacing.xs,borderRadius:radius.pill},galleryCountText:{...typography.caption,color:"#fff",fontWeight:"700"},dots:{minHeight:30,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:spacing.xs,backgroundColor:colors.surface},dot:{width:7,height:7,borderRadius:radius.pill,backgroundColor:colors.border},dotActive:{width:20,backgroundColor:colors.brand},heading:{gap:spacing.sm},eyebrow:{...typography.label,color:colors.brandDark},title:{...typography.display,color:colors.text},price:{...typography.title,color:colors.brandDark},location:{flexDirection:"row",alignItems:"center",gap:spacing.xs},muted:{...typography.body,color:colors.textMuted},facts:{flexDirection:"row",flexWrap:"wrap",gap:spacing.sm},fact:{flexDirection:"row",alignItems:"center",gap:spacing.xs,paddingHorizontal:spacing.md,paddingVertical:spacing.sm,borderRadius:radius.pill,backgroundColor:colors.surface},factText:{...typography.caption,color:colors.text},code:{...typography.caption,color:colors.textMuted},errorBlock:{gap:spacing.sm},error:{...typography.caption,color:colors.danger},body:{...typography.body,color:colors.text},caption:{...typography.caption,color:colors.textMuted},detailRow:{flexDirection:"row",justifyContent:"space-between",gap:spacing.lg,paddingVertical:spacing.sm,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:colors.border},detailLabel:{...typography.caption,color:colors.textMuted,flex:1},detailValue:{...typography.label,color:colors.text,textAlign:"right",flex:1},chips:{flexDirection:"row",flexWrap:"wrap",gap:spacing.sm},chip:{flexDirection:"row",alignItems:"center",gap:spacing.xs,paddingHorizontal:spacing.sm,paddingVertical:spacing.sm,borderRadius:radius.pill,backgroundColor:colors.surfaceMuted},chipText:{...typography.caption,color:colors.text},notice:{...typography.caption,color:colors.text,backgroundColor:"#FBF1E5",padding:spacing.md,borderRadius:radius.md},similar:{width:290},similarList:{gap:spacing.md,paddingRight:spacing.lg}});
+const styles=StyleSheet.create({screen:{flex:1,backgroundColor:colors.background},content:{padding:spacing.lg,paddingBottom:spacing.xxl,gap:spacing.lg},state:{flex:1,backgroundColor:colors.background},actions:{flexDirection:"row",justifyContent:"flex-end",gap:spacing.sm},iconButton:{width:46,height:46,borderRadius:radius.pill,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,alignItems:"center",justifyContent:"center"},gallery:{borderRadius:radius.lg,overflow:"hidden",backgroundColor:colors.surfaceMuted,position:"relative"},placeholder:{alignItems:"center",justifyContent:"center",gap:spacing.sm},galleryCount:{position:"absolute",right:spacing.md,top:spacing.md,backgroundColor:colors.overlay,paddingHorizontal:spacing.sm,paddingVertical:spacing.xs,borderRadius:radius.pill},galleryCountText:{...typography.caption,color:"#fff",fontWeight:"700"},dots:{minHeight:30,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:spacing.xs,backgroundColor:colors.surface},dot:{width:7,height:7,borderRadius:radius.pill,backgroundColor:colors.border},dotActive:{width:20,backgroundColor:colors.brand},heading:{gap:spacing.sm},eyebrow:{...typography.label,color:colors.brandDark},title:{...typography.display,color:colors.text},price:{...typography.title,color:colors.brandDark},location:{flexDirection:"row",alignItems:"center",gap:spacing.xs},muted:{...typography.body,color:colors.textMuted},facts:{flexDirection:"row",flexWrap:"wrap",gap:spacing.sm},fact:{flexDirection:"row",alignItems:"center",gap:spacing.xs,paddingHorizontal:spacing.md,paddingVertical:spacing.sm,borderRadius:radius.pill,backgroundColor:colors.surface},factText:{...typography.caption,color:colors.text},code:{...typography.caption,color:colors.textMuted},errorBlock:{gap:spacing.sm},error:{...typography.caption,color:colors.danger},body:{...typography.body,color:colors.text},caption:{...typography.caption,color:colors.textMuted},detailRow:{flexDirection:"row",justifyContent:"space-between",gap:spacing.lg,paddingVertical:spacing.sm,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:colors.border},detailLabel:{...typography.caption,color:colors.textMuted,flex:1},detailValue:{...typography.label,color:colors.text,textAlign:"right",flex:1},chips:{flexDirection:"row",flexWrap:"wrap",gap:spacing.sm},chip:{flexDirection:"row",alignItems:"center",gap:spacing.xs,paddingHorizontal:spacing.sm,paddingVertical:spacing.sm,borderRadius:radius.pill,backgroundColor:colors.surfaceMuted},chipText:{...typography.caption,color:colors.text},notice:{...typography.caption,color:colors.text,backgroundColor:"#FBF1E5",padding:spacing.md,borderRadius:radius.md},buyAssistanceCard:{gap:spacing.md},buyAssistanceHeader:{flexDirection:"row",alignItems:"center",gap:spacing.sm},buyAssistanceTitle:{...typography.heading,color:colors.text},similar:{width:290},similarList:{gap:spacing.md,paddingRight:spacing.lg}});

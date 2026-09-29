@@ -16,6 +16,8 @@ export function formatMoneyInput(value: string): string | null {
   return fraction === undefined ? grouped : `${grouped}.${fraction}`;
 }
 
+export { formatMoneyInput as formatNairaInput };
+
 export function moneyInputFromMinor(value: number): string {
   return formatMoneyInput(`${Math.floor(value / 100)}.${String(value % 100).padStart(2, "0")}`) ?? "";
 }
