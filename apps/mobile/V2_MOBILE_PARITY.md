@@ -102,6 +102,6 @@ Phase 1 requested no media permissions. Phase 3 adds `expo-image-picker`, `expo-
 2. **Discovery (complete):** Home, Buy, property details, Saved, Compare, Mortgage, property sharing and referral-aware property navigation.
 3. **Property actions (complete):** Sell/List editor, media/documents, Sales Mandate/signature/submission, Sell Assistance, Buy Assistance, viewings and inquiries.
 4. **Customer operations (complete):** Dashboard Overview, Listings management, Analytics and Purchased Properties.
-5. **Communication and earnings:** Messages/Tickets, Support, Referrals and Withdrawal Requests.
-6. **Account:** Profile/avatar, Business, bank details, password/recovery, KYC and native Google-auth decision.
-7. **Closure:** informational-page parity decisions, final API parity audit, physical device/accessibility regression and production/EAS readiness.
+5. **Communication and earnings (complete):** Messages/Tickets, Support, Referrals and Withdrawal Requests.
+6. **Account (complete):** Profile/avatar, Business, bank details, password change, KYC.
+7. **Closure (upcoming):** standalone dark-mode pass, final store submission, and EAS production deployment.

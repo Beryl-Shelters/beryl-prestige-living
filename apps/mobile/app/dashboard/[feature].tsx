@@ -1,9 +1,31 @@
-import { useLocalSearchParams } from "expo-router";
+import { Redirect, useLocalSearchParams } from "expo-router";
 import { FeaturePlaceholder } from "@/components/feature-placeholder";
-const labels: Record<string, [string, string]> = {
-  messages: ["Messages", "Phase 5"],
-  "saved-properties": ["Saved Properties", "Phase 2"],
-  settings: ["Settings", "Phase 6"],
-  kyc: ["KYC", "Phase 6"],
-};
-export default function DashboardFeature(){const {feature}=useLocalSearchParams<{feature:string}>();const [title,phase]=labels[feature??""]??["Customer Account","Later phase"];return <FeaturePlaceholder title={title} description="This destination is connected to authenticated customer navigation." phase={phase} authenticated/>}
+
+export default function DashboardFeature() {
+  const { feature } = useLocalSearchParams<{ feature: string }>();
+
+  if (feature === "messages") {
+    return <Redirect href="/dashboard/messages" />;
+  }
+  if (feature === "settings") {
+    return <Redirect href="/dashboard/settings" />;
+  }
+  if (feature === "kyc") {
+    return <Redirect href="/dashboard/kyc" />;
+  }
+  if (feature === "saved-properties") {
+    return <Redirect href="/saved-properties" />;
+  }
+  if (feature === "referrals") {
+    return <Redirect href="/dashboard/referrals" />;
+  }
+
+  return (
+    <FeaturePlaceholder
+      title="Customer Account"
+      description="This destination is connected to authenticated customer navigation."
+      phase="Later phase"
+      authenticated
+    />
+  );
+}

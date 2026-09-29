@@ -31,8 +31,11 @@ export default function DashboardLayout() {
       <Stack.Screen name="listings" options={{ headerShown: false }} />
       <Stack.Screen name="analytics" options={{ title: "Analytics" }} />
       <Stack.Screen name="purchased-properties" options={{ title: "Purchased Properties" }} />
-      <Stack.Screen name="[feature]" options={{ title: "Account" }} />
+      <Stack.Screen name="messages" options={{ headerShown: false }} />
       <Stack.Screen name="referrals" options={{ headerShown: false }} />
+      <Stack.Screen name="settings" options={{ headerShown: false }} />
+      <Stack.Screen name="kyc" options={{ title: "KYC Verification" }} />
+      <Stack.Screen name="[feature]" options={{ title: "Account" }} />
     </Stack>
   );
 }

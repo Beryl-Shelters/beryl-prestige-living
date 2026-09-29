@@ -3,13 +3,21 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { AppIcon, type AppIconName } from "../app-icon";
 import { colors, radius, spacing, typography } from "@/theme/tokens";
 
-export type DashboardSection = "overview" | "listings" | "analytics" | "purchased";
+export type DashboardSection =
+  | "overview"
+  | "listings"
+  | "analytics"
+  | "messages"
+  | "purchased"
+  | "referrals";
 
 const navItems: { id: DashboardSection; label: string; icon: AppIconName; route: string }[] = [
   { id: "overview", label: "Overview", icon: "grid-outline", route: "/dashboard" },
   { id: "listings", label: "My Listings", icon: "list-outline", route: "/dashboard/listings" },
   { id: "analytics", label: "Analytics", icon: "analytics-outline", route: "/dashboard/analytics" },
+  { id: "messages", label: "Messages", icon: "chatbubble-ellipses-outline", route: "/dashboard/messages" },
   { id: "purchased", label: "Purchased", icon: "home-outline", route: "/dashboard/purchased-properties" },
+  { id: "referrals", label: "Referrals", icon: "people-outline", route: "/dashboard/referrals" },
 ];
 
 export function DashboardNav({ active }: { active: DashboardSection }) {
