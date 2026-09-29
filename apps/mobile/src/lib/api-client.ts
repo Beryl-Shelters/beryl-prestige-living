@@ -18,7 +18,7 @@ export class MobileApiClient {
     if (options.authenticated !== false) { const token=await this.store.get("account"); if(token)headers.Authorization=`Bearer ${token}`; }
     for(const purpose of options.purposes ?? []){const token=await this.store.get(purpose);const header=requestHeaders[purpose];if(token&&header)headers[header]=token;}
     let response:Response;
-    try { response=await this.transport(`${apiBaseUrl}${path}`,{...options,headers,body:options.body===undefined?undefined:options.body instanceof FormData?options.body:JSON.stringify(options.body)}); }
+    try { const transport=this.transport;response=await transport(`${apiBaseUrl}${path}`,{...options,headers,body:options.body===undefined?undefined:options.body instanceof FormData?options.body:JSON.stringify(options.body)}); }
     catch { throw new MobileApiError("network","You appear to be offline. Check your connection and try again."); }
     for(const purpose of Object.keys(responseHeaders) as SessionPurpose[]){const value=response.headers.get(responseHeaders[purpose]);if(value!==null){if(value)await this.store.set(purpose,value);else await this.store.remove(purpose);}}
     const payload=await response.json().catch(()=>null) as Envelope<T>|null;

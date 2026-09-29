@@ -27,6 +27,8 @@ test("API origin normalization is centralized and rejects credentials or query f
 
 test("API errors classify offline, unauthorized, validation, conflict, missing and server failures",()=>{assert.equal(errorKind(401),"unauthorized");assert.equal(errorKind(403),"unauthorized");assert.equal(errorKind(400),"validation");assert.equal(errorKind(409),"conflict");assert.equal(errorKind(404),"not_found");assert.equal(errorKind(500),"server");assert.equal(new MobileApiError("network","offline").kind,"network");});
 
+test("API transport is invoked unbound so browser fetch keeps a valid receiver",()=>{const api=read("src/lib/api-client.ts");assert.match(api,/const transport=this\.transport;response=await transport\(/);assert.doesNotMatch(api,/await this\.transport\(/);});
+
 test("session restoration, expiry handling, offline retention and logout clearing are deterministic",async()=>{
   const store=new MemoryStore();assert.deepEqual(await restoreCustomerSession(store,async()=>customer),{status:"signedOut",customer:null});
   await store.set("account","opaque-session");assert.deepEqual(await restoreCustomerSession(store,async()=>customer),{status:"signedIn",customer});

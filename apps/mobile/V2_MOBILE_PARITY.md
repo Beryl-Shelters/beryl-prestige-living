@@ -2,13 +2,13 @@
 
 This checklist was produced from the current `apps/web` routes/components and `apps/api` routers. Current V2 Web/API behavior is authoritative; legacy screenshots are used only for mobile layout patterns.
 
-Status meanings: **Foundation** is implemented in Phase 1, **Planned** is routed/audited but not implemented, and **Web-only** is intentionally excluded from native product scope.
+Status meanings: **Complete** is implemented and validated, **Foundation** is routed with Phase 1 infrastructure, **Planned** is audited but not implemented, and **Web-only** is intentionally excluded from native product scope.
 
 ## Customer feature matrix
 
 | Feature | Web route | Existing API | Auth | Mobile destination | Phase | Status | Notes |
 |---|---|---|---|---|---|---|---|
-| Home | `/` | `GET /api/v1/public/properties`; public analytics events | Public | `/(tabs)` | 2 | Foundation shell | Real featured/latest property data only; no fixtures. |
+| Home | `/` | `GET /api/v1/public/properties`; `POST /api/v1/public/property-searches` | Public | `/(tabs)` | 2 | Complete | Deterministic latest `LISTED` properties; there is no canonical featured flag, so no Featured section is fabricated. |
 | About | `/about` | None | Public | Account → About/link | 7 | Planned | Informational content; may be native or an in-app Web link after final content audit. |
 | Careers | `/careers` | None for content | Public | Account → Careers/link | 7 | Planned | Informational content is not a primary tab. |
 | Career application | `/careers` | `POST /api/v1/public/careers/applications` | Public | Careers | 7 | Planned | Resume: PDF, 10 MB; requires document picker. |
@@ -16,8 +16,8 @@ Status meanings: **Foundation** is implemented in Phase 1, **Planned** is routed
 | Public Referrals | `/referrals` | None until account action | Public | Account → Referrals information | 5 | Planned | Canonical commission is 2% / 200 bps. |
 | Support/FAQ | `/support` | None for FAQs | Public | `/support` | 5 | Foundation route | Static FAQ/contact composition arrives with Support. |
 | Report property/agent | `/support` | `POST /api/v1/public/support/reports` | Public | Support | 5 | Planned | Conditional Property/Agent payloads. |
-| Buy marketplace | `/buy` | `GET /api/v1/public/properties` | Public | `/(tabs)/properties` | 2 | Foundation shell | Search, state/FCT, subtype, 7+, conveniences and sorting. |
-| Property detail | `/buy/[propertyCode]` | `GET /api/v1/public/properties/:code` | Public | `/properties/[propertyCode]` | 2 | Foundation route | Deep link uses public property code, never database UUID. |
+| Buy marketplace | `/buy` | `GET /api/v1/public/properties` | Public | `/(tabs)/properties` | 2 | Complete | Server search/filter/sort, state/FCT, subtype, 7+, conveniences, pull-to-refresh and paginated load-more. |
+| Property detail | `/buy/[propertyCode]` | `GET /api/v1/public/properties/:code` | Public | `/properties/[propertyCode]` | 2 | Complete | Public code deep link, gallery, metadata, location, save/share, mortgage connection and similar `LISTED` properties. |
 | Contextual help | Shared public UI | None | Public | Contextual native help | 3/5 | Planned | Mobile modal/sheet; no duplicate backend. |
 | Real Estate Inquiry | Property/contextual modal | `POST /api/v1/public/inquiries` | Public | Property detail inquiry | 3 | Planned | Existing public submission contract. |
 | Buy Assistance | `/buy/assistance` | `POST /api/v1/public/buy-assistance` | Public | Properties → Assistance | 3 | Planned | Optional PDF mandate requires document picker. |
@@ -29,11 +29,11 @@ Status meanings: **Foundation** is implemented in Phase 1, **Planned** is routed
 | Password recovery | `/forgot-password*`, `/reset-password*` | forgot/resend/verify/context/reset under `/api/v1/auth` | Challenge/recovery | Auth recovery stack | 6 | Planned | Same opaque purpose-bound token transport is available to Mobile. |
 | Session restoration | Shared Web auth | `GET /api/v1/auth/me` | Account | App root | 1 | Foundation | SecureStore token restored and validated on launch. |
 | Logout | Shared Web auth | `POST /api/v1/auth/logout` | Account | Account | 1 | Foundation | Server session revoked; all local purpose tokens cleared. |
-| Saved Properties | `/saved-properties` | `GET/POST/DELETE /api/v1/saved-properties`; `/states` | Account | `/dashboard/saved-properties` | 2 | Foundation route | Owner derived from session. |
-| Compare Properties | `/compare-properties*` | `GET /api/v1/saved-properties/compare` | Account | Properties/Saved → Compare | 2 | Planned | Horizontal comparison for more than two on narrow screens. |
-| Mortgage Calculator | `/mortgage-calculator` | None | Public | `/(tabs)/mortgage` | 2 | Foundation shell | Local calculation; formatted money inputs; no loan application. |
+| Saved Properties | `/saved-properties` | `GET/POST/DELETE /api/v1/saved-properties`; `/states` | Account | `/saved-properties` | 2 | Complete | Session owner only; search, pagination, empty/error states and shared bookmark state. |
+| Compare Properties | `/compare-properties*` | `GET /api/v1/saved-properties/compare` | Account | `/compare-properties` | 2 | Complete | In-session public-code selection, saved `LISTED` properties only, 2 minimum/3 maximum, horizontal native columns. |
+| Mortgage Calculator | `/mortgage-calculator` | None | Public | `/(tabs)/mortgage` | 2 | Complete | Exact Web fixed-rate formula, zero-interest branch, formatted money inputs and optional public property prefill; no financial mutation. |
 | Property Viewing | Property detail | `POST /api/v1/public/property-viewings` | Public | Property detail | 3 | Planned | Request only; no property payment. |
-| Property sharing | Property detail | Canonical public code/URL | Public | Native Share | 2 | Foundation abstraction | Shares HTTPS canonical URL supplied by the feature. |
+| Property sharing | Property detail | Canonical public code/URL; `POST /api/v1/dashboard/referrals/public-property` for authenticated referral links | Public/account | Native Share | 2 | Complete | Plain `/buy/[propertyCode]` HTTPS links; canonical API-produced referral URLs; no UUID/private media. |
 | Sell entry | `/sell` | Auth check | Mixed | `/(tabs)/list` | 3 | Foundation auth gate | Signed-out users go to customer login. |
 | Create/edit listing | `/dashboard/listings/new`, `/:id/edit` | `GET /options`; `POST/PATCH /api/v1/listings` | Account | List/Listing editor | 3 | Planned | Lifecycle remains `UNLISTED → PENDING → LISTED/REJECTED`. |
 | Listing photos | Listing editor | multipart listing endpoints | Account | Listing editor | 3 | Planned | Image picker/camera decision deferred; no permission requested in Phase 1. |
@@ -99,7 +99,7 @@ Phase 1 requests no camera, photo-library, document or biometric permissions.
 ## Delivery phases
 
 1. **Foundation (complete here):** parity audit, Expo Router shell, bottom tabs, customer auth/session/API transport, SecureStore, reusable design system, errors, sharing/deep-link routes.
-2. **Discovery:** Home, Buy, property details, Saved, Compare, Mortgage, property sharing.
+2. **Discovery (complete):** Home, Buy, property details, Saved, Compare, Mortgage, property sharing and referral-aware property navigation. Viewing submission remains Phase 3 by design.
 3. **Property actions:** Sell/List editor, media/documents, Sales Mandate/signature/submission, Sell Assistance, Buy Assistance, viewings and inquiries.
 4. **Customer operations:** Dashboard Overview, Listings management, Analytics and Purchased Properties.
 5. **Communication and earnings:** Messages/Tickets, Support, Referrals and Withdrawal Requests.

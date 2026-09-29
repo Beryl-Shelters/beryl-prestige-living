@@ -18,8 +18,8 @@
   "dependencies": {
     "@expo/metro-runtime": "~57.0.16",
     "@expo/vector-icons": "^15.0.2",
-    "expo": "~57.0.25",
-    "expo-router": "~57.0.23",
+    "expo": "~57.0.26",
+    "expo-router": "~57.0.24",
     "expo-secure-store": "~57.0.4",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",

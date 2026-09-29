@@ -1,2 +1,2 @@
-import { Card, Screen, ScreenState, SectionHeading } from "@/components/ui";
-export default function PropertiesScreen(){return <Screen><SectionHeading title="Properties" description="Beryl Shelter marketplace"/><Card><ScreenState title="Property discovery is next" message="Phase 2 will connect search, filters, property details, saving and comparison to the current V2 APIs. No placeholder properties are displayed."/></Card></Screen>}
+import { PropertyListScreen } from "@/components/property-list-screen";
+export default function PropertiesScreen(){return <PropertyListScreen/>}
