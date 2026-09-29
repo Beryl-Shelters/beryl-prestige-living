@@ -41,11 +41,11 @@ Status meanings: **Complete** is implemented and validated, **Foundation** is ro
 | Sales Mandate | Listing editor | `/listings/:id/mandate*` | Account | Listing editor | 3 | Complete | Part 1 vendor details, Part 2 10 legal clauses, 5% commission, 180 days, consent. |
 | Signature | Sales Mandate | `POST /listings/:id/mandate/signature` | Account | Listing editor | 3 | Complete | Native touch drawing canvas with SVG path tracking and PNG export. |
 | Listing submission | Listing editor | `POST /listings/:id/submit` | Account | Listing editor | 3 | Complete | Optimistic lock submit transitioning UNLISTED to PENDING with success step. |
-| Listing rejection/resubmit | Dashboard listing | read/edit/request approval | Account | Listing detail/editor | 3/4 | Planned | Show canonical rejection reason; resubmit to `PENDING`. |
-| Dashboard Overview | `/dashboard` | `GET /api/v1/dashboard/overview` | Account | `/dashboard` | 4 | Foundation route | Real counts/recent activity only. |
-| Dashboard Listings | `/dashboard/listings*` | list/read/unlist/delete under `/api/v1/listings` | Account | `/dashboard/listings` | 4 | Foundation route | Search/filter and lifecycle actions from current API. |
-| Customer Analytics | `/dashboard/analytics` | `GET /api/v1/dashboard/analytics` | Account | `/dashboard/analytics` | 4 | Foundation route | Real customer listing analytics. |
-| Purchased Properties | `/dashboard/properties` | `GET /api/v1/dashboard/properties` | Account | `/dashboard/purchased-properties` | 4 | Foundation route | Immutable snapshots of verified offline purchases. No purchase action. |
+| Listing rejection/resubmit | Dashboard listing | read/edit/request approval | Account | Listing detail/editor | 3/4 | Complete | Show canonical rejection reason; resubmit to `PENDING`. |
+| Dashboard Overview | `/dashboard` | `GET /api/v1/dashboard/overview` | Account | `/dashboard` | 4 | Complete | Real counts, recent activity, cumulative revenue chart. |
+| Dashboard Listings | `/dashboard/listings*` | list/read/unlist/delete under `/api/v1/listings` | Account | `/dashboard/listings` | 4 | Complete | Search/filter and lifecycle actions from current API. |
+| Customer Analytics | `/dashboard/analytics` | `GET /api/v1/dashboard/analytics` | Account | `/dashboard/analytics` | 4 | Complete | Real customer listing analytics, performance chart, bedrooms, property types. |
+| Purchased Properties | `/dashboard/properties` | `GET /api/v1/dashboard/properties` | Account | `/dashboard/purchased-properties` | 4 | Complete | Immutable snapshots of verified offline purchases. No purchase action. |
 | Messages/Tickets | `/dashboard/messages` | ticket list/read/create/reply/read/attachments under `/api/v1/messages` | Account | `/dashboard/messages` | 5 | Foundation route | `OPEN`/`RESOLVED`; resolved is read-only; no invented statuses. |
 | Referrals | `/dashboard/referrals` | `GET/POST /api/v1/dashboard/referrals`; `/public-property` | Account | `/dashboard/referrals` | 5 | Foundation route | Buyer/seller referral links and canonical share URLs. |
 | Referral deep link | Canonical shared URL | Referral attribution through current Web/API flow | Public | `/referrals/[referralCode]` | 5 | Foundation route | Public code only; attribution implementation remains canonical. |
@@ -101,7 +101,7 @@ Phase 1 requested no media permissions. Phase 3 adds `expo-image-picker`, `expo-
 1. **Foundation (complete here):** parity audit, Expo Router shell, bottom tabs, customer auth/session/API transport, SecureStore, reusable design system, errors, sharing/deep-link routes.
 2. **Discovery (complete):** Home, Buy, property details, Saved, Compare, Mortgage, property sharing and referral-aware property navigation.
 3. **Property actions (complete):** Sell/List editor, media/documents, Sales Mandate/signature/submission, Sell Assistance, Buy Assistance, viewings and inquiries.
-4. **Customer operations:** Dashboard Overview, Listings management, Analytics and Purchased Properties.
+4. **Customer operations (complete):** Dashboard Overview, Listings management, Analytics and Purchased Properties.
 5. **Communication and earnings:** Messages/Tickets, Support, Referrals and Withdrawal Requests.
 6. **Account:** Profile/avatar, Business, bank details, password/recovery, KYC and native Google-auth decision.
 7. **Closure:** informational-page parity decisions, final API parity audit, physical device/accessibility regression and production/EAS readiness.

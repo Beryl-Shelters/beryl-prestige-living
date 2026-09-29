@@ -51,7 +51,46 @@ export type CustomerListing = {
   registered_title_document?: string | null;
   additional_information?: string | null;
   owner?: { full_name: string; email: string; phone: string | null };
+  completeness?: number;
+  leads?: number;
+  views?: number;
+  time_on_market?: number | null;
+  referral_url?: string;
 };
+
+export type ListingsCounts = {
+  all: number;
+  UNLISTED: number;
+  PENDING: number;
+  LISTED: number;
+  REJECTED: number;
+};
+
+export type ListingsPage = {
+  items: CustomerListing[];
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+  counts: ListingsCounts;
+};
+
+export function listingStatusPresentation(status: ListingStatus): {
+  label: string;
+  tone: "neutral" | "success" | "warning" | "danger";
+} {
+  switch (status) {
+    case "LISTED":
+      return { label: "Approved", tone: "success" };
+    case "PENDING":
+      return { label: "Pending", tone: "warning" };
+    case "REJECTED":
+      return { label: "Rejected", tone: "danger" };
+    case "UNLISTED":
+    default:
+      return { label: "Unlisted", tone: "neutral" };
+  }
+}
 
 export type MandateDocument = {
   id: string;
@@ -236,6 +275,51 @@ export function createListingsApi(client?: ApiTransport) {
         {
           method: "POST",
           body: {},
+        }
+      );
+    },
+
+    async list(params?: {
+      q?: string;
+      status?: ListingStatus | "";
+      page?: number;
+      pageSize?: number;
+    }): Promise<ListingsPage> {
+      const query = new URLSearchParams();
+      if (params?.q) query.set("q", params.q.trim());
+      if (params?.status) query.set("status", params.status);
+      if (params?.page) query.set("page", String(params.page));
+      if (params?.pageSize) query.set("page_size", String(params.pageSize));
+      const qs = query.toString();
+      return getClient().request<ListingsPage>(`/api/v1/listings${qs ? `?${qs}` : ""}`);
+    },
+
+    async unlist(id: string, version: number): Promise<CustomerListing> {
+      return getClient().request<CustomerListing>(
+        `/api/v1/listings/${encodeURIComponent(id)}/unlist`,
+        {
+          method: "POST",
+          body: { version },
+        }
+      );
+    },
+
+    async delete(id: string, version: number): Promise<{ deleted: boolean }> {
+      return getClient().request<{ deleted: boolean }>(
+        `/api/v1/listings/${encodeURIComponent(id)}`,
+        {
+          method: "DELETE",
+          body: { version },
+        }
+      );
+    },
+
+    async requestApproval(id: string, version: number): Promise<CustomerListing> {
+      return getClient().request<CustomerListing>(
+        `/api/v1/listings/${encodeURIComponent(id)}/request-approval`,
+        {
+          method: "POST",
+          body: { version },
         }
       );
     },
