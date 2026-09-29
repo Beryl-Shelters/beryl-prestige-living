@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import { adminApi, type AdminProfile } from "../lib/api";
+import { AdminThemeToggle } from "./theme-toggle";
 
 const AdminAccountContext = createContext<AdminProfile | null>(null);
 
@@ -142,21 +143,24 @@ export function AdminAppShell({ children }: { children: ReactNode }) {
               <Icon kind="menu"/>
             </button>
             <span className="admin-topbar-title">Admin Portal</span>
-            <div className="admin-profile-menu">
-              <button aria-expanded={profileOpen} onClick={() => setProfileOpen((open) => !open)} type="button">
-                <span className="admin-avatar">{initials(admin.fullName)}</span>
-                <span>{admin.fullName}</span>
-                <span aria-hidden="true">⌄</span>
-              </button>
-              {profileOpen && (
-                <div className="admin-profile-popover">
-                  <strong>{admin.fullName}</strong>
-                  <span>{admin.role === "SUPER_ADMIN" ? "Super Admin" : "Admin"}</span>
-                  <button disabled={loggingOut} onClick={() => void logout()} type="button">
-                    {loggingOut ? "Signing out…" : "Sign out"}
-                  </button>
-                </div>
-              )}
+            <div className="admin-topbar-actions">
+              <AdminThemeToggle />
+              <div className="admin-profile-menu">
+                <button aria-expanded={profileOpen} onClick={() => setProfileOpen((open) => !open)} type="button">
+                  <span className="admin-avatar">{initials(admin.fullName)}</span>
+                  <span>{admin.fullName}</span>
+                  <span aria-hidden="true">⌄</span>
+                </button>
+                {profileOpen && (
+                  <div className="admin-profile-popover">
+                    <strong>{admin.fullName}</strong>
+                    <span>{admin.role === "SUPER_ADMIN" ? "Super Admin" : "Admin"}</span>
+                    <button disabled={loggingOut} onClick={() => void logout()} type="button">
+                      {loggingOut ? "Signing out…" : "Sign out"}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </header>
           {shellError && <p className="admin-shell-error" role="alert">{shellError}</p>}

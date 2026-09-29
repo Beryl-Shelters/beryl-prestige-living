@@ -7,6 +7,7 @@ import { authRequest, type Customer } from "../../lib/auth-api";
 import { BrandLogo } from "./brand-logo";
 import { FloatingHelp } from "../public/floating-help";
 import { AssistanceDecision } from "../public/assistance-decision";
+import { ThemeToggle } from "../theme/theme-toggle";
 
 const navigation = [
   ["Home", "/"],
@@ -86,7 +87,8 @@ export function PublicHeader({ sessionAware = false, mobileMenu = false, onSessi
           })}
         </nav>
         <div className="header-actions">
-        {sessionAware && customer ? <div className="public-account-menu" ref={accountRef}>
+          <ThemeToggle />
+          {sessionAware && customer ? <div className="public-account-menu" ref={accountRef}>
           <button ref={accountTrigger} className="public-account-trigger" type="button" aria-haspopup="true" aria-expanded={accountOpen} aria-controls="public-account-dropdown" onClick={() => setAccountOpen(value => !value)}>
             <span className="public-account-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="3.5"/><path d="M5 19a7 7 0 0 1 14 0Z"/></svg></span>
             <span className="public-account-name">{[customer.first_name, customer.last_name].filter(Boolean).join(" ") || "My Account"}</span>

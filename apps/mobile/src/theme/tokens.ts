@@ -1,6 +1,6 @@
 import { Platform, type TextStyle, type ViewStyle } from "react-native";
 
-export const colors = {
+export const lightColors = {
   background: "#F7F5F2",
   surface: "#FFFFFF",
   surfaceMuted: "#F1EEEA",
@@ -18,6 +18,34 @@ export const colors = {
   danger: "#C93E3E",
   overlay: "rgba(24, 18, 13, 0.48)",
 } as const;
+
+export const darkColors = {
+  background: "#0D1117",
+  surface: "#161F28",
+  surfaceMuted: "#1A232F",
+  text: "#F1F5F9",
+  textMuted: "#94A3B8",
+  border: "#283545",
+  brand: "#C58B43",
+  brandDark: "#DF9F4F",
+  brandGold: "#C58B43",
+  brandTint: "#241D16",
+  action: "#C58B43",
+  actionText: "#FFFFFF",
+  success: "#22C55E",
+  warning: "#F59E0B",
+  danger: "#EF4444",
+  overlay: "rgba(0, 0, 0, 0.68)",
+} as const;
+
+export type ColorTokens = {
+  readonly [K in keyof typeof lightColors]: string;
+};
+export const colors = lightColors;
+
+export function getColors(scheme: "light" | "dark"): ColorTokens {
+  return scheme === "dark" ? darkColors : lightColors;
+}
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, hero: 48 } as const;
 export const radius = { xs: 4, sm: 8, md: 12, lg: 18, pill: 999 } as const;

@@ -10,6 +10,7 @@ import { BrandLogo } from "../auth/brand-logo";
 import { DashboardIcon } from "./dashboard-icon";
 import { useDashboard } from "./dashboard-provider";
 import { dashboardNavigation } from "./navigation";
+import { ThemeToggle } from "../theme/theme-toggle";
 
 function Sidebar({ close }: { close?: () => void }) {
   const pathname = usePathname();
@@ -25,6 +26,9 @@ function Sidebar({ close }: { close?: () => void }) {
       <button type="button" disabled={loggingOut} onClick={logout}><DashboardIcon name="logout" /><span>Log Out</span></button>
       <Link href="/" onClick={() => close?.()}><DashboardIcon name="home" /><span>Back Home</span></Link>
     </nav>
+    <div className="dashboard-theme-row">
+      <ThemeToggle showLabels />
+    </div>
     <div className="dashboard-identity">
       <span className={`dashboard-avatar${overview.customer.profile_image_url ? " has-image" : ""}`} aria-hidden="true">{overview.customer.profile_image_url ? <img src={overview.customer.profile_image_url} alt="" /> : customerInitials(overview.customer)}</span>
       <div><strong>{customerName(overview.customer) || "—"}</strong><span>{accountTypeLabel(overview.customer.account_type) || "—"}</span></div>

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import localFont from "next/font/local";
 
 import { ToastProvider } from "../components/auth/toast-provider";
+import { ThemeProvider, themeScript } from "../components/theme/theme-provider";
 import "./globals.css";
 import "./floating-help.css";
 import "./sell-assistance.css";
@@ -23,10 +24,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className={jakarta.variable}>
-        {children}
-        <ToastProvider />
+        <ThemeProvider>
+          {children}
+          <ToastProvider />
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -801,9 +801,21 @@
 .property-review-panel,.property-live-panel,.property-rejected-panels aside,.property-seller-card { padding: 1.35rem; }
 .property-review-panel h2,.property-live-panel h2,.property-rejected-panels h2,.property-seller-card h2 { margin: 0 0 .8rem; font-size: 1.15rem; }
 .property-review-panel > button { width: 100%; margin-top: .75rem; }
-.property-approve { background: #158346; color: #fff; }
-.property-reject { border: 1px solid #b7312f; background: #fff4f3; color: #b7312f; }
-.property-reject-solid { background: #b52f2d; color: #fff; }
+.property-approve { border: 1px solid transparent; background: #158346; color: #fff; transition: background-color .15s ease, border-color .15s ease, color .15s ease; }
+.property-approve:hover { background: #116938 !important; color: #fff !important; }
+.property-approve:active { background: #0d522c !important; }
+.property-approve:focus-visible { outline: 3px solid #22c55e; outline-offset: 2px; }
+
+.property-reject { border: 1px solid #b7312f; background: #fff4f3; color: #b7312f; transition: background-color .15s ease, border-color .15s ease, color .15s ease; }
+.property-reject:hover { background: #fee2e2 !important; border-color: #dc2626 !important; color: #991b1b !important; }
+.property-reject:active { background: #fecaca !important; border-color: #b91c1c !important; color: #7f1d1d !important; }
+.property-reject:focus-visible { outline: 3px solid #dc2626; outline-offset: 2px; }
+
+.property-reject-solid { border: 1px solid transparent; background: #b52f2d; color: #fff; transition: background-color .15s ease, border-color .15s ease; }
+.property-reject-solid:hover { background: #991b1b !important; color: #fff !important; }
+.property-reject-solid:active { background: #7f1d1d !important; }
+.property-reject-solid:focus-visible { outline: 3px solid #dc2626; outline-offset: 2px; }
+
 .property-live-panel h2 { color: #168246; }
 .property-live-panel p,.property-seller-card { display: grid; gap: .35rem; }
 .property-live-panel small { display: block; color: #877e74; }
@@ -822,7 +834,8 @@
 .property-modal-symbol.approve { color: #168246; }
 .property-modal-symbol.reject { color: #b52f2d; }
 .property-modal-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; margin-top: 1.5rem; }
-.property-modal-actions > button:first-child { border: 1px solid #936014; background: #fff; color: #715017; }
+.property-modal-actions > button:first-child { border: 1px solid var(--line); background: var(--panel); color: var(--ink); transition: background-color .15s ease, color .15s ease; }
+.property-modal-actions > button:first-child:hover { background: var(--soft) !important; color: var(--ink) !important; }
 .property-reason-field { display: grid; gap: .5rem; text-align: left; font-weight: 700; }
 .property-reason-field textarea { resize: vertical; border: 0; border-radius: 10px; background: #eae7df; padding: 1rem; line-height: 1.5; }
 .property-resubmit-note { display: grid; gap: .2rem; border-radius: 9px; background: #f7f4ee; padding: .9rem; text-align: left; }
@@ -1056,4 +1069,316 @@
   .lead-confirm { padding: 1.35rem 1rem; }
 }
 
-.referrer-withdrawals{min-width:0;margin-top:1.25rem;overflow:hidden;border-radius:14px;background:#fff;box-shadow:0 5px 18px #2415080b}.referrer-withdrawals>header{padding:1.35rem}.referrer-withdrawals h2{margin:0;font-size:1.25rem}.referrer-withdrawals header p{margin:.35rem 0 0;color:#756d64;font-size:.85rem}.referrer-withdrawals table{width:100%;min-width:1080px;border-collapse:collapse}.referrer-withdrawals th{background:#eef1f5;padding:1rem;color:#465064;font-size:.72rem;letter-spacing:.05em;text-align:left;text-transform:uppercase}.referrer-withdrawals td{border-bottom:1px solid #e5e7eb;padding:1rem;vertical-align:top}.referrer-withdrawals td small{display:block;margin-top:.25rem;color:#827970}.referrer-withdrawals-empty{padding:3rem;text-align:center;color:#6c655d}.admin-withdrawal-status,.reserved-payment{display:inline-flex;border-radius:999px;padding:.34rem .68rem;font-size:.72rem;font-weight:800}.admin-withdrawal-status--pending{background:#fff0d5;color:#965f07}.admin-withdrawal-status--processing{background:#e7eef8;color:#375575}.admin-withdrawal-status--paid{background:#e1f6e8;color:#087538}.admin-withdrawal-status--rejected{background:#fde7e7;color:#a02c2c}.admin-withdrawal-status--cancelled,.reserved-payment{background:#eceff3;color:#5b6470}.withdrawal-admin-actions{display:flex;flex-wrap:wrap;gap:.45rem}.withdrawal-admin-actions button{white-space:nowrap;background:#9a6a22;color:#fff}.withdrawal-admin-actions .reject-withdrawal{border:1px solid #d8b3ad;background:#fff;color:#9a3429}.withdrawal-rejection{display:grid;gap:.45rem;margin-top:1rem;font-weight:750}.withdrawal-rejection textarea{resize:vertical;border:1px solid #d7d0c7;border-radius:8px;padding:.8rem;font:inherit}.withdrawal-reject-confirm{background:#a13b30!important;color:#fff!important}
+.referrer-withdrawals{min-width:0;margin-top:1.25rem;overflow:hidden;border-radius:14px;background:var(--card-bg);box-shadow:0 5px 18px rgba(0,0,0,0.06);border:1px solid var(--line)}.referrer-withdrawals>header{padding:1.35rem}.referrer-withdrawals h2{margin:0;font-size:1.25rem;color:var(--ink)}.referrer-withdrawals header p{margin:.35rem 0 0;color:var(--muted);font-size:.85rem}.referrer-withdrawals table{width:100%;min-width:1080px;border-collapse:collapse}.referrer-withdrawals th{background:var(--table-header-bg);padding:1rem;color:var(--table-header-text);font-size:.72rem;letter-spacing:.05em;text-align:left;text-transform:uppercase;border-bottom:1px solid var(--line)}.referrer-withdrawals td{border-bottom:1px solid var(--line);padding:1rem;vertical-align:top;color:var(--ink)}.referrer-withdrawals td small{display:block;margin-top:.25rem;color:var(--muted)}.referrer-withdrawals-empty{padding:3rem;text-align:center;color:var(--muted)}.admin-withdrawal-status,.reserved-payment{display:inline-flex;border-radius:999px;padding:.34rem .68rem;font-size:.72rem;font-weight:800}.admin-withdrawal-status--pending{background:#fff0d5;color:#965f07}.admin-withdrawal-status--processing{background:#e7eef8;color:#375575}.admin-withdrawal-status--paid{background:#e1f6e8;color:#087538}.admin-withdrawal-status--rejected{background:#fde7e7;color:#a02c2c}.admin-withdrawal-status--cancelled,.reserved-payment{background:#eceff3;color:#5b6470}.withdrawal-admin-actions{display:flex;flex-wrap:wrap;gap:.45rem}.withdrawal-admin-actions button{white-space:nowrap;background:#9a6a22;color:#fff}.withdrawal-admin-actions .reject-withdrawal{border:1px solid #d8b3ad;background:#fff;color:#9a3429;transition:all .15s ease}.withdrawal-admin-actions .reject-withdrawal:hover{background:#fee2e2!important;border-color:#dc2626!important;color:#991b1b!important}.withdrawal-admin-actions .reject-withdrawal:active{background:#fecaca!important;border-color:#b91c1c!important;color:#7f1d1d!important}.withdrawal-admin-actions .reject-withdrawal:focus-visible{outline:2px solid #dc2626;outline-offset:1px}.withdrawal-rejection{display:grid;gap:.45rem;margin-top:1rem;font-weight:750;color:var(--ink)}.withdrawal-rejection textarea{resize:vertical;border:1px solid var(--line);border-radius:8px;padding:.8rem;font:inherit;background:var(--soft);color:var(--ink)}.withdrawal-reject-confirm{background:#a13b30!important;color:#fff!important}
+
+/* ==================================================
+   ADMIN DARK MODE OVERRIDES (Executive Update aesthetic)
+   ================================================== */
+[data-theme="dark"] .admin-app-shell {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .admin-sidebar {
+  background: #11161d;
+  border-right: 1px solid var(--line);
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .admin-primary-nav a {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .admin-primary-nav a:hover,
+[data-theme="dark"] .admin-primary-nav a.is-active {
+  background: #1a232f;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .admin-primary-nav small {
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+[data-theme="dark"] .admin-sidebar-account {
+  border-top-color: var(--line);
+}
+
+[data-theme="dark"] .admin-avatar {
+  background: rgba(197, 139, 67, 0.2);
+  color: var(--brand);
+}
+
+[data-theme="dark"] .admin-sidebar-account small {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .admin-sidebar-account button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .admin-topbar {
+  background: rgba(22, 31, 40, 0.95);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .admin-topbar-title {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .admin-menu-button {
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+[data-theme="dark"] .admin-profile-menu > button {
+  background: #161f28;
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .admin-profile-popover {
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .admin-profile-popover strong {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .admin-profile-popover span {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .admin-profile-popover button {
+  background: var(--soft);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+[data-theme="dark"] .admin-profile-popover button:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .admin-card,
+[data-theme="dark"] .customer-table-card,
+[data-theme="dark"] .property-detail-card,
+[data-theme="dark"] .property-review-panel,
+[data-theme="dark"] .property-live-panel,
+[data-theme="dark"] .property-rejected-panels aside,
+[data-theme="dark"] .property-seller-card,
+[data-theme="dark"] .lead-card,
+[data-theme="dark"] .leads-toolbar,
+[data-theme="dark"] .lead-stage-panel,
+[data-theme="dark"] .referrer-withdrawals {
+  background: var(--card-bg);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .customer-table-card th {
+  background: #121820;
+  color: #94a3b8;
+  border-bottom: 1px solid var(--line);
+}
+
+[data-theme="dark"] .customer-table-card td {
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .customer-table-card tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .customer-name-cell small,
+[data-theme="dark"] .customer-contact span {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .customer-initials {
+  background: rgba(197, 139, 67, 0.18);
+  color: var(--brand);
+}
+
+[data-theme="dark"] .admin-table-search,
+[data-theme="dark"] .admin-filter-select,
+[data-theme="dark"] .customer-filter-input,
+[data-theme="dark"] .leads-toolbar input,
+[data-theme="dark"] .leads-toolbar select {
+  background: var(--soft);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .admin-pagination button {
+  background: var(--soft);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .property-attempt {
+  border-top-color: var(--line);
+}
+
+[data-theme="dark"] .property-live-panel small {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .property-modal {
+  background: var(--card-bg);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+[data-theme="dark"] .property-modal-close {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .property-reason-field textarea {
+  background: var(--soft);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .property-resubmit-note {
+  background: var(--soft);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+[data-theme="dark"] .property-resubmit-note span {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .property-reject {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .property-reject:hover {
+  background: rgba(239, 68, 68, 0.25) !important;
+  border-color: #f87171 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .property-reject:active {
+  background: rgba(239, 68, 68, 0.35) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .property-approve {
+  background: rgba(34, 197, 94, 0.16);
+  border-color: #22c55e;
+  color: #4ade80;
+}
+
+[data-theme="dark"] .property-approve:hover {
+  background: rgba(34, 197, 94, 0.28) !important;
+  border-color: #4ade80 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .property-approve:active {
+  background: rgba(34, 197, 94, 0.40) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .property-reject-solid {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .property-reject-solid:hover {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .leads-column {
+  background: var(--soft);
+  border: 1px solid var(--line);
+}
+
+[data-theme="dark"] .lead-card small,
+[data-theme="dark"] .lead-card span {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .lead-stage-panel {
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .lead-stage-panel > small {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .lead-stage-choice {
+  background: var(--soft);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .lead-confirm {
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .lead-confirm-summary {
+  background: var(--soft);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .lead-confirm-summary span {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .lead-outcome-warning {
+  background: rgba(245, 158, 11, 0.15);
+  border-left-color: #f59e0b;
+  color: var(--ink);
+}
+
+[data-theme="dark"] .withdrawal-admin-actions .reject-withdrawal {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .withdrawal-admin-actions .reject-withdrawal:hover {
+  background: rgba(239, 68, 68, 0.25) !important;
+  border-color: #f87171 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .admin-withdrawal-status--pending {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .admin-withdrawal-status--processing {
+  background: rgba(56, 189, 248, 0.18);
+  color: #38bdf8;
+}
+
+[data-theme="dark"] .admin-withdrawal-status--paid {
+  background: rgba(34, 197, 94, 0.18);
+  color: #4ade80;
+}
+
+[data-theme="dark"] .admin-withdrawal-status--rejected {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+}
+
+[data-theme="dark"] .admin-withdrawal-status--cancelled,
+[data-theme="dark"] .reserved-payment {
+  background: var(--soft);
+  color: var(--muted);
+}

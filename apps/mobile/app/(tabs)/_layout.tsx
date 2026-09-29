@@ -1,6 +1,43 @@
 import { Tabs } from "expo-router";
 import { AppIcon } from "@/components/app-icon";
-import { colors } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
 
-const icons={index:["home-outline","home"],properties:["search-outline","search"],list:["add-circle-outline","add-circle"],mortgage:["calculator-outline","calculator"],account:["person-outline","person"]} as const;
-export default function TabsLayout(){return <Tabs screenOptions={({route})=>({headerShown:false,tabBarActiveTintColor:colors.brandDark,tabBarInactiveTintColor:colors.textMuted,tabBarStyle:{height:66,paddingTop:6,paddingBottom:8,backgroundColor:colors.surface,borderTopColor:colors.border},tabBarLabelStyle:{fontSize:12,fontWeight:"600"},tabBarIcon:({color,size,focused})=>{const names=icons[route.name as keyof typeof icons]??icons.index;return <AppIcon name={names[focused?1:0]} color={color} size={size}/>;}})}><Tabs.Screen name="index" options={{title:"Home",tabBarAccessibilityLabel:"Home tab"}}/><Tabs.Screen name="properties" options={{title:"Properties",tabBarAccessibilityLabel:"Properties tab"}}/><Tabs.Screen name="list" options={{title:"List",tabBarAccessibilityLabel:"List a property tab"}}/><Tabs.Screen name="mortgage" options={{title:"Mortgage",tabBarAccessibilityLabel:"Mortgage calculator tab"}}/><Tabs.Screen name="account" options={{title:"Account",tabBarAccessibilityLabel:"Account tab"}}/></Tabs>}
+const icons = {
+  index: ["home-outline", "home"],
+  properties: ["search-outline", "search"],
+  list: ["add-circle-outline", "add-circle"],
+  mortgage: ["calculator-outline", "calculator"],
+  account: ["person-outline", "person"],
+} as const;
+
+export default function TabsLayout() {
+  const { colors } = useTheme();
+
+  return (
+    <Tabs
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: colors.brandDark,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle: {
+          height: 66,
+          paddingTop: 6,
+          paddingBottom: 8,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+        },
+        tabBarLabelStyle: { fontSize: 12, fontWeight: "600" },
+        tabBarIcon: ({ color, size, focused }) => {
+          const names = icons[route.name as keyof typeof icons] ?? icons.index;
+          return <AppIcon name={names[focused ? 1 : 0]} color={color} size={size} />;
+        },
+      })}
+    >
+      <Tabs.Screen name="index" options={{ title: "Home", tabBarAccessibilityLabel: "Home tab" }} />
+      <Tabs.Screen name="properties" options={{ title: "Properties", tabBarAccessibilityLabel: "Properties tab" }} />
+      <Tabs.Screen name="list" options={{ title: "List", tabBarAccessibilityLabel: "List a property tab" }} />
+      <Tabs.Screen name="mortgage" options={{ title: "Mortgage", tabBarAccessibilityLabel: "Mortgage calculator tab" }} />
+      <Tabs.Screen name="account" options={{ title: "Account", tabBarAccessibilityLabel: "Account tab" }} />
+    </Tabs>
+  );
+}

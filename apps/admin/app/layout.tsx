@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { AdminThemeProvider, adminThemeScript } from "../components/theme-provider";
 import "./globals.css";
 import "./admin-app.css";
 
@@ -11,8 +12,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: adminThemeScript }} />
+      </head>
+      <body>
+        <AdminThemeProvider>{children}</AdminThemeProvider>
+      </body>
     </html>
   );
 }
