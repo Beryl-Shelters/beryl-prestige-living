@@ -50,7 +50,7 @@ export function AdminAuthShell({ children, variant }: AdminAuthShellProps) {
             <span>Admin Portal</span>
           </div>
           <h2>Manage listings, leads and your team.</h2>
-          <p>Secure access for Beryl Prestige Living staff.</p>
+          <p>Secure access for Beryl Shelter staff.</p>
           <div className="admin-invitation-note">
             <HelpIcon />
             <span>Invitation-only access</span>
