@@ -1,6 +1,6 @@
 import { AuthApiError } from "./auth-api";
 
-export type ReferralItem={id:string;referralType:"PROPERTY"|"SELLER";saleAmount:number;propertyCode:string;earnings:number;status:"COMPLETED";completedAt:string};
+export type ReferralItem={id:string;referralType:"PROPERTY"|"SELLER";saleAmount:number;propertyCode:string;earnings:number;status:"COMPLETED";completedAt:string;paymentState:"OUTSTANDING"|"PAID";paidAt:string|null};
 export type ReferralPage={program:{commissionRateBasisPoints:number};summary:{availableBalance:number;totalEarnings:number;referrals:number;propertiesSold:number};items:ReferralItem[];page:number;pageSize:number;total:number;totalPages:number};
 export type CreatedReferral={id:string;referralType:"PROPERTY"|"SELLER";propertyCode:string|null;referralUrl:string};
 

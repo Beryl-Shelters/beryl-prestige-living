@@ -15,12 +15,13 @@ import { adminApi, type AdminProfile } from "../lib/api";
 
 const AdminAccountContext = createContext<AdminProfile | null>(null);
 
-function Icon({ kind }: { kind: "dashboard" | "users" | "properties" | "leads" | "menu" | "logout" }) {
+function Icon({ kind }: { kind: "dashboard" | "users" | "properties" | "leads" | "referrers" | "menu" | "logout" }) {
   const paths = {
     dashboard: <><path d="m3 11 9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></>,
     users: <><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></>,
     properties: <><path d="m3 8 9-4 9 4-9 4-9-4Z"/><path d="m5 10 7 4 7-4v7l-7 4-7-4v-7Z"/></>,
     leads: <><path d="M4 20h16M6 20v-9h12v9M4 11l8-7 8 7"/><path d="M9 14h6"/></>,
+    referrers: <><circle cx="8" cy="8" r="3"/><circle cx="17" cy="7" r="2"/><path d="M3 20c0-4 2-6 5-6s5 2 5 6M14 14c4 0 6 2 6 5"/><path d="m13 9 2 2 4-4"/></>,
     menu: <path d="M4 7h16M4 12h16M4 17h16"/>,
     logout: <><path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9"/></>,
   };
@@ -93,6 +94,7 @@ export function AdminAppShell({ children }: { children: ReactNode }) {
   const usersActive = pathname.startsWith("/dashboard/users");
   const propertiesActive = pathname.startsWith("/dashboard/properties");
   const leadsActive = pathname.startsWith("/dashboard/leads");
+  const referrersActive = pathname.startsWith("/dashboard/referrers");
   return (
     <AdminAccountContext.Provider value={admin}>
       <div className="admin-app-shell">
@@ -120,6 +122,9 @@ export function AdminAppShell({ children }: { children: ReactNode }) {
             </Link>
             <Link className={leadsActive ? "is-active" : ""} href="/dashboard/leads" onClick={closeMenu}>
               <Icon kind="leads"/><span>Leads</span>
+            </Link>
+            <Link className={referrersActive ? "is-active" : ""} href="/dashboard/referrers" onClick={closeMenu}>
+              <Icon kind="referrers"/><span>Referrers</span>
             </Link>
           </nav>
           <div className="admin-sidebar-account">

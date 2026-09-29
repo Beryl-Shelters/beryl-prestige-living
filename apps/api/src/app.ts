@@ -50,6 +50,7 @@ import { SupabaseAdminCustomersRepository, type AdminCustomersRepository } from 
 import { SupabaseAdminPropertiesRepository, type AdminPropertiesRepository } from "./admin/properties-repository.js";
 import { SupabaseAdminLeadsRepository, type AdminLeadsRepository } from "./admin/leads-repository.js";
 import { SupabaseAdminPurchasesRepository, type AdminPurchasesRepository } from "./admin/purchases-repository.js";
+import { SupabaseAdminReferrersRepository, type AdminReferrersRepository } from "./admin/referrers-repository.js";
 
 export interface AppConfig {
   webAppUrl: string | undefined;
@@ -60,6 +61,7 @@ export interface AppConfig {
   adminPropertiesRepository?: AdminPropertiesRepository;
   adminLeadsRepository?: AdminLeadsRepository;
   adminPurchasesRepository?: AdminPurchasesRepository;
+  adminReferrersRepository?: AdminReferrersRepository;
   adminIdentity?: AdminIdentity;
   adminEmail?: AdminInvitationEmail;
   gateway?: AuthGateway;
@@ -125,7 +127,7 @@ export function createApp(config: AppConfig): Express {
     app.use("/api/v1/dashboard/kyc",kycRouter(config.auth,gateway,config.kycRepository??new SupabaseKycRepository(config.auth),storage));
     app.use("/api/v1/listings", listingsRouter(config.auth, gateway, listings, storage));
     app.use("/api/v1/messages", messagesRouter(config.auth,gateway,tickets,storage));
-    if(config.admin)app.use("/api/v1/admin",adminRouter(config.auth,config.admin,config.adminRepository??new SupabaseAdminRepository(config.auth),config.adminCustomersRepository??new SupabaseAdminCustomersRepository(config.auth),config.adminPropertiesRepository??new SupabaseAdminPropertiesRepository(config.auth),config.adminLeadsRepository??new SupabaseAdminLeadsRepository(config.auth),config.adminPurchasesRepository??new SupabaseAdminPurchasesRepository(config.auth),storage,config.adminIdentity??new SupabaseAdminIdentity(config.auth),config.adminEmail??new ResendAdminInvitationEmail(config.admin)));
+    if(config.admin)app.use("/api/v1/admin",adminRouter(config.auth,config.admin,config.adminRepository??new SupabaseAdminRepository(config.auth),config.adminCustomersRepository??new SupabaseAdminCustomersRepository(config.auth),config.adminPropertiesRepository??new SupabaseAdminPropertiesRepository(config.auth),config.adminLeadsRepository??new SupabaseAdminLeadsRepository(config.auth),config.adminPurchasesRepository??new SupabaseAdminPurchasesRepository(config.auth),config.adminReferrersRepository??new SupabaseAdminReferrersRepository(config.auth),storage,config.adminIdentity??new SupabaseAdminIdentity(config.auth),config.adminEmail??new ResendAdminInvitationEmail(config.admin)));
   } else app.use(["/api/v1/auth", "/api/v1/dashboard", "/api/v1/listings", "/api/v1/messages"], (_request, _response, next) => next(unavailable()));
   if(!config.auth||!config.admin)app.use("/api/v1/admin",(_request,_response,next)=>next(unavailable()));
   app.use(authErrorHandler);
