@@ -79,7 +79,7 @@ export async function checkReferrals({
   const endpoint = "/dashboard/referrals",
     ready = () =>
       browserPage
-        .getByRole("heading", { name: "Earn with Beryl Prestige Livings", exact: true })
+        .getByRole("heading", { name: "Earn with Beryl Shelter", exact: true })
         .waitFor();
   const open = async () => {
     await browserPage.goto(origin + "/dashboard/referrals");
