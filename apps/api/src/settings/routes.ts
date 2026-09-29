@@ -5,6 +5,7 @@ import type { AuthConfig } from "../auth/config.js";
 import { AuthError,expired } from "../auth/errors.js";
 import type { AuthGateway,Customer } from "../auth/gateway.js";
 import { AuthSessions } from "../auth/sessions.js";
+import { isTrustedCustomerRequest } from "../auth/request-trust.js";
 import { changePasswordSchema } from "../auth/validation.js";
 import type { MediaStorage } from "../listings/media.js";
 import { settingsBusinessInput,settingsProfileInput } from "./model.js";
@@ -19,7 +20,7 @@ export function settingsRouter(config:AuthConfig,gateway:AuthGateway,repository:
     message:{success:false,error:{code:"RATE_LIMITED",message:"Too many password attempts. Please try again later."}}});
   router.use((req,res,next)=>{
     res.setHeader("Cache-Control","no-store");res.vary("Cookie");
-    if(req.method!=="GET"&&(req.headers.origin!==config.webOrigin||!(req.is("application/json")||req.is("multipart/form-data"))))
+    if(req.method!=="GET"&&(!isTrustedCustomerRequest(req,config)||!(req.is("application/json")||req.is("multipart/form-data"))))
       return next(new AuthError(403,"UNTRUSTED_ORIGIN","This request is not permitted."));
     next();
   });
@@ -57,7 +58,7 @@ export function settingsRouter(config:AuthConfig,gateway:AuthGateway,repository:
     const owner=customer(res),{oldPassword,newPassword}=changePasswordSchema.parse(req.body);
     const verified=await gateway.login(owner.email,oldPassword);
     if(verified.userId!==owner.id)throw new AuthError(401,"INVALID_CREDENTIALS","Invalid credentials.");
-    sessions.clear(res,"ACCOUNT");
+    sessions.clear(res,"ACCOUNT",req);
     await gateway.deleteUserSessions(owner.id);
     await gateway.updatePassword(verified,newPassword);
     await gateway.deleteUserSessions(owner.id);

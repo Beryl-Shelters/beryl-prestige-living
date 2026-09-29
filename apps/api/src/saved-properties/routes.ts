@@ -4,6 +4,7 @@ import type { AuthConfig } from "../auth/config.js";
 import { AuthError, expired } from "../auth/errors.js";
 import type { AuthGateway } from "../auth/gateway.js";
 import { AuthSessions } from "../auth/sessions.js";
+import { isTrustedCustomerRequest } from "../auth/request-trust.js";
 import { savedPropertiesQuery, savedPropertyCompareQuery, savedPropertyInput, savedPropertyParams, savedPropertyStatesQuery } from "./model.js";
 import type { SavedPropertiesRepository } from "./repository.js";
 
@@ -14,7 +15,7 @@ export function savedPropertiesRouter(config: AuthConfig, gateway: AuthGateway, 
   const router = Router(), sessions = new AuthSessions(config, gateway);
   router.use((request, response, next) => {
     response.setHeader("Cache-Control", "no-store"); response.vary("Cookie");
-    if (request.method !== "GET" && (request.headers.origin !== config.webOrigin || !request.is("application/json")))
+    if (request.method !== "GET" && (!isTrustedCustomerRequest(request, config) || !request.is("application/json")))
       return next(new AuthError(403, "UNTRUSTED_ORIGIN", "This request is not permitted."));
     next();
   });

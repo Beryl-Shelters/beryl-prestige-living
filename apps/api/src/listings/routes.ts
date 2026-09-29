@@ -5,6 +5,7 @@ import type { AuthConfig } from "../auth/config.js";
 import { AuthCipher } from "../auth/crypto.js";
 import type { AuthGateway, Customer } from "../auth/gateway.js";
 import { AuthSessions } from "../auth/sessions.js";
+import { isTrustedCustomerRequest } from "../auth/request-trust.js";
 import { AuthError, expired } from "../auth/errors.js";
 import { listingOptions, listingQuery, presentListing, versionInput } from "./model.js";
 import { notFound, type ListingsRepository } from "./repository.js";
@@ -16,7 +17,7 @@ export function listingsRouter(config:AuthConfig,gateway:AuthGateway,repository:
   const router=Router(); const sessions=new AuthSessions(config,gateway); const service=new ListingsService(repository,storage,new AuthCipher(config.encryptionKey));
   router.use((_req,res,next)=>{res.setHeader("Cache-Control","no-store");res.vary("Cookie");next();});
   router.use((req,_res,next)=>{
-    if(req.method!=="GET" && (req.headers.origin!==config.webOrigin || !(req.is("application/json") || req.is("multipart/form-data")))) return next(new AuthError(403,"UNTRUSTED_ORIGIN","This request is not permitted."));
+    if(req.method!=="GET" && (!isTrustedCustomerRequest(req,config) || !(req.is("application/json") || req.is("multipart/form-data")))) return next(new AuthError(403,"UNTRUSTED_ORIGIN","This request is not permitted."));
     next();
   });
   router.use(rateLimit({windowMs:60000,limit:40,skip:req=>req.method==="GET",standardHeaders:"draft-7",legacyHeaders:false,message:{success:false,error:{code:"RATE_LIMITED",message:"Too many requests. Please try again later."}}}));

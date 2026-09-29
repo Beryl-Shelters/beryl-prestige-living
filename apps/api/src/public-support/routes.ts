@@ -2,6 +2,7 @@ import { Router, type Request, type Response, type NextFunction } from "express"
 import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
 import { AuthError } from "../auth/errors.js";
+import { isTrustedCustomerRequest } from "../auth/request-trust.js";
 import type { AuthConfig } from "../auth/config.js";
 import type { PublicSupportRepository } from "./repository.js";
 
@@ -27,7 +28,7 @@ export function publicSupportRouter(config: AuthConfig, repository: PublicSuppor
   router.use((_req, res, next) => { res.setHeader("Cache-Control", "no-store"); next(); });
   router.post("/reports", rateLimit({ windowMs: 3600000, limit: 25, standardHeaders: "draft-7", legacyHeaders: false,
     message: { success: false, error: { code: "RATE_LIMITED", message: "Too many reports. Please try again later." } } }), wrap(async (req, res) => {
-    if (req.headers.origin !== config.webOrigin) throw new AuthError(403, "UNTRUSTED_ORIGIN", "This request is not permitted.");
+    if (!isTrustedCustomerRequest(req, config)) throw new AuthError(403, "UNTRUSTED_ORIGIN", "This request is not permitted.");
     if (!req.is("application/json")) throw new AuthError(415, "JSON_REQUIRED", "Submit the report as JSON.");
     if (Object.keys(req.query).length) throw new AuthError(400, "INVALID_REPORT", "Check the supplied report fields.");
     const report = reportSchema.parse(req.body);

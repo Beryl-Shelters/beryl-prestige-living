@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { AuthConfig } from "../auth/config.js";
 import type { AuthGateway } from "../auth/gateway.js";
 import { AuthSessions } from "../auth/sessions.js";
+import { isTrustedCustomerRequest } from "../auth/request-trust.js";
 import { AuthError, expired } from "../auth/errors.js";
 import { createTicketInput, replyInput, readInput, ticketQuery, attachmentCreateInput, attachmentReplyInput } from "./model.js";
 import type { TicketsRepository } from "./repository.js";
@@ -17,7 +18,7 @@ export function messagesRouter(config:AuthConfig,gateway:AuthGateway,repository:
   const attachments=new TicketAttachmentsService(repository,storage);
   router.use((req,res,next) => {
     res.setHeader("Cache-Control","no-store"); res.vary("Cookie");
-    if (!["GET","HEAD"].includes(req.method) && (req.headers.origin!==config.webOrigin || !(req.is("application/json")||req.is("multipart/form-data")))) return next(new AuthError(403,"UNTRUSTED_ORIGIN","This request is not permitted."));
+    if (!["GET","HEAD"].includes(req.method) && (!isTrustedCustomerRequest(req,config) || !(req.is("application/json")||req.is("multipart/form-data")))) return next(new AuthError(403,"UNTRUSTED_ORIGIN","This request is not permitted."));
     next();
   });
   router.use(rateLimit({windowMs:60000,limit:40,skip:req=>["GET","HEAD"].includes(req.method),standardHeaders:"draft-7",legacyHeaders:false,

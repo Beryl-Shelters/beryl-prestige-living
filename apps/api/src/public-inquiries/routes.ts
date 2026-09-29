@@ -3,6 +3,7 @@ import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
 import type { AuthConfig } from "../auth/config.js";
 import { AuthError } from "../auth/errors.js";
+import { isTrustedCustomerRequest } from "../auth/request-trust.js";
 import { inquirySources, inquiryTypes, type PublicInquiriesRepository } from "./repository.js";
 
 const noControls=(value:string)=>[...value].every(char=>{const point=char.codePointAt(0)!;return point>31&&point!==127});
@@ -17,7 +18,7 @@ const wrap=(fn:(request:Request,response:Response)=>Promise<void>)=>(request:Req
 
 export function publicInquiriesRouter(config:AuthConfig,repository:PublicInquiriesRepository){const router=Router();router.use((_req,res,next)=>{res.setHeader("Cache-Control","no-store");next()});
   router.post("/",rateLimit({windowMs:3600000,limit:20,standardHeaders:"draft-7",legacyHeaders:false,message:{success:false,error:{code:"RATE_LIMITED",message:"Too many inquiries. Please try again later."}}}),wrap(async(req,res)=>{
-    if(req.headers.origin!==config.webOrigin)throw new AuthError(403,"UNTRUSTED_ORIGIN","This request is not permitted.");
+    if(!isTrustedCustomerRequest(req,config))throw new AuthError(403,"UNTRUSTED_ORIGIN","This request is not permitted.");
     if(!req.is("application/json"))throw new AuthError(415,"JSON_REQUIRED","Submit the inquiry as JSON.");
     if(Object.keys(req.query).length)throw new AuthError(400,"INVALID_INQUIRY","Check the supplied inquiry fields.");
     const inquiry=inquirySchema.parse(req.body);try{await repository.submit(inquiry)}catch{throw new AuthError(503,"INQUIRY_UNAVAILABLE","Your inquiry could not be submitted. Please try again.")}

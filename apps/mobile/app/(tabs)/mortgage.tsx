@@ -1,0 +1,2 @@
+import { Card, Screen, ScreenState, SectionHeading } from "@/components/ui";
+export default function MortgageScreen(){return <Screen><SectionHeading title="Mortgage Calculator" description="Plan a property budget using the same calculation rules as Customer Web."/><Card><ScreenState title="Calculator arrives in Phase 2" message="The Phase 1 shell contains no fictional prices or financial estimates."/></Card></Screen>}

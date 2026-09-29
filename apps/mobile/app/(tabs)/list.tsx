@@ -1,0 +1,4 @@
+import { router } from "expo-router";
+import { Button, Card, LoadingState, Screen, ScreenState, SectionHeading } from "@/components/ui";
+import { useAuth } from "@/providers/auth-provider";
+export default function ListScreen(){const {status}=useAuth();return <Screen><SectionHeading title="List a property" description="Create and submit a property through the canonical Beryl sales flow."/>{status==="loading"?<LoadingState label="Checking your account"/>:status!=="signedIn"?<Card><ScreenState title="Sign in to list" message="A verified customer account is required before you can create a listing." action={<Button label="Log in" onPress={()=>router.push("/(auth)/login")}/>}/></Card>:<Card><ScreenState title="Listing workflow arrives in Phase 3" message="Property data, media, documents, Sales Mandate, signature and submission will use the existing V2 listing APIs."/></Card>}</Screen>}

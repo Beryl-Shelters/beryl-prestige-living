@@ -85,6 +85,7 @@ async function fixture(t: TestContext, overrides = {}) {
   t.after(()=>new Promise<void>((resolve)=>{server.close(()=>resolve());server.closeAllConnections();}));
   const address=server.address();assert.ok(address && typeof address!=="string");
   const jar=new Map<string,string>();
+  const mobileTokens=new Map<string,string>();
   async function request(path:string,body?:unknown,headers:Record<string,string>={}) {
     const response=await fetch(`http://127.0.0.1:${address.port}/api/v1/auth${path}`,{
       method:body===undefined?"GET":"POST",headers:{Origin:config.webOrigin,"Content-Type":"application/json",Cookie:[...jar].map(([k,v])=>`${k}=${v}`).join("; "),...headers},
@@ -96,7 +97,16 @@ async function fixture(t: TestContext, overrides = {}) {
     }
     return {response,body:await response.json()};
   }
-  return {gateway,request,jar};
+  async function mobileRequest(path:string,body?:unknown,headers:Record<string,string>={}) {
+    const requestHeaders:Record<string,string>={"X-Beryl-Client":"mobile",...headers};
+    if(body!==undefined)requestHeaders["Content-Type"]="application/json";
+    const account=mobileTokens.get("account");if(account)requestHeaders.Authorization=`Bearer ${account}`;
+    for(const purpose of ["verify","forgot","recovery","oauth"]){const value=mobileTokens.get(purpose);if(value)requestHeaders[`X-Beryl-${purpose[0]!.toUpperCase()}${purpose.slice(1)}-Token`]=value;}
+    const response=await fetch(`http://127.0.0.1:${address.port}/api/v1/auth${path}`,{method:body===undefined?"GET":"POST",headers:requestHeaders,...(body===undefined?{}:{body:JSON.stringify(body)})});
+    for(const purpose of ["account","verify","forgot","recovery","oauth"]){const value=response.headers.get(`x-beryl-${purpose}-token`);if(value===null)continue;if(value)mobileTokens.set(purpose,value);else mobileTokens.delete(purpose);}
+    return {response,body:await response.json()};
+  }
+  return {gateway,request,mobileRequest,jar,mobileTokens};
 }
 const loginBody={identifier:customer.email,password:registration.password};
 const resetBody={password:registration.password,confirmPassword:registration.password};
@@ -216,6 +226,24 @@ test("authenticated me, encrypted storage and logout invalidate cookie replay",a
   assert.equal((await request("/me")).body.data.customer.id,customer.id);
   assert.equal((await request("/logout",{})).response.status,200);jar.set("beryl_account",cookie);
   assert.equal((await request("/me")).response.status,401);
+});
+test("native Mobile uses the same opaque server session through SecureStore-compatible bearer transport",async(t)=>{
+  const {gateway,mobileRequest,mobileTokens}=await fixture(t);gateway.profiles=[];
+  const registered=await mobileRequest("/register",registration);
+  assert.equal(registered.response.status,201);assert.ok(mobileTokens.has("verify"));assert.equal(mobileTokens.has("account"),false);
+  assert.equal((await mobileRequest("/verification-context")).body.data.maskedEmail,"a***@example.com");
+  const verified=await mobileRequest("/verify-email",{code:"123456"});
+  assert.equal(verified.response.status,200);assert.ok(mobileTokens.has("account"));
+  const raw=mobileTokens.get("account")!;const row=gateway.sessions.get(hashToken(raw))!;
+  assert.ok(row);assert.equal(row.encrypted_tokens.includes("private-access"),false);
+  assert.equal((await mobileRequest("/me")).body.data.customer.id,customer.id);
+  assert.equal(JSON.stringify(verified.body).includes(raw),false);
+  assert.equal((await mobileRequest("/logout",{})).response.status,200);
+  mobileTokens.set("account",raw);assert.equal((await mobileRequest("/me")).response.status,401);
+});
+test("Mobile marker is accepted only without a browser Origin",async(t)=>{
+  const {mobileRequest}=await fixture(t);
+  assert.equal((await mobileRequest("/login",loginBody,{Origin:"https://evil.example"})).response.status,403);
 });
 test("provider rejection and database session expiry cannot access me",async(t)=>{
   const {request,gateway}=await fixture(t);await request("/login",loginBody);

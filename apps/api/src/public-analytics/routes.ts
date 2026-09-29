@@ -1,6 +1,7 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { rateLimit } from "express-rate-limit";
 import { AuthError } from "../auth/errors.js";
+import { isTrustedCustomerRequest } from "../auth/request-trust.js";
 import type { AuthConfig } from "../auth/config.js";
 import type { PublicAnalyticsRepository } from "./repository.js";
 
@@ -24,7 +25,7 @@ export function publicAnalyticsRouter(config: AuthConfig, repository: PublicAnal
   // Origin checks and per-IP limits reduce abuse; unauthenticated activity
   // counts cannot be made fraud-proof without a stronger product contract.
   router.post("/property-searches", rateLimit({ windowMs: 60000, limit: 10, standardHeaders: "draft-7", legacyHeaders: false, message: limited }), wrap(async (req, res) => {
-    if (req.headers.origin !== config.webOrigin || !req.is("application/json")) throw new AuthError(403, "UNTRUSTED_ORIGIN", "This request is not permitted.");
+    if (!isTrustedCustomerRequest(req, config) || !req.is("application/json")) throw new AuthError(403, "UNTRUSTED_ORIGIN", "This request is not permitted.");
     if (Object.keys(req.query).length || !req.body || typeof req.body !== "object" || Array.isArray(req.body) || Object.keys(req.body).length) {
       throw new AuthError(400, "INVALID_SEARCH_EVENT", "Invalid search event.");
     }

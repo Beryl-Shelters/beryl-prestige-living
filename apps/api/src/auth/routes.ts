@@ -7,6 +7,7 @@ import { hashToken, randomToken } from "./crypto.js";
 import { AuthError, expired, invalidCode } from "./errors.js";
 import type { AuthGateway, Customer } from "./gateway.js";
 import { AuthSessions } from "./sessions.js";
+import { isTrustedCustomerRequest } from "./request-trust.js";
 import { codeSchema, identifierSchema, loginSchema, maskEmail, normalizeIdentifier, normalizePhone, registerSchema, resetSchema } from "./validation.js";
 
 const genericRecovery = { message: "If an account matches those details, a verification code will be sent to its email." };
@@ -20,7 +21,7 @@ export function authRouter(config: AuthConfig, gateway: AuthGateway) {
   // Exact origin and JSON content type defend cookie-authenticated mutations
   // against cross-site and malicious sibling-subdomain requests.
   router.use((request, _response, next) => {
-    if (request.method !== "GET" && (request.headers.origin !== config.webOrigin || !request.is("application/json"))) {
+    if (request.method !== "GET" && (!isTrustedCustomerRequest(request, config) || !request.is("application/json"))) {
       next(new AuthError(403, "UNTRUSTED_ORIGIN", "This request is not permitted.")); return;
     }
     next();
@@ -37,14 +38,14 @@ export function authRouter(config: AuthConfig, gateway: AuthGateway) {
     return gateway.findCustomer(lookup.column, lookup.value);
   }
   function ok(response: Response, data: unknown = {}) { response.json({ success: true, data }); }
-  function requireUnverified(response: Response, profile: Customer | null) {
+  function requireUnverified(request: Request, response: Response, profile: Customer | null) {
     // This field is synchronized from Supabase Auth's email_confirmed_at.
     if (profile?.email_verified_at) {
-      sessions.clear(response, "VERIFY");
+      sessions.clear(response, "VERIFY", request);
       throw new AuthError(409, "EMAIL_ALREADY_VERIFIED", "Your email is already verified. Please log in.");
     }
     if (!profile) {
-      sessions.clear(response, "VERIFY");
+      sessions.clear(response, "VERIFY", request);
       throw new AuthError(400, "VERIFICATION_REQUIRED", "Unable to start verification. Check your details or create an account.");
     }
     return profile;
@@ -66,7 +67,7 @@ export function authRouter(config: AuthConfig, gateway: AuthGateway) {
       }
       throw error;
     }
-    sessions.setChallenge(response, "VERIFY", { email: data.email });
+    sessions.setChallenge(request, response, "VERIFY", { email: data.email });
     response.status(201);
     ok(response, { maskedEmail: maskEmail(data.email) });
   }));
@@ -79,11 +80,11 @@ export function authRouter(config: AuthConfig, gateway: AuthGateway) {
       const tokens = await gateway.login(email, data.password);
       if (!profile || tokens.userId !== profile.id) throw new AuthError(401, "INVALID_CREDENTIALS", "Invalid credentials.");
       await sessions.establish(request, response, "ACCOUNT", tokens);
-      sessions.clear(response, "VERIFY");
+      sessions.clear(response, "VERIFY", request);
       ok(response);
     } catch (error) {
       if (error instanceof AuthError && error.code === "EMAIL_NOT_VERIFIED") {
-        sessions.setChallenge(response, "VERIFY", { email });
+        sessions.setChallenge(request, response, "VERIFY", { email });
       }
       throw error;
     }
@@ -91,29 +92,29 @@ export function authRouter(config: AuthConfig, gateway: AuthGateway) {
   router.get("/verification-context", wrap(async (request, response) => {
     const email = sessions.challenge(request, "VERIFY")?.email;
     if (!email) throw new AuthError(400, "VERIFICATION_REQUIRED", "Enter your email on the login page and choose Verify Email.");
-    requireUnverified(response, await gateway.findCustomer("email", email));
+    requireUnverified(request, response, await gateway.findCustomer("email", email));
     ok(response, { maskedEmail: maskEmail(email) });
   }));
   router.post("/verify-email", wrap(async (request, response) => {
     const { code } = codeSchema.parse(request.body);
     const email = sessions.challenge(request, "VERIFY")?.email;
     if (!email) throw invalidCode();
-    requireUnverified(response, await gateway.findCustomer("email", email));
+    requireUnverified(request, response, await gateway.findCustomer("email", email));
     const tokens = await gateway.verify(email, code, "signup");
     await sessions.establish(request, response, "ACCOUNT", tokens);
-    sessions.clear(response, "VERIFY");
+    sessions.clear(response, "VERIFY", request);
     ok(response);
   }));
   router.post("/resend-verification", wrap(async (request, response) => {
     const body = z.object({ identifier: z.string().trim().min(1).max(254).optional() }).strict().parse(request.body);
     const challengeEmail = sessions.challenge(request, "VERIFY")?.email;
     if (!body.identifier && !challengeEmail) throw new AuthError(400, "VERIFICATION_REQUIRED", "Enter your email on the login page and choose Verify Email.");
-    const profile = requireUnverified(response, body.identifier
+    const profile = requireUnverified(request, response, body.identifier
       ? await resolve(body.identifier)
       : await gateway.findCustomer("email", challengeEmail!));
     const email = profile.email;
     await gateway.resend(email);
-    sessions.setChallenge(response, "VERIFY", { email });
+    sessions.setChallenge(request, response, "VERIFY", { email });
     ok(response, { message: "If verification is needed, a code has been sent to your account email." });
   }));
   router.get("/me", wrap(async (request, response) => {
@@ -135,15 +136,15 @@ export function authRouter(config: AuthConfig, gateway: AuthGateway) {
     const oldGrant = sessions.cookie(request, "RECOVERY");
     if (oldGrant) await gateway.deleteSession(hashToken(oldGrant));
     await sendRecovery(identifier);
-    sessions.setChallenge(response, "FORGOT", { identifier });
-    sessions.clear(response, "RECOVERY");
+    sessions.setChallenge(request, response, "FORGOT", { identifier });
+    sessions.clear(response, "RECOVERY", request);
     ok(response, genericRecovery);
   }));
   router.post("/resend-recovery", wrap(async (request, response) => {
     const identifier = sessions.challenge(request, "FORGOT")?.identifier;
     if (!identifier) throw invalidCode();
     await sendRecovery(identifier);
-    sessions.setChallenge(response, "FORGOT", { identifier });
+    sessions.setChallenge(request, response, "FORGOT", { identifier });
     ok(response, genericRecovery);
   }));
   router.post("/verify-recovery", wrap(async (request, response) => {
@@ -154,7 +155,7 @@ export function authRouter(config: AuthConfig, gateway: AuthGateway) {
     const tokens = await gateway.verify(profile?.email ?? `${randomToken()}@invalid.example`, code, "recovery");
     if (!profile || profile.id !== tokens.userId) throw invalidCode();
     await sessions.establish(request, response, "RECOVERY", tokens);
-    sessions.clear(response, "FORGOT");
+    sessions.clear(response, "FORGOT", request);
     ok(response);
   }));
   router.get("/recovery-context", wrap(async (request, response) => {
@@ -167,7 +168,7 @@ export function authRouter(config: AuthConfig, gateway: AuthGateway) {
     const raw = sessions.cookie(request, "RECOVERY");
     if (!raw) throw expired();
     const record = await gateway.consumeRecovery(hashToken(raw));
-    sessions.clear(response, "RECOVERY");
+    sessions.clear(response, "RECOVERY", request);
     if (!record) throw expired();
     const tokens = sessions.decode(record);
     await gateway.validate(tokens);
@@ -176,7 +177,7 @@ export function authRouter(config: AuthConfig, gateway: AuthGateway) {
     await gateway.updatePassword(tokens, password);
     await gateway.deleteUserSessions(record.user_id);
     await gateway.signOut(tokens);
-    sessions.clear(response, "ACCOUNT");
+    sessions.clear(response, "ACCOUNT", request);
     ok(response);
   }));
 
@@ -184,14 +185,14 @@ export function authRouter(config: AuthConfig, gateway: AuthGateway) {
     if (!config.googleEnabled) throw new AuthError(503, "GOOGLE_NOT_CONFIGURED", config.production ? "Google sign-in is not available yet." : "Google OAuth is not configured. Configure the Supabase Google provider and callback URLs, then enable AUTH_GOOGLE_ENABLED.");
     const state = randomToken();
     const { url, verifier } = await gateway.startGoogle(state);
-    sessions.setChallenge(response, "OAUTH", { state, verifier }, 600);
+    sessions.setChallenge(_request, response, "OAUTH", { state, verifier }, 600);
     ok(response, { url });
   }));
   router.post("/google/callback", wrap(async (request, response) => {
     if (!config.googleEnabled) throw new AuthError(503, "GOOGLE_NOT_CONFIGURED", "Google sign-in is not available yet.");
     const data = z.object({ code: z.string().min(1).max(2048), state: z.string().min(1).max(128) }).strict().parse(request.body);
     const flow = sessions.challenge(request, "OAUTH");
-    sessions.clear(response, "OAUTH");
+    sessions.clear(response, "OAUTH", request);
     if (!flow?.state || !flow.verifier || !timingSafeEqual(Buffer.from(hashToken(flow.state)), Buffer.from(hashToken(data.state)))) throw new AuthError(400, "OAUTH_STATE_INVALID", "Google sign-in expired. Please try again.");
     const tokens = await gateway.exchangeGoogle(data.code, flow.verifier);
     const profile = await gateway.findCustomer("id", tokens.userId);

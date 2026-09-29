@@ -2,6 +2,7 @@ import { Router, type NextFunction, type Request, type Response } from "express"
 import { rateLimit } from "express-rate-limit";
 import type { AuthConfig } from "../auth/config.js";
 import { AuthError } from "../auth/errors.js";
+import { isTrustedCustomerRequest } from "../auth/request-trust.js";
 import type { MediaStorage } from "../listings/media.js";
 import { sellAssistanceInput } from "./model.js";
 import type { SellAssistanceRepository } from "./repository.js";
@@ -14,7 +15,7 @@ export function publicSellAssistanceRouter(config: AuthConfig, repository: SellA
   router.use((_request, response, next) => { response.setHeader("Cache-Control", "no-store"); next(); });
   router.post("/", rateLimit({ windowMs: 3600000, limit: 20, standardHeaders: "draft-7", legacyHeaders: false,
     message: { success: false, error: { code: "RATE_LIMITED", message: "Too many assistance requests. Please try again later." } } }), wrap(async (request, response) => {
-    if (request.headers.origin !== config.webOrigin) throw new AuthError(403, "UNTRUSTED_ORIGIN", "This request is not permitted.");
+    if (!isTrustedCustomerRequest(request, config)) throw new AuthError(403, "UNTRUSTED_ORIGIN", "This request is not permitted.");
     if (!request.is("multipart/form-data")) throw new AuthError(415, "MULTIPART_REQUIRED", "Submit the assistance request with multipart form data.");
     if (Object.keys(request.query).length) throw new AuthError(400, "INVALID_SELL_ASSISTANCE", "Check the supplied assistance fields.");
     const upload = await readSellAssistance(request); const input = sellAssistanceInput.parse(upload.data);

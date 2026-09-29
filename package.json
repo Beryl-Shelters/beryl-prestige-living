@@ -17,7 +17,11 @@
     "lint:api": "npm run lint --workspace=@beryl/api",
     "build:admin": "npm run build --workspace=@beryl/admin",
     "type-check:admin": "npm run type-check --workspace=@beryl/admin",
-    "lint:admin": "npm run lint --workspace=@beryl/admin"
+    "lint:admin": "npm run lint --workspace=@beryl/admin",
+    "dev:mobile": "npm run start --workspace=@beryl/mobile",
+    "type-check:mobile": "npm run type-check --workspace=@beryl/mobile",
+    "lint:mobile": "npm run lint --workspace=@beryl/mobile",
+    "test:mobile": "npm run test --workspace=@beryl/mobile"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

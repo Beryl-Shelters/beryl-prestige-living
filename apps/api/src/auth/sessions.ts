@@ -5,21 +5,48 @@ import type { AuthConfig } from "./config.js";
 import { AuthCipher, hashToken, randomToken } from "./crypto.js";
 import { AuthError, expired } from "./errors.js";
 import type { AuthGateway, ProviderTokens, StoredSession } from "./gateway.js";
+import { isNativeMobileRequest } from "./request-trust.js";
+
+const purposeHeaders: Record<string, string> = {
+  ACCOUNT: "X-Beryl-Account-Token",
+  RECOVERY: "X-Beryl-Recovery-Token",
+  VERIFY: "X-Beryl-Verify-Token",
+  FORGOT: "X-Beryl-Forgot-Token",
+  OAUTH: "X-Beryl-OAuth-Token",
+};
 
 export class AuthSessions {
   readonly cipher: AuthCipher;
   constructor(readonly config: AuthConfig, readonly gateway: AuthGateway) { this.cipher = new AuthCipher(config.encryptionKey); }
   private name(purpose: string) { return `${this.config.cookieSecure ? "__Host-" : ""}beryl_${purpose.toLowerCase()}`; }
-  cookie(request: Request, purpose: string) { return parse(request.headers.cookie ?? "")[this.name(purpose)]; }
+  cookie(request: Request, purpose: string) {
+    if (isNativeMobileRequest(request)) {
+      if (purpose === "ACCOUNT") {
+        const authorization = request.get("authorization") ?? "";
+        const match = /^Bearer ([A-Za-z0-9_-]{20,})$/.exec(authorization);
+        return match?.[1];
+      }
+      const value = request.get(purposeHeaders[purpose] ?? "");
+      return value && /^[A-Za-z0-9_-]{20,4096}$/.test(value) ? value : undefined;
+    }
+    return parse(request.headers.cookie ?? "")[this.name(purpose)];
+  }
   setCookie(response: Response, purpose: string, value: string, seconds: number) {
     response.append("Set-Cookie", serialize(this.name(purpose), value, {
       httpOnly: true, secure: this.config.cookieSecure, sameSite: this.config.cookieSameSite,
       path: "/", maxAge: seconds,
     }));
   }
-  clear(response: Response, purpose: string) { this.setCookie(response, purpose, "", 0); }
-  setChallenge(response: Response, purpose: string, payload: Record<string, string>, seconds = 1800) {
-    this.setCookie(response, purpose, this.cipher.seal({ ...payload, expires: Date.now() + seconds * 1000 }, purpose), seconds);
+  private setTransport(request: Request, response: Response, purpose: string, value: string, seconds: number) {
+    if (isNativeMobileRequest(request)) response.setHeader(purposeHeaders[purpose]!, value);
+    else this.setCookie(response, purpose, value, seconds);
+  }
+  clear(response: Response, purpose: string, request?: Request) {
+    if (request && isNativeMobileRequest(request)) response.setHeader(purposeHeaders[purpose]!, "");
+    else this.setCookie(response, purpose, "", 0);
+  }
+  setChallenge(request: Request, response: Response, purpose: string, payload: Record<string, string>, seconds = 1800) {
+    this.setTransport(request, response, purpose, this.cipher.seal({ ...payload, expires: Date.now() + seconds * 1000 }, purpose), seconds);
   }
   challenge(request: Request, purpose: string): Record<string, string> | undefined {
     const value = this.cipher.open<Record<string, string> & { expires: number }>(this.cookie(request, purpose) ?? "", purpose);
@@ -31,7 +58,7 @@ export class AuthSessions {
     const raw = randomToken();
     const ttl = purpose === "RECOVERY" ? 600 : this.config.sessionSeconds;
     await this.gateway.createSession(hashToken(raw), tokens.userId, purpose, this.cipher.seal(tokens, "provider-tokens"), ttl);
-    this.setCookie(response, purpose, raw, ttl);
+    this.setTransport(request, response, purpose, raw, ttl);
   }
   decode(record: StoredSession): ProviderTokens {
     const tokens = this.cipher.open<ProviderTokens>(record.encrypted_tokens, "provider-tokens");
@@ -72,6 +99,6 @@ export class AuthSessions {
     }
     const recovery = this.cookie(request, "RECOVERY");
     if (recovery) await this.gateway.deleteSession(hashToken(recovery));
-    for (const purpose of ["ACCOUNT", "RECOVERY", "VERIFY", "FORGOT", "OAUTH"]) this.clear(response, purpose);
+    for (const purpose of ["ACCOUNT", "RECOVERY", "VERIFY", "FORGOT", "OAUTH"]) this.clear(response, purpose, request);
   }
 }

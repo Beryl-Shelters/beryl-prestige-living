@@ -94,7 +94,7 @@ export function createApp(config: AppConfig): Express {
   app.set("trust proxy", config.trustProxyHops ?? 0);
   app.use(helmet());
   const allowedOrigins=new Set([config.auth?.webOrigin,config.webAppUrl,config.admin?.appOrigin].filter((value):value is string=>Boolean(value)));
-  app.use(cors({ origin:(origin,callback)=>callback(null,!origin||allowedOrigins.has(origin)), credentials: true, methods: ["GET", "POST", "PATCH", "DELETE"], allowedHeaders: ["Content-Type"] }));
+  app.use(cors({ origin:(origin,callback)=>callback(null,!origin||allowedOrigins.has(origin)), credentials: true, methods: ["GET", "POST", "PATCH", "DELETE"], allowedHeaders: ["Content-Type","Authorization","X-Beryl-Client","X-Beryl-Verify-Token","X-Beryl-Forgot-Token","X-Beryl-Recovery-Token","X-Beryl-OAuth-Token"] }));
   app.use(express.json({ limit: "16kb" }));
 
   app.get("/health", (_request, response) => {

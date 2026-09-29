@@ -1,6 +1,7 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { rateLimit } from "express-rate-limit";
 import { AuthError } from "../auth/errors.js";
+import { isTrustedCustomerRequest } from "../auth/request-trust.js";
 import type { AuthConfig } from "../auth/config.js";
 import type { MediaStorage } from "../listings/media.js";
 import { careerApplicationInput } from "./model.js";
@@ -14,7 +15,7 @@ export function publicCareersRouter(config: AuthConfig, repository: CareerApplic
   router.use((_request, response, next) => { response.setHeader("Cache-Control", "no-store"); next(); });
   router.post("/applications", rateLimit({ windowMs: 3600000, limit: 40, standardHeaders: "draft-7", legacyHeaders: false,
     message: { success: false, error: { code: "RATE_LIMITED", message: "Too many applications. Please try again later." } } }), wrap(async (request, response) => {
-    if (request.headers.origin !== config.webOrigin) throw new AuthError(403, "UNTRUSTED_ORIGIN", "This request is not permitted.");
+    if (!isTrustedCustomerRequest(request, config)) throw new AuthError(403, "UNTRUSTED_ORIGIN", "This request is not permitted.");
     if (!request.is("multipart/form-data")) throw new AuthError(415, "MULTIPART_REQUIRED", "Submit the application with a resume.");
     if (Object.keys(request.query).length) throw new AuthError(400, "INVALID_APPLICATION", "Check the supplied application fields.");
     const { data, file } = await readCareerApplication(request);

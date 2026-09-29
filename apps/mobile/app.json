@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Beryl Shelter",
+    "slug": "beryl-shelter",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "berylshelter",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.berylshelter.mobile"
+    },
+    "android": {
+      "package": "com.berylshelter.mobile",
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-status-bar"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
