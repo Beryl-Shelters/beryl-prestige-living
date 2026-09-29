@@ -25,6 +25,8 @@ export const adminPaymentIdSchema = z
 export const adminPaymentRequestSchema = z
   .object({ requestId: z.uuid() })
   .strict();
+export const adminWithdrawalIdSchema = z.string().trim().toUpperCase().regex(/^WDR-[A-HJ-NP-Z2-9]{6}$/);
+export const adminWithdrawalRejectionSchema = z.object({ reason:z.string().trim().min(1).max(2000).refine(value=>![...value].some(character=>{const code=character.charCodeAt(0);return code===127||(code<32&&code!==10&&code!==13);}),"Reason contains unsupported characters.") }).strict();
 export const adminReferrerDetailQuerySchema = z
   .object({
     page: z.coerce.number().int().min(1).max(100000).default(1),
@@ -39,6 +41,8 @@ export type AdminReferrerDirectoryPage = {
     referrals: number;
     completed: number;
     outstandingMinor: number;
+    reservedMinor: number;
+    pendingRequests: number;
   };
   counts: { all: number; owed: number; paid: number };
   items: {
@@ -50,6 +54,9 @@ export type AdminReferrerDirectoryPage = {
     earnedMinor: number;
     paidMinor: number;
     outstandingMinor: number;
+    reservedMinor: number;
+    availableMinor: number;
+    pendingRequests: number;
     bankStatus: BankStatus;
   }[];
   page: number;
@@ -70,6 +77,8 @@ export type AdminReferrerDetail = {
     earnedMinor: number;
     paidMinor: number;
     outstandingMinor: number;
+    reservedMinor: number;
+    availableMinor: number;
   };
   bank: {
     status: BankStatus;
@@ -86,15 +95,21 @@ export type AdminReferrerDetail = {
     earnedAt: string;
     status: "COMPLETED";
     rewardMinor: number;
-    paymentState: "OUTSTANDING" | "PAID";
+    paymentState: "OUTSTANDING" | "PARTIALLY_PAID" | "PAID";
+    paidMinor: number;
+    reservedMinor: number;
+    availableMinor: number;
     paymentId: string | null;
     paidAt: string | null;
   }[];
+  withdrawals: AdminWithdrawalItem[];
   page: number;
   pageSize: number;
   total: number;
   totalPages: number;
 };
+export type WithdrawalStatus="PENDING"|"PROCESSING"|"PAID"|"REJECTED"|"CANCELLED";
+export type AdminWithdrawalItem={id:string;amountMinor:number;status:WithdrawalStatus;requestedAt:string;processingStartedAt:string|null;paidAt:string|null;rejectedAt:string|null;rejectionReason:string|null;cancelledAt:string|null;maskedAccountNumber:string;bankName:string;paymentId:string|null};
 export type AdminPaymentPreview = {
   commissionId: string;
   referrerId: string;
@@ -112,3 +127,5 @@ export type AdminPaymentResult = {
   amountMinor: number;
   paidAt: string;
 };
+export type AdminWithdrawalPaymentPreview={withdrawalId:string;referrerId:string;referrerName:string;amountMinor:number;accountName:string;bankName:string;accountNumber:string};
+export type AdminWithdrawalPaymentResult={paymentId:string;withdrawalId:string;referrerId:string;amountMinor:number;paidAt:string};

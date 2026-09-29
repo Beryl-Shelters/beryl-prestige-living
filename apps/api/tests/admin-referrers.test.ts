@@ -176,6 +176,8 @@ const page: AdminReferrerDirectoryPage = {
     referrals: 2,
     completed: 1,
     outstandingMinor: 1000000,
+    reservedMinor: 0,
+    pendingRequests: 0,
   },
   counts: { all: 1, owed: 1, paid: 0 },
   items: [
@@ -188,6 +190,9 @@ const page: AdminReferrerDirectoryPage = {
       earnedMinor: 1000000,
       paidMinor: 0,
       outstandingMinor: 1000000,
+      reservedMinor: 0,
+      availableMinor: 1000000,
+      pendingRequests: 0,
       bankStatus: "ON_FILE",
     },
   ],
@@ -209,6 +214,8 @@ const detail: AdminReferrerDetail = {
     earnedMinor: 1000000,
     paidMinor: 0,
     outstandingMinor: 1000000,
+    reservedMinor: 0,
+    availableMinor: 1000000,
   },
   bank: {
     status: "ON_FILE",
@@ -216,6 +223,7 @@ const detail: AdminReferrerDetail = {
     bankName: "Test Bank",
     maskedAccountNumber: "••••••6789",
   },
+  withdrawals: [],
   items: [],
   page: 1,
   pageSize: 10,
@@ -280,6 +288,11 @@ class Referrers implements AdminReferrersRepository {
       size_bytes: 9,
     });
   }
+  beginWithdrawal(_admin:string,withdrawal:string){return Promise.resolve({id:withdrawal,status:"PROCESSING" as const});}
+  rejectWithdrawal(_admin:string,withdrawal:string,reason:string){return Promise.resolve({id:withdrawal,status:"REJECTED" as const,rejectionReason:reason});}
+  withdrawalPreview(_admin:string,withdrawal:string){return Promise.resolve({withdrawalId:withdrawal,referrerId,referrerName:"Controlled Referrer",amountMinor:750000,accountName:"Controlled Referrer",bankName:"Test Bank",accountNumber:"0123456789"});}
+  recordWithdrawal(requestId:string,admin:string,withdrawal:string,receipt:MediaAsset){this.records.push({requestId,admin,commission:withdrawal,receipt});const payment={paymentId:"PAY-WDR234",withdrawalId:withdrawal,referrerId,amountMinor:750000,paidAt:new Date().toISOString()};return Promise.resolve(payment);}
+  withdrawalByRequest(){return Promise.resolve(null);}
 }
 class Storage implements MediaStorage {
   uploads = 0;
@@ -485,6 +498,7 @@ test("private payout receipts require Admin authorization", async (t) => {
   assert.equal(response.headers.get("content-type"), "application/pdf");
   assert.equal(f.storage.downloads, 1);
 });
+test("withdrawal processing, rejection, and payment are Admin-authenticated and amount is server-derived",async t=>{const f=await fixture(t);await f.login(adminId);assert.equal((await f.request("/referrers/withdrawals/WDR-ABC234/processing",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"})).status,200);assert.equal((await f.request("/referrers/withdrawals/WDR-ABC234/reject",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({reason:"Bank details could not be verified."})})).status,200);const preview=await f.request("/referrers/withdrawals/WDR-ABC234/payment");assert.equal(preview.status,200);const body=new FormData();body.set("data",JSON.stringify({requestId:crypto.randomUUID()}));body.set("receipt",new Blob(["%PDF-test"],{type:"application/pdf"}),"receipt.pdf");assert.equal((await f.request("/referrers/withdrawals/WDR-ABC234/payment",{method:"POST",body})).status,201);assert.equal(f.referrers.records.at(-1)?.commission,"WDR-ABC234");});
 
 test("payout migration aggregates canonically, records exactly once, and updates customer financial truth", async (t) => {
   const db = new PGlite();

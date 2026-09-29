@@ -14,4 +14,7 @@ export class ReferralsService {
     const row=await this.repository.createPublicProperty(referrer,propertyCode);
     return {...row,referralUrl:`${this.config.webOrigin}/buy?code=${encodeURIComponent(row.propertyCode!)}&ref=${encodeURIComponent(row.id)}`};
   }
+  withdrawals(owner:string,page:number){return this.repository.withdrawals(owner,this.config.referralWithdrawalMinimumMinor,page,referralPageSize);}
+  requestWithdrawal(requestId:string,owner:string,amountMinor:number){return this.repository.requestWithdrawal(requestId,owner,amountMinor,this.config.referralWithdrawalMinimumMinor);}
+  cancelWithdrawal(owner:string,id:string){return this.repository.cancelWithdrawal(owner,id);}
 }

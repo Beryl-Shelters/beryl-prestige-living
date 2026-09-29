@@ -5,6 +5,8 @@ import type { MediaAsset } from "../listings/model.js";
 import type {
   AdminPaymentPreview,
   AdminPaymentResult,
+  AdminWithdrawalPaymentPreview,
+  AdminWithdrawalPaymentResult,
   AdminReferrerDetail,
   AdminReferrerDirectoryPage,
   AdminReferrerQuery,
@@ -29,6 +31,11 @@ export interface AdminReferrersRepository {
     requestId: string,
   ): Promise<AdminPaymentResult | null>;
   receipt(admin: string, payment: string): Promise<MediaAsset>;
+  beginWithdrawal(admin:string,withdrawal:string):Promise<{id:string;status:"PROCESSING"}>;
+  rejectWithdrawal(admin:string,withdrawal:string,reason:string):Promise<{id:string;status:"REJECTED";rejectionReason:string}>;
+  withdrawalPreview(admin:string,withdrawal:string):Promise<AdminWithdrawalPaymentPreview>;
+  recordWithdrawal(requestId:string,admin:string,withdrawal:string,receipt:MediaAsset):Promise<AdminWithdrawalPaymentResult>;
+  withdrawalByRequest(admin:string,requestId:string):Promise<AdminWithdrawalPaymentResult|null>;
 }
 function check(error: { code?: string; message?: string } | null): void {
   if (!error) return;
@@ -47,8 +54,8 @@ function check(error: { code?: string; message?: string } | null): void {
   if (error.code === "23505")
     throw new AuthError(
       409,
-      "COMMISSION_ALREADY_PAID",
-      "This commission has already been recorded as paid.",
+      error.message?.includes("Withdrawal")?"WITHDRAWAL_ALREADY_PAID":"COMMISSION_UNAVAILABLE",
+      error.message?.includes("Withdrawal")?"This withdrawal has already been recorded as paid.":error.message?.includes("reserved")?"This commission is already paid or reserved by an active withdrawal request.":"This commission has already been recorded as paid.",
     );
   if (["23514", "23502", "22P02"].includes(error.code ?? ""))
     throw new AuthError(
@@ -139,4 +146,9 @@ export class SupabaseAdminReferrersRepository implements AdminReferrersRepositor
       p_payment: payment,
     });
   }
+  beginWithdrawal(admin:string,withdrawal:string){return this.rpc<{id:string;status:"PROCESSING"}>("begin_admin_referral_withdrawal",{p_admin:admin,p_withdrawal:withdrawal});}
+  rejectWithdrawal(admin:string,withdrawal:string,reason:string){return this.rpc<{id:string;status:"REJECTED";rejectionReason:string}>("reject_admin_referral_withdrawal",{p_admin:admin,p_withdrawal:withdrawal,p_reason:reason});}
+  withdrawalPreview(admin:string,withdrawal:string){return this.rpc<AdminWithdrawalPaymentPreview>("read_admin_referral_withdrawal_payment_preview",{p_admin:admin,p_withdrawal:withdrawal});}
+  recordWithdrawal(requestId:string,admin:string,withdrawal:string,receipt:MediaAsset){return this.rpc<AdminWithdrawalPaymentResult>("record_admin_referral_withdrawal_payout",{p_request_id:requestId,p_admin:admin,p_withdrawal:withdrawal,p_receipt_public_id:receipt.public_id,p_receipt_resource_type:receipt.resource_type,p_receipt_delivery_type:receipt.delivery_type,p_receipt_mime_type:receipt.mime_type,p_receipt_size_bytes:receipt.size_bytes});}
+  withdrawalByRequest(admin:string,requestId:string){return this.rpc<AdminWithdrawalPaymentResult|null>("read_admin_referral_withdrawal_payment_request",{p_admin:admin,p_request_id:requestId});}
 }

@@ -19,7 +19,7 @@ function Sidebar({ close }: { close?: () => void }) {
       {close && <button className="dashboard-close" aria-label="Close navigation" onClick={close}><DashboardIcon name="close" /></button>}
     </div>
     <nav className="dashboard-navigation" aria-label="Dashboard navigation">
-      {dashboardNavigation.map((item) => <Link key={item.href} href={item.href} onClick={() => close?.()} aria-current={pathname === item.href || item.href === "/dashboard/listings" && pathname.startsWith("/dashboard/listings/") ? "page" : undefined}>
+      {dashboardNavigation.map((item) => <Link key={item.href} href={item.href} onClick={() => close?.()} aria-current={pathname === item.href || ["/dashboard/listings","/dashboard/referrals"].includes(item.href) && pathname.startsWith(`${item.href}/`) ? "page" : undefined}>
         <DashboardIcon name={item.icon} /><span>{item.label}</span>
       </Link>)}
       <button type="button" disabled={loggingOut} onClick={logout}><DashboardIcon name="logout" /><span>Log Out</span></button>

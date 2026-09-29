@@ -39,10 +39,14 @@ const id = "33333333-3333-4333-8333-333333333333",
     earnedMinor: index ? 0 : 1000000,
     paidMinor: 0,
     outstandingMinor: index ? 0 : 1000000,
+    reservedMinor: index ? 0 : 250000,
+    availableMinor: index ? 0 : 750000,
+    pendingRequests: index ? 0 : 1,
     bankStatus: index ? "NOT_NEEDED" : "ON_FILE",
   }));
 let empty = false,
-  paid = false;
+  paid = false,
+  withdrawalStatus = "CANCELLED";
 function detail() {
   return {
     referrer: {
@@ -57,6 +61,8 @@ function detail() {
       earnedMinor: 1000000,
       paidMinor: paid ? 1000000 : 0,
       outstandingMinor: paid ? 0 : 1000000,
+      reservedMinor: withdrawalStatus === "PENDING" || withdrawalStatus === "PROCESSING" ? 250000 : 0,
+      availableMinor: paid ? 0 : withdrawalStatus === "PENDING" || withdrawalStatus === "PROCESSING" ? 750000 : 1000000,
     },
     bank: {
       status: "ON_FILE",
@@ -64,6 +70,7 @@ function detail() {
       bankName: "Test Bank",
       maskedAccountNumber: "••••••6789",
     },
+    withdrawals: [{id:"WDR-ABC234",amountMinor:250000,status:withdrawalStatus,requestedAt:"2026-09-29T09:00:00Z",processingStartedAt:withdrawalStatus==="PROCESSING"?"2026-09-29T10:00:00Z":null,paidAt:withdrawalStatus==="PAID"?"2026-09-29T11:00:00Z":null,rejectedAt:null,rejectionReason:null,cancelledAt:null,maskedAccountNumber:"••••••6789",bankName:"Test Bank",paymentId:withdrawalStatus==="PAID"?"PAY-WDR234":null}],
     items: [
       {
         commissionId: "COM-ABC234",
@@ -74,6 +81,9 @@ function detail() {
         earnedAt: "2026-09-20T12:00:00Z",
         status: "COMPLETED",
         rewardMinor: 1000000,
+        paidMinor: paid ? 1000000 : 0,
+        reservedMinor: withdrawalStatus === "PENDING" || withdrawalStatus === "PROCESSING" ? 250000 : 0,
+        availableMinor: paid ? 0 : withdrawalStatus === "PENDING" || withdrawalStatus === "PROCESSING" ? 750000 : 1000000,
         paymentState: paid ? "PAID" : "OUTSTANDING",
         paymentId: paid ? "PAY-ABC234" : null,
         paidAt: paid ? "2026-09-28T12:00:00Z" : null,
@@ -130,6 +140,8 @@ try {
             referrals: 0,
             completed: 0,
             outstandingMinor: 0,
+            reservedMinor: 0,
+            pendingRequests: 0,
           },
           counts: { all: 0, owed: 0, paid: 0 },
           items: [],
@@ -157,6 +169,8 @@ try {
           referrals: 28,
           completed: 1,
           outstandingMinor: 1000000,
+          reservedMinor: 250000,
+          pendingRequests: 1,
         },
         counts: { all: 7, owed: 1, paid: 0 },
         items: found,
@@ -167,6 +181,9 @@ try {
       });
     }
     if (path === `/referrers/${id}`) return reply({ referrer: detail() });
+    if(path==="/referrers/withdrawals/WDR-ABC234/processing"&&route.request().method()==="POST"){withdrawalStatus="PROCESSING";return reply({withdrawal:{id:"WDR-ABC234",status:"PROCESSING"}});}
+    if(path==="/referrers/withdrawals/WDR-ABC234/payment"&&route.request().method()==="GET")return reply({payment:{withdrawalId:"WDR-ABC234",referrerId:id,referrerName:"Controlled Referrer",amountMinor:250000,accountName:"Controlled Referrer",bankName:"Test Bank",accountNumber:"0123456789"}});
+    if(path==="/referrers/withdrawals/WDR-ABC234/payment"&&route.request().method()==="POST"){withdrawalStatus="PAID";return reply({payment:{paymentId:"PAY-WDR234"}},201);}
     if (
       path === "/referrers/commissions/COM-ABC234/payment" &&
       route.request().method() === "GET"
@@ -229,9 +246,9 @@ try {
   await page.getByText("Controlled Referrer", { exact: true }).waitFor();
   await page.getByRole("link", { name: "View Controlled Referrer" }).click();
   await page.getByRole("heading", { name: "Controlled Referrer" }).waitFor();
-  assert.equal(await page.getByText("••••••6789").count(), 1);
+  assert.equal(await page.getByText("••••••6789").count(), 2);
   assert.equal(await page.getByText("0123456789").count(), 0);
-  await page.getByRole("button", { name: "Mark as paid" }).click();
+  await page.getByRole("button", { name: /Pay available/ }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByText("0123456789").waitFor();
   assert.equal(
@@ -247,7 +264,7 @@ try {
     });
   await dialog.getByRole("button", { name: "Confirm Payment" }).click();
   await page.getByRole("heading", { name: "Payment Recorded" }).waitFor();
-  await page.getByText("We have saved this payment successfully.").waitFor();
+  await page.getByText("We have saved this external payment successfully.").waitFor();
   await page.getByRole("button", { name: "Done" }).click();
   await page.getByText("Paid", { exact: true }).waitFor();
   assert.equal(
@@ -256,6 +273,17 @@ try {
     ),
     true,
   );
+  paid=false;withdrawalStatus="PENDING";await page.reload();await page.getByRole("heading",{name:"Controlled Referrer"}).waitFor();
+  await page.getByRole("button",{name:"Begin Processing"}).click();
+  await page.getByRole("button",{name:"Record Payment"}).waitFor();
+  await page.getByRole("button",{name:"Record Payment"}).click();
+  const withdrawalDialog=page.getByRole("dialog");
+  await withdrawalDialog.getByText("WDR-ABC234").waitFor();
+  await withdrawalDialog.locator('input[type="file"]').setInputFiles({name:"receipt.pdf",mimeType:"application/pdf",buffer:Buffer.from("%PDF-test")});
+  await withdrawalDialog.getByRole("button",{name:"Confirm Payment"}).click();
+  await page.getByRole("heading",{name:"Payment Recorded"}).waitFor();
+  await page.getByRole("button",{name:"Done"}).click();
+  await page.getByText("PAID",{exact:true}).waitFor();
   empty = true;
   await page.goto(`${origin}/dashboard/referrers`);
   await page.getByRole("heading", { name: "No referrers yet" }).waitFor();

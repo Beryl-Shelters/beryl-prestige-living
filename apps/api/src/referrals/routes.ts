@@ -4,7 +4,7 @@ import type { AuthConfig } from "../auth/config.js";
 import { AuthError,expired } from "../auth/errors.js";
 import type { AuthGateway } from "../auth/gateway.js";
 import { AuthSessions } from "../auth/sessions.js";
-import { createPublicPropertyReferralInput,createReferralInput,referralQuery } from "./model.js";
+import { cancelWithdrawalInput,createPublicPropertyReferralInput,createReferralInput,createWithdrawalInput,referralQuery,withdrawalId,withdrawalQuery } from "./model.js";
 import type { ReferralsRepository } from "./repository.js";
 import { ReferralsService } from "./service.js";
 
@@ -16,6 +16,9 @@ export function referralsRouter(config:AuthConfig,gateway:AuthGateway,repository
   router.use((req,res,next)=>{void(async()=>{const tokens=await sessions.account(req),customer=await gateway.findCustomer("id",tokens.userId);if(!customer?.email_verified_at)throw expired();res.locals.referralOwner=tokens.userId;next();})().catch(next);});
   const owner=(res:Response)=>res.locals.referralOwner as string;
   router.get("/",wrap(async(req,res)=>{if(req.body&&Object.keys(req.body).length)throw new AuthError(400,"INVALID_REFERRAL_QUERY","Use a positive whole-number page.");const query=referralQuery.parse(req.query);res.json({success:true,data:await service.list(owner(res),query.page)});}));
+  router.get("/withdrawals",wrap(async(req,res)=>{if(req.body&&Object.keys(req.body).length)throw new AuthError(400,"INVALID_WITHDRAWAL_QUERY","Use a positive whole-number page.");const query=withdrawalQuery.parse(req.query);res.json({success:true,data:await service.withdrawals(owner(res),query.page)});}));
+  router.post("/withdrawals",wrap(async(req,res)=>{if(Object.keys(req.query).length)throw new AuthError(400,"INVALID_WITHDRAWAL_REQUEST","Check the withdrawal details.");const input=createWithdrawalInput.parse(req.body);res.status(201).json({success:true,data:await service.requestWithdrawal(input.requestId,owner(res),input.amountMinor)});}));
+  router.post("/withdrawals/:withdrawalId/cancel",wrap(async(req,res)=>{if(Object.keys(req.query).length)throw new AuthError(400,"INVALID_WITHDRAWAL_REQUEST","Check the withdrawal details.");cancelWithdrawalInput.parse(req.body);res.json({success:true,data:await service.cancelWithdrawal(owner(res),withdrawalId.parse(req.params.withdrawalId))});}));
   router.post("/",wrap(async(req,res)=>{if(Object.keys(req.query).length)throw new AuthError(400,"INVALID_REFERRAL","Check the referral details.");const input=createReferralInput.parse(req.body);res.status(201).json({success:true,data:await service.create(owner(res),input.type,input.listingId??null)});}));
   router.post("/public-property",wrap(async(req,res)=>{if(Object.keys(req.query).length)throw new AuthError(400,"INVALID_REFERRAL","Check the referral details.");const input=createPublicPropertyReferralInput.parse(req.body);res.status(201).json({success:true,data:await service.createPublicProperty(owner(res),input.propertyCode)});}));
   return router;

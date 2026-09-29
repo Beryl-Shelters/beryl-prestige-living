@@ -18,6 +18,7 @@ export const authConfigSchema = z.object({
   rateWindowMs: z.coerce.number().int().min(1000).default(900000),
   rateLimit: z.coerce.number().int().min(1).default(30),
   googleEnabled: z.boolean().default(false),
+  referralWithdrawalMinimumMinor: z.coerce.number().int().min(1).max(999999999999999).default(10000),
   production: z.boolean(),
 }).superRefine((value, ctx) => {
   if ((value.production || value.cookieSameSite === "none") && !value.cookieSecure) {
@@ -43,6 +44,7 @@ export function loadAuthConfig(source: NodeJS.ProcessEnv): AuthConfig | undefine
     rateWindowMs: source.AUTH_RATE_WINDOW_MS || 900000,
     rateLimit: source.AUTH_RATE_LIMIT || 30,
     googleEnabled: source.AUTH_GOOGLE_ENABLED === "true",
+    referralWithdrawalMinimumMinor: source.REFERRAL_WITHDRAWAL_MINIMUM_MINOR || 10000,
   });
   if (!parsed.success) throw new Error("Invalid authentication configuration. Check the documented origins, cookie settings and encryption key.");
   return parsed.data;
