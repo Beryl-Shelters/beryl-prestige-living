@@ -1,5 +1,5 @@
 import { apiBaseUrl } from "./config";
-import { errorKind, MobileApiError } from "./api-error";
+import { errorKind, MobileApiError, transportFailure } from "./api-error";
 import { secureSessionStore, type SessionPurpose, type SessionStore } from "./session-store";
 import { shouldClearAccountForResponse } from "./api-auth-boundary";
 
@@ -20,7 +20,7 @@ export class MobileApiClient {
     for(const purpose of options.purposes ?? []){const token=await this.store.get(purpose);const header=requestHeaders[purpose];if(token&&header)headers[header]=token;}
     let response:Response;
     try { const transport=this.transport;response=await transport(`${apiBaseUrl}${path}`,{...options,headers,body:options.body===undefined?undefined:options.body instanceof FormData?options.body:JSON.stringify(options.body)}); }
-    catch { throw new MobileApiError("network","You appear to be offline. Check your connection and try again."); }
+    catch (error) { throw transportFailure(error); }
     for(const purpose of Object.keys(responseHeaders) as SessionPurpose[]){const value=response.headers.get(responseHeaders[purpose]);if(value!==null){if(value)await this.store.set(purpose,value);else await this.store.remove(purpose);}}
     const payload=await response.json().catch(()=>null) as Envelope<T>|null;
     if(!response.ok){if(shouldClearAccountForResponse(response.status,options.authenticated)){await this.store.remove("account");await unauthorizedHandler?.();}const message=payload&&"error" in payload&&payload.error?.message?payload.error.message:"Beryl Shelter could not complete this request.";const code=payload&&"error" in payload?payload.error?.code:undefined;throw new MobileApiError(errorKind(response.status),message,response.status,code);}

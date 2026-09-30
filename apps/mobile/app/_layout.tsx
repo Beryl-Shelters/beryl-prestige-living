@@ -27,6 +27,8 @@ function ThemedNavigationShell() {
         <Stack.Screen name="dashboard" options={{ headerShown: false }} />
         <Stack.Screen name="referrals/[referralCode]" options={{ title: "Referral" }} />
         <Stack.Screen name="support" options={{ title: "Support" }} />
+        <Stack.Screen name="sell-assistance" options={{ headerShown: false }} />
+        <Stack.Screen name="buy-assistance" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" options={{ title: "Not Found" }} />
       </Stack>
     </>

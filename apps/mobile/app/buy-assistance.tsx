@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon } from "@/components/app-icon";
 import { DocumentPickerComponent } from "@/components/document-picker";
+import { OptionSelect } from "@/components/option-select";
 import { Button, Card, SectionHeading, TextField } from "@/components/ui";
 import { assistanceApi } from "@/lib/assistance-api";
 import { friendlyError } from "@/lib/api-error";
@@ -64,6 +65,11 @@ export default function BuyAssistanceRoute() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  function goBack() {
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)");
+  }
 
   const isResidential = propertyType === "Residential";
 
@@ -136,7 +142,7 @@ export default function BuyAssistanceRoute() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Go back"
-          onPress={() => router.back()}
+          onPress={goBack}
           style={styles.backBtn}
         >
           <AppIcon name="arrow-back" size={22} color={colors.text} />
@@ -335,26 +341,7 @@ export default function BuyAssistanceRoute() {
                 onChangeText={setLocality}
               />
 
-              <View style={styles.fieldBlock}>
-                <Text style={styles.label}>State *</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-                  {nigerianStates.map((st) => {
-                    const active = selectedState === st;
-                    return (
-                      <Pressable
-                        key={st}
-                        accessibilityRole="radio"
-                        accessibilityLabel={st}
-                        accessibilityState={{ selected: active }}
-                        onPress={() => setSelectedState(st)}
-                        style={[styles.chip, active && styles.chipActive]}
-                      >
-                        <Text style={[styles.chipText, active && styles.chipTextActive]}>{st}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </View>
+              <OptionSelect label="State *" value={selectedState} options={nigerianStates} onChange={setSelectedState} />
 
               <TextField
                 label="City"

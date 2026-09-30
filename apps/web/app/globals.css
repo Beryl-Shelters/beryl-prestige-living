@@ -1,4 +1,5 @@
 @import "react-toastify/dist/ReactToastify.css";
+@import "./dark-mode.css";
 
 :root {
   --ink: #080b10;
@@ -23,6 +24,11 @@
   --dropdown-hover-bg: #faf5eb;
   --badge-bg: #f4ede4;
   --badge-text: #784c17;
+  --surface-elevated: #ffffff;
+  --surface-muted: #f2f0ed;
+  --text-secondary: #475569;
+  --disabled-bg: #e5e7eb;
+  --disabled-text: #64748b;
 }
 
 [data-theme="dark"] {
@@ -46,6 +52,11 @@
   --dropdown-hover-bg: #1f2a37;
   --badge-bg: #2d2419;
   --badge-text: #e6b36a;
+  --surface-elevated: #1a232f;
+  --surface-muted: #202b38;
+  --text-secondary: #c1cbd8;
+  --disabled-bg: #34404d;
+  --disabled-text: #a7b2c0;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -70,6 +81,11 @@
     --dropdown-hover-bg: #1f2a37;
     --badge-bg: #2d2419;
     --badge-text: #e6b36a;
+    --surface-elevated: #1a232f;
+    --surface-muted: #202b38;
+    --text-secondary: #c1cbd8;
+    --disabled-bg: #34404d;
+    --disabled-text: #a7b2c0;
   }
 }
 

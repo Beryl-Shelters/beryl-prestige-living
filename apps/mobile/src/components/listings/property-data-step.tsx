@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { AppIcon } from "../app-icon";
 import { MediaPicker } from "../media-picker";
+import { OptionSelect } from "../option-select";
 import { Button, Card, SectionHeading, TextField } from "../ui";
 import { friendlyError } from "@/lib/api-error";
 import type { PickedFile } from "@/lib/file-upload-helper";
@@ -380,26 +381,7 @@ export function PropertyDataStep({
           maxLength={300}
         />
 
-        <View style={styles.fieldBlock}>
-          <Text style={styles.label}>State *</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-            {options.state.map((st) => {
-              const active = selectedState === st;
-              return (
-                <Pressable
-                  key={st}
-                  accessibilityRole="radio"
-                  accessibilityLabel={st}
-                  accessibilityState={{ selected: active }}
-                  onPress={() => setSelectedState(st)}
-                  style={[styles.chip, active && styles.chipActive]}
-                >
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{st}</Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
+        <OptionSelect label="State *" value={selectedState} options={options.state} onChange={setSelectedState} />
 
         <TextField
           label="City / Locality *"

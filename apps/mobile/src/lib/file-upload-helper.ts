@@ -29,9 +29,11 @@ export async function appendPickedFile(
       }
     }
   } else {
-    // Native (iOS/Android): React Native FormData polyfill accepts { uri, name, type }
+    // Prefer a real Blob so Android does not have to resolve a content/file URI
+    // while the request is crossing the native networking bridge. Keep the
+    // standard React Native URI part as a fallback for providers that do not
+    // expose local picker assets through fetch().
     if (file.bytes) {
-      // If we have raw bytes, use standard Blob supported in React Native 0.86+
       try {
         const blob = new Blob([file.bytes as unknown as BlobPart], { type: file.type });
         formData.append(fieldName, blob, file.name);
@@ -42,10 +44,17 @@ export async function appendPickedFile(
         );
       }
     } else {
-      formData.append(
-        fieldName,
-        { uri: file.uri, name: file.name, type: file.type } as unknown as Blob
-      );
+      try {
+        const localResponse = await fetch(file.uri);
+        if (!localResponse.ok) throw new Error("Local file could not be read");
+        const blob = await localResponse.blob();
+        formData.append(fieldName, blob, file.name);
+      } catch {
+        formData.append(
+          fieldName,
+          { uri: file.uri, name: file.name, type: file.type } as unknown as Blob
+        );
+      }
     }
   }
 }

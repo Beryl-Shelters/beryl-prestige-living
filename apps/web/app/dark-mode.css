@@ -1,0 +1,123 @@
+/* Customer Web dark theme completion. Route styles predate the semantic theme
+   tokens, so these selectors translate their light-only surfaces without
+   introducing a second theme mechanism. */
+[data-theme="dark"] body { color-scheme: dark; }
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea { color: var(--ink); }
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder { color: var(--muted); opacity: 1; }
+[data-theme="dark"] input:disabled,
+[data-theme="dark"] select:disabled,
+[data-theme="dark"] textarea:disabled,
+[data-theme="dark"] button:disabled { color: var(--disabled-text); }
+
+/* Public canvases, content surfaces, and footer. */
+[data-theme="dark"] :is(.landing-page,.public-page,.public-referrals-page,.public-buy-page,.public-sell-page,.buy-assistance-page,.sell-assistance-page,.public-analytics-page,.support-page,.saved-properties-page,.mortgage-page) { background: var(--surface); color: var(--ink); }
+[data-theme="dark"] :is(.property-search,.featured-card,.latest-card,.how-card,.public-referrals-card,.referral-auth-dialog,.buy-mandate,.buy-sidebar,.buy-results-state,.buy-pagination,.buy-filter-sheet,.sell-choice-card,.buy-assistance-intro,.buy-assistance-form,.buy-assistance-success,.sell-assistance-intro,.sell-assistance-form,.sell-assistance-success,.assistance-decision-dialog,.public-analytics-card,.support-faq-item,.support-contact,.saved-properties-hero,.saved-properties-content,.mortgage-form-card,.mortgage-result-card) { background: var(--panel); border-color: var(--line); color: var(--ink); }
+[data-theme="dark"] :is(.purpose-cards article,.working>div,.search-query,.buy-count-filter button,.buy-filter-fields>label>input,.buy-filter-fields>label>select,.buy-filter-pair label>input,.buy-filter-pair label>select,.buy-budget-input,.buy-assistance-field>input,.buy-assistance-field>select,.buy-assistance-field>textarea,.buy-money,.buy-facilities>div,.sell-assistance-field>input,.sell-assistance-field>select,.sell-assistance-field>textarea,.sell-money,.sell-percent,.sell-facilities>div,.support-report input,.support-report select,.support-report textarea,.mortgage-control,.mortgage-field select,.mortgage-result-card dd,.saved-properties-search) { background-color: var(--input-bg); border-color: var(--input-border); color: var(--ink); }
+[data-theme="dark"] :is(.buy-file-control,.sell-file-control,.resume-control) { background: var(--surface-muted); border-color: var(--muted); color: var(--ink); }
+[data-theme="dark"] :is(.public-page,.public-referrals-page,.public-buy-page,.public-sell-page,.support-page,.careers-page) :is(p,small) { color: var(--text-secondary); }
+[data-theme="dark"] :is(.purpose-cards p,.working p,.office address small,.buy-location,.buy-results-state,.public-price-heading p,.public-chart-axis,.public-chart-months,.public-chart-empty,.public-analytics-state,.support-report label small) { color: var(--muted); }
+[data-theme="dark"] .office address>div { border-color: var(--line); }
+[data-theme="dark"] .leadership article small { background: var(--gold-light); color: var(--badge-text); }
+[data-theme="dark"] :is(.search-tabs button,.hero-account-link,.buy-chip,.buy-pagination button,.buy-mobile-filter-open,.sell-choice-actions a,.sell-choice-actions button,.assistance-decision-no) { background: var(--surface-muted); border-color: var(--line); color: var(--ink); }
+[data-theme="dark"] .property-search :is(input,select) { color: var(--ink); }
+[data-theme="dark"] .property-search :is(input,select)::placeholder { color: var(--muted); }
+[data-theme="dark"] .public-buy-page :is(.buy-card,.buy-referral) { background: var(--panel); border-color: var(--line); color: var(--ink); }
+[data-theme="dark"] .buy-card-bottom { border-color: var(--line); }
+[data-theme="dark"] .buy-results-state strong { color: var(--ink); }
+[data-theme="dark"] .buy-filter-fields :is(label,legend) { color: var(--ink); }
+[data-theme="dark"] .buy-count-filter button[aria-pressed="true"] { background: var(--gold-light); border-color: var(--gold); }
+[data-theme="dark"] .support-faq-item button { color: var(--ink); }
+[data-theme="dark"] .support-contact-grid :is(p,a) { color: var(--ink); }
+[data-theme="dark"] .public-period-control { background: var(--surface-muted); }
+[data-theme="dark"] .public-period-control button { color: var(--ink); }
+[data-theme="dark"] .public-chart-plot i,
+[data-theme="dark"] .public-search-plot i,
+[data-theme="dark"] .public-search-dates { border-color: var(--line); }
+[data-theme="dark"] .public-donut { background: var(--gold-light); }
+[data-theme="dark"] .public-donut::before { background: var(--panel); }
+[data-theme="dark"] .careers-hero,
+[data-theme="dark"] .career-application { background-color: var(--surface); color: var(--ink); }
+[data-theme="dark"] .career-application :is(input,select,textarea) { background: var(--input-bg); border-color: var(--input-border); color: var(--ink); }
+[data-theme="dark"] .career-fields small { color: var(--muted); }
+[data-theme="dark"] .career-notice { background: var(--gold-light); color: var(--text-secondary); }
+[data-theme="dark"] .site-footer { background: #130d06; color: #f4ede3; }
+
+/* Dashboard shared surfaces and controls. */
+[data-theme="dark"] .dashboard-main { background: var(--surface); color: var(--ink); }
+[data-theme="dark"] :is(.listings-panel,.customer-listing-card,.listings-empty,.quick-preview-card,.listing-dialog,.analytics-performance,.analytics-overview,.analytics-breakdown,.messages-workspace,.tickets-pane,.conversation-pane,.referrals-earn,.referrals-invite,.referral-kpi,.referrals-history,.withdrawal-balance,.withdrawal-form,.withdrawal-history,.settings-card,.properties-zero-state,.properties-request-state) { background: var(--card-bg); border-color: var(--line); color: var(--ink); }
+[data-theme="dark"] :is(.listings-toolbar input,.listings-toolbar select,.listings-search,.listing-status-filters button,.listing-form input:not([type=checkbox]),.listing-form select,.listing-form textarea,.listing-detail-field>div,.analytics-search,.analytics-breakdown dd,.tickets-search input,.reply-composer textarea,.new-ticket-content input,.new-ticket-content textarea,.withdrawal-amount,.settings-fields input,.settings-fields textarea,.settings-password-fields input,.properties-header input) { background: var(--input-bg); border-color: var(--input-border); color: var(--ink); }
+[data-theme="dark"] :is(.listings-toolbar>span,.listings-empty,.listings-no-results p,.listing-card-information p,.customer-listing-card small,.listing-performance>p,.quick-preview-body p,.analytics-axis,.analytics-months,.analytics-chart-empty,.tickets-empty,.conversation-empty,.conversation-header p,.conversation-status small,.ticket-row-bottom,.settings-section p,.settings-person-title span,.settings-company-title span,.properties-count,.properties-request-state p) { color: var(--muted); }
+
+/* Listings and property detail. */
+[data-theme="dark"] :is(.listings-page .listings-title,.listings-pagination,.listing-card-information,.listing-card-financial,.listing-performance,.listing-card-status,.listing-editor-fields section,.listing-detail-information hr) { border-color: var(--line); }
+[data-theme="dark"] .listing-status-filters button.active { background: var(--gold-light); color: var(--badge-text); }
+[data-theme="dark"] .listing-photo,
+[data-theme="dark"] .quick-preview-image { background: var(--surface-muted); }
+[data-theme="dark"] .listing-action-menu>div { background: var(--surface-elevated); border-color: var(--line); }
+[data-theme="dark"] .listing-action-menu :is(a,button) { color: var(--ink); border-color: var(--line); }
+[data-theme="dark"] .listing-action-menu :is(a,button):hover { background: var(--surface-muted); }
+[data-theme="dark"] .listing-detail-field>div { background: var(--surface-muted); }
+[data-theme="dark"] .listing-detail-field.agent-empty>div { background: #3b2026; }
+[data-theme="dark"] .listing-dialog { color: var(--ink); }
+[data-theme="dark"] :is(.listing-confirmation-actions,.delete-actions) { background: var(--surface-muted); }
+[data-theme="dark"] :is(.listing-confirmation-actions button,.delete-actions button) { background: var(--panel); border-color: var(--line); color: var(--ink); }
+[data-theme="dark"] .listing-image-strip button { background: var(--panel); color: var(--ink); }
+
+/* Dashboard analytics. */
+[data-theme="dark"] .analytics-search svg,
+[data-theme="dark"] :is(.analytics-axis,.analytics-months,.analytics-chart-empty) { color: var(--muted); }
+[data-theme="dark"] .analytics-gridline,
+[data-theme="dark"] .analytics-months span::before,
+[data-theme="dark"] .analytics-breakdown dl,
+[data-theme="dark"] .analytics-breakdown dl>div { border-color: var(--line); }
+[data-theme="dark"] .analytics-total { background: conic-gradient(var(--gold-dark) var(--analytics-represented),var(--surface-muted) 0); }
+[data-theme="dark"] .analytics-total>div { background: var(--card-bg); }
+[data-theme="dark"] .analytics-total span { color: var(--badge-text); }
+
+/* Messaging workspace. */
+[data-theme="dark"] .messages-workspace { border-color: var(--line); }
+[data-theme="dark"] .tickets-pane { border-color: var(--line); }
+[data-theme="dark"] :is(.ticket-filters button,.ticket-row,.conversation-header,.reply-composer,.reply-area,.resolved-ticket,.tickets-back,.messages-retry button,.new-ticket-dialog,.new-ticket-dialog footer,.messages-workspace .attach-message-button) { background: var(--panel); border-color: var(--line); color: var(--ink); }
+[data-theme="dark"] :is(.ticket-row:hover,.ticket-row.selected) { background: var(--surface-muted); }
+[data-theme="dark"] .conversation-pane { background: var(--surface); }
+[data-theme="dark"] .conversation-history { background: #111820; }
+[data-theme="dark"] .conversation-empty-icon { background: var(--surface-muted); }
+[data-theme="dark"] .conversation-empty h2 { color: var(--ink); }
+[data-theme="dark"] .ticket-opened { background: var(--surface-muted); color: var(--text-secondary); }
+[data-theme="dark"] .message-bubble.support { background: #24303d; }
+[data-theme="dark"] .message-bubble.customer { background: #254a38; }
+[data-theme="dark"] :is(.selected-message-file,.message-download) { background: var(--surface-muted); border-color: var(--line); }
+[data-theme="dark"] .new-ticket-dialog { color-scheme: dark; }
+
+/* Referrals, withdrawals, purchased properties. */
+[data-theme="dark"] :is(.referrals-earn>p,.referral-flow-step p,.referral-kpi h2,.referrals-empty p,.withdrawal-balance h2,.withdrawal-balance dt,.withdrawal-help,.withdrawal-form legend,.withdrawal-bank p,.withdrawal-notice,.withdrawal-empty p) { color: var(--muted); }
+[data-theme="dark"] .referral-actions { background: var(--panel); }
+[data-theme="dark"] .referral-actions>div { background: var(--surface-muted); }
+[data-theme="dark"] :is(.referrals-table,.withdrawal-history table,.properties-table) { background: var(--panel); color: var(--ink); }
+[data-theme="dark"] :is(.referrals-table th,.withdrawal-history th,.properties-table th) { background: var(--surface-muted); color: var(--ink); }
+[data-theme="dark"] :is(.referrals-table th,.referrals-table td,.withdrawal-history th,.withdrawal-history td,.properties-table th,.properties-table td,.referrals-table-scroll,.referrals-history-footer,.properties-table-scroll) { border-color: var(--line); }
+[data-theme="dark"] :is(.referrals-pagination button,.withdrawal-history footer button,.properties-pagination button) { background: var(--panel); border-color: var(--line); color: var(--ink); }
+[data-theme="dark"] .withdrawal-quick button { background: var(--surface-muted); border-color: var(--line); color: var(--badge-text); }
+[data-theme="dark"] .withdrawal-bank { border-color: var(--line); }
+[data-theme="dark"] .withdrawal-bank.is-missing { background: var(--gold-light); }
+[data-theme="dark"] .withdrawal-notice { background: var(--surface-muted); }
+[data-theme="dark"] .withdrawal-submit:disabled { background: var(--disabled-bg); color: var(--disabled-text); opacity: 1; }
+[data-theme="dark"] .properties-property-cell strong { color: var(--ink); }
+
+/* Settings, all tabs. */
+[data-theme="dark"] .settings-page { color: var(--ink); }
+[data-theme="dark"] .settings-tabs button { background: var(--surface-muted); color: var(--text-secondary); }
+[data-theme="dark"] .settings-tabs button[aria-selected="true"] { background: var(--card-bg); color: var(--gold-dark); }
+[data-theme="dark"] :is(.settings-identity,.settings-section) { border-color: var(--line); }
+[data-theme="dark"] .settings-fields input[readonly] { background: var(--surface-muted); color: var(--text-secondary); }
+[data-theme="dark"] .settings-upload { border-color: var(--muted); color: #79aef2; }
+[data-theme="dark"] .settings-upload small { color: var(--text-secondary); }
+[data-theme="dark"] .settings-card>footer button { background: var(--panel); color: var(--gold-dark); }
+
+@media (max-width:700px) {
+  [data-theme="dark"] :is(.mortgage-page main,.saved-properties-page main) { background: var(--surface); }
+  [data-theme="dark"] :is(.mortgage-intro,.career-application) { background-color: var(--surface); }
+}

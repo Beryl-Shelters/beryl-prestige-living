@@ -79,7 +79,9 @@ export async function checkSettings({page,origin,calls,failures,screenshot,passe
   assert.equal(await page.getByLabel("First Name *").inputValue(),"Ada");assert.equal(profileWrites().length,before);
   await page.getByLabel("First Name *").fill("Amara");await page.getByRole("button",{name:"Save Changes",exact:true}).click();await toast("Profile updated successfully");
   for(const image of [{name:"profile.png",mimeType:"image/png",buffer:Buffer.from("89504e470d0a1a0a","hex"),extension:"png"},{name:"profile.jpg",mimeType:"image/jpeg",buffer:Buffer.from("ffd8ffdb","hex"),extension:"jpg"},{name:"profile.webp",mimeType:"image/webp",buffer:Buffer.from("RIFF0000WEBP0"),extension:"webp"}]){
-    await page.locator('input[type="file"]').setInputFiles(image);await page.getByRole("button",{name:"Save Changes",exact:true}).click();await toast("Profile updated successfully");
+    await page.locator('input[type="file"]').setInputFiles(image);await page.getByText(image.name,{exact:true}).waitFor();
+    const writesBeforeUpload=profileWrites().length;await page.getByRole("button",{name:"Save Changes",exact:true}).click();await toast("Profile updated successfully");
+    while(profileWrites().length===writesBeforeUpload)await new Promise(resolve=>setTimeout(resolve,10));
     assert.equal(profileWrites().at(-1).body._imageMime,image.mimeType);assert.match(settingsState.profile.profileImageUrl,new RegExp(`profile\\.${image.extension}$`));
   }
   assert.equal(await page.locator(".settings-avatar img").count(),2);assert.equal(await page.locator(".settings-avatar").first().evaluate(element=>getComputedStyle(element).backgroundColor),"rgba(0, 0, 0, 0)");

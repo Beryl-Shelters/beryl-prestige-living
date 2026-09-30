@@ -13,7 +13,7 @@ export const dashboardFixture = {
 
 export async function checkDashboard({ page, origin, calls, failures, screenshot, passed, pauseRequest, resume, toast }) {
   const endpoint = "/dashboard/overview";
-  const sections = ["Overview", "Listings", "Analytics", "Messages", "Properties", "Referrals", "Settings"];
+  const sections = ["Overview", "Listings", "Analytics", "Messages", "Properties", "Referrals", "Withdraw Earnings", "Settings"];
   const ready = () => page.locator(".dashboard-greeting").waitFor();
   const open = async (path = "/dashboard") => { await page.goto(origin + path); await ready(); await page.evaluate(() => document.fonts.ready); };
   for (const width of [1440, 768, 390, 320]) {

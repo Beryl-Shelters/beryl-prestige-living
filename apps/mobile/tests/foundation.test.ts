@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { errorKind, MobileApiError } from "../src/lib/api-error";
+import { errorKind, MobileApiError, transportFailure } from "../src/lib/api-error";
 import { shouldClearAccountForResponse } from "../src/lib/api-auth-boundary";
 import { normalizeBaseUrl } from "../src/lib/config";
 import { clearCustomerSession, restoreCustomerSession } from "../src/lib/session-lifecycle";
@@ -27,6 +27,11 @@ test("API origin normalization is centralized and rejects credentials or query f
 });
 
 test("API errors classify offline, unauthorized, validation, conflict, missing and server failures",()=>{assert.equal(errorKind(401),"unauthorized");assert.equal(errorKind(403),"unauthorized");assert.equal(errorKind(400),"validation");assert.equal(errorKind(409),"conflict");assert.equal(errorKind(404),"not_found");assert.equal(errorKind(500),"server");assert.equal(new MobileApiError("network","offline").kind,"network");});
+
+test("only genuine fetch connectivity failures use network messaging",()=>{
+  const network=transportFailure(new TypeError("Network request failed"));assert.equal(network.kind,"network");assert.doesNotMatch(network.message,/appear to be offline/i);
+  const preparation=transportFailure(new Error("Malformed multipart body"));assert.equal(preparation.kind,"server");assert.match(preparation.message,/prepared or sent/i);
+});
 
 test("API transport is invoked unbound so browser fetch keeps a valid receiver",()=>{const api=read("src/lib/api-client.ts");assert.match(api,/const transport=this\.transport;response=await transport\(/);assert.doesNotMatch(api,/await this\.transport\(/);});
 

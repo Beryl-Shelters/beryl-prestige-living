@@ -14,5 +14,15 @@ export function errorKind(status: number): ApiErrorKind {
 
 export function friendlyError(error: unknown): string {
   if (error instanceof MobileApiError) return error.message;
-  return "We could not connect to Beryl Shelter. Check your connection and try again.";
+  return "Beryl Shelter could not complete this request. Please try again.";
+}
+
+export function transportFailure(error: unknown): MobileApiError {
+  if (typeof DOMException !== "undefined" && error instanceof DOMException && ["AbortError", "TimeoutError"].includes(error.name)) {
+    return new MobileApiError("network", "The request timed out. Please try again.");
+  }
+  if (error instanceof TypeError && /network request failed|failed to fetch|networkerror/i.test(error.message)) {
+    return new MobileApiError("network", "The request could not reach Beryl Shelter. Check your connection and try again.");
+  }
+  return new MobileApiError("server", "The request could not be prepared or sent. Please try again.");
 }

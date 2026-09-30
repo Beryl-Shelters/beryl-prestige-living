@@ -43,6 +43,20 @@ test("canonical property fields and required validation are preserved in Propert
   // Validation checks
   assert.match(step, /At least 1 property photograph is required/);
   assert.match(step, /Minimum down payment cannot exceed total property cost/);
+  assert.match(step, /OptionSelect label="State \*"/);
+  assert.doesNotMatch(step, /State \*<\/Text>[\s\S]{0,200}<ScrollView horizontal/);
+});
+
+test("long Nigerian state lists use the shared vertical selector",()=>{
+  const selector=read("src/components/option-select.tsx"),buy=read("app/buy-assistance.tsx"),upload=read("src/lib/file-upload-helper.ts");
+  assert.match(selector,/ScrollView/);assert.match(selector,/accessibilityRole="radio"/);assert.match(selector,/setOpen\(false\)/);
+  assert.match(buy,/OptionSelect label="State \*"/);assert.match(upload,/await fetch\(file\.uri\)/);assert.match(upload,/await localResponse\.blob\(\)/);
+});
+
+test("assistance routes own one human-readable header",()=>{
+  const layout=read("app/_layout.tsx"),sell=read("app/sell-assistance.tsx"),buy=read("app/buy-assistance.tsx");
+  assert.match(layout,/name="sell-assistance" options=\{\{ headerShown: false \}\}/);assert.match(layout,/name="buy-assistance" options=\{\{ headerShown: false \}\}/);
+  assert.match(sell,/>Sell Assistance</);assert.match(buy,/>Buy Assistance</);
 });
 
 test("listings API enforces private upload contract, multipart bodies and client marker", async () => {

@@ -58,6 +58,11 @@ export default function SellAssistanceRoute() {
   const [submitError, setSubmitError] = useState("");
   const [success, setSuccess] = useState(false);
 
+  function goBack() {
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)");
+  }
+
   function toggleFacility(name: string) {
     setSelectedFacilities((prev) =>
       prev.includes(name) ? prev.filter((f) => f !== name) : [...prev, name]
@@ -154,7 +159,7 @@ export default function SellAssistanceRoute() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Go back"
-          onPress={() => router.back()}
+          onPress={goBack}
           style={styles.backBtn}
         >
           <AppIcon name="arrow-back" size={22} color={colors.text} />
