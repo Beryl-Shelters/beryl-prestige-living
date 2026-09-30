@@ -1,5 +1,4 @@
 import { Redirect, useLocalSearchParams } from "expo-router";
-import { FeaturePlaceholder } from "@/components/feature-placeholder";
 
 export default function DashboardFeature() {
   const { feature } = useLocalSearchParams<{ feature: string }>();
@@ -20,12 +19,5 @@ export default function DashboardFeature() {
     return <Redirect href="/dashboard/referrals" />;
   }
 
-  return (
-    <FeaturePlaceholder
-      title="Customer Account"
-      description="This destination is connected to authenticated customer navigation."
-      phase="Later phase"
-      authenticated
-    />
-  );
+  return <Redirect href="/+not-found" />;
 }

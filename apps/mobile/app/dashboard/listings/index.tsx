@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Image,
@@ -11,7 +11,6 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { AppIcon } from "@/components/app-icon";
-import { DashboardNav } from "@/components/dashboard/dashboard-nav";
 import {
   DeleteModal,
   RejectionModal,
@@ -26,7 +25,8 @@ import {
   type ListingStatus,
 } from "@/lib/listings-api";
 import { formatNaira } from "@/lib/money";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 type FilterOption = {
   label: string;
@@ -42,6 +42,8 @@ const filterTabs: FilterOption[] = [
 ];
 
 export default function MyListingsScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [search, setSearch] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<"" | ListingStatus>("");
@@ -308,7 +310,6 @@ export default function MyListingsScreen() {
 
   return (
     <View style={styles.container}>
-      <DashboardNav active="listings" />
 
       {/* Header bar with CTA */}
       <View style={styles.topHeader}>
@@ -332,7 +333,7 @@ export default function MyListingsScreen() {
         <TextInput
           accessibilityLabel="Search listings"
           placeholder="Search by title, code or location"
-          placeholderTextColor="#9C948C"
+          placeholderTextColor={colors.textMuted}
           value={search}
           onChangeText={setSearch}
           maxLength={100}
@@ -519,260 +520,264 @@ export default function MyListingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: spacing.xl,
-  },
-  topHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-  },
-  pageTitle: {
-    ...typography.title,
-    color: colors.text,
-  },
-  createBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: colors.action,
-    paddingVertical: spacing.xs + 2,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-  },
-  createBtnText: {
-    ...typography.label,
-    color: colors.actionText,
-  },
-  searchWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    marginHorizontal: spacing.md,
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.md,
-    height: 44,
-    gap: spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    ...typography.body,
-    color: colors.text,
-    paddingVertical: 0,
-  },
-  filterBar: {
-    flexDirection: "row",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.xs,
-  },
-  filterChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceMuted,
-  },
-  filterChipActive: {
-    backgroundColor: colors.brandDark,
-  },
-  filterChipText: {
-    ...typography.caption,
-    fontWeight: "600",
-    color: colors.textMuted,
-  },
-  filterChipTextActive: {
-    color: "#FFF",
-  },
-  countBadge: {
-    backgroundColor: colors.border,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: radius.pill,
-  },
-  countBadgeActive: {
-    backgroundColor: "rgba(255, 255, 255, 0.25)",
-  },
-  countBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: colors.textMuted,
-  },
-  countBadgeTextActive: {
-    color: "#FFF",
-  },
-  listContent: {
-    padding: spacing.md,
-    gap: spacing.md,
-    paddingBottom: spacing.xxl,
-  },
-  card: {
-    gap: spacing.md,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    gap: spacing.md,
-  },
-  propertyThumb: {
-    width: 76,
-    height: 76,
-    borderRadius: radius.md,
-  },
-  thumbPlaceholder: {
-    backgroundColor: colors.surfaceMuted,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cardMainInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  cardTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  listingCode: {
-    ...typography.caption,
-    color: colors.textMuted,
-    fontWeight: "600",
-  },
-  propertyTitle: {
-    ...typography.label,
-    color: colors.text,
-    fontWeight: "700",
-  },
-  placeText: {
-    ...typography.caption,
-    color: colors.textMuted,
-  },
-  factsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surfaceMuted,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm,
-    gap: spacing.xs,
-  },
-  factText: {
-    ...typography.caption,
-    fontSize: 12,
-    color: colors.text,
-    fontWeight: "500",
-  },
-  factDivider: {
-    color: colors.border,
-  },
-  priceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingTop: spacing.xs,
-  },
-  priceLabel: {
-    ...typography.caption,
-    fontSize: 11,
-    color: colors.textMuted,
-  },
-  priceValue: {
-    ...typography.heading,
-    fontSize: 16,
-    color: colors.success,
-  },
-  marketCol: {
-    alignItems: "flex-end",
-  },
-  marketValue: {
-    ...typography.label,
-    color: colors.text,
-  },
-  completenessRow: {
-    gap: 4,
-  },
-  completenessHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  completenessLabel: {
-    ...typography.caption,
-    color: colors.textMuted,
-  },
-  completenessPercent: {
-    ...typography.caption,
-    fontWeight: "700",
-    color: colors.brandDark,
-  },
-  progressBarTrack: {
-    height: 6,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceMuted,
-    overflow: "hidden",
-  },
-  progressBarFill: {
-    height: "100%",
-    backgroundColor: colors.brand,
-    borderRadius: radius.pill,
-  },
-  actionRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.xs,
-    justifyContent: "flex-end",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingTop: spacing.sm,
-  },
-  statusChip: {
-    paddingHorizontal: spacing.xs + 2,
-    paddingVertical: 1,
-    borderRadius: radius.pill,
-  },
-  statusChip_success: { backgroundColor: "#E6F4EA" },
-  statusChip_warning: { backgroundColor: "#FEF7E0" },
-  statusChip_danger: { backgroundColor: "#FCE8E6" },
-  statusChip_neutral: { backgroundColor: colors.surfaceMuted },
-  statusChipText: { fontSize: 11, fontWeight: "700" },
-  statusChipText_success: { color: colors.success },
-  statusChipText_warning: { color: colors.warning },
-  statusChipText_danger: { color: colors.danger },
-  statusChipText_neutral: { color: colors.textMuted },
-  emptyContainer: {
-    alignItems: "center",
-    gap: spacing.md,
-    paddingVertical: spacing.xxl,
-    width: "100%",
-  },
-  emptyTitle: {
-    ...typography.heading,
-    color: colors.text,
-    textAlign: "center",
-  },
-  emptyText: {
-    ...typography.caption,
-    color: colors.textMuted,
-    textAlign: "center",
-  },
-  loadMoreFooter: {
-    paddingVertical: spacing.lg,
-    alignItems: "center",
-  },
-});
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centered: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: spacing.xl,
+    },
+    topHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.md,
+    },
+    pageTitle: {
+      ...typography.title,
+      color: colors.text,
+    },
+    createBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      backgroundColor: colors.action,
+      paddingVertical: spacing.xs + 2,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.pill,
+    },
+    createBtnText: {
+      ...typography.label,
+      color: colors.actionText,
+    },
+    searchWrapper: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      marginHorizontal: spacing.md,
+      marginTop: spacing.sm,
+      paddingHorizontal: spacing.md,
+      height: 44,
+      gap: spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      ...typography.body,
+      color: colors.text,
+      paddingVertical: 0,
+    },
+    filterBar: {
+      flexDirection: "row",
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      gap: spacing.xs,
+    },
+    filterChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radius.pill,
+      backgroundColor: colors.surfaceMuted,
+    },
+    filterChipActive: {
+      backgroundColor: colors.brandDark,
+    },
+    filterChipText: {
+      ...typography.caption,
+      fontWeight: "600",
+      color: colors.textMuted,
+    },
+    filterChipTextActive: {
+      color: "#FFF",
+    },
+    countBadge: {
+      backgroundColor: colors.border,
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+      borderRadius: radius.pill,
+    },
+    countBadgeActive: {
+      backgroundColor: "rgba(255, 255, 255, 0.25)",
+    },
+    countBadgeText: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: colors.textMuted,
+    },
+    countBadgeTextActive: {
+      color: "#FFF",
+    },
+    listContent: {
+      padding: spacing.md,
+      gap: spacing.md,
+      paddingBottom: spacing.xxl,
+    },
+    card: {
+      gap: spacing.md,
+    },
+    cardHeader: {
+      flexDirection: "row",
+      gap: spacing.md,
+    },
+    propertyThumb: {
+      width: 76,
+      height: 76,
+      borderRadius: radius.md,
+    },
+    thumbPlaceholder: {
+      backgroundColor: colors.surfaceMuted,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    cardMainInfo: {
+      flex: 1,
+      gap: 2,
+    },
+    cardTopRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    listingCode: {
+      ...typography.caption,
+      color: colors.textMuted,
+      fontWeight: "600",
+    },
+    propertyTitle: {
+      ...typography.label,
+      color: colors.text,
+      fontWeight: "700",
+    },
+    placeText: {
+      ...typography.caption,
+      color: colors.textMuted,
+    },
+    factsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surfaceMuted,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radius.sm,
+      gap: spacing.xs,
+    },
+    factText: {
+      ...typography.caption,
+      fontSize: 12,
+      color: colors.text,
+      fontWeight: "500",
+    },
+    factDivider: {
+      color: colors.border,
+    },
+    priceRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.border,
+      paddingTop: spacing.xs,
+    },
+    priceLabel: {
+      ...typography.caption,
+      fontSize: 11,
+      color: colors.textMuted,
+    },
+    priceValue: {
+      ...typography.heading,
+      fontSize: 16,
+      color: colors.success,
+    },
+    marketCol: {
+      alignItems: "flex-end",
+    },
+    marketValue: {
+      ...typography.label,
+      color: colors.text,
+    },
+    completenessRow: {
+      gap: 4,
+    },
+    completenessHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    completenessLabel: {
+      ...typography.caption,
+      color: colors.textMuted,
+    },
+    completenessPercent: {
+      ...typography.caption,
+      fontWeight: "700",
+      color: colors.brandDark,
+    },
+    progressBarTrack: {
+      height: 6,
+      borderRadius: radius.pill,
+      backgroundColor: colors.surfaceMuted,
+      overflow: "hidden",
+    },
+    progressBarFill: {
+      height: "100%",
+      backgroundColor: colors.brand,
+      borderRadius: radius.pill,
+    },
+    actionRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.xs,
+      justifyContent: "flex-end",
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.border,
+      paddingTop: spacing.sm,
+    },
+    statusChip: {
+      paddingHorizontal: spacing.xs + 2,
+      paddingVertical: 1,
+      borderRadius: radius.pill,
+      borderWidth: 1,
+      borderColor: "transparent",
+    },
+    statusChip_success: { backgroundColor: colors.surfaceMuted, borderColor: colors.success },
+    statusChip_warning: { backgroundColor: colors.surfaceMuted, borderColor: colors.warning },
+    statusChip_danger: { backgroundColor: colors.surfaceMuted, borderColor: colors.danger },
+    statusChip_neutral: { backgroundColor: colors.surfaceMuted, borderColor: colors.border },
+    statusChipText: { fontSize: 11, fontWeight: "700" },
+    statusChipText_success: { color: colors.success },
+    statusChipText_warning: { color: colors.warning },
+    statusChipText_danger: { color: colors.danger },
+    statusChipText_neutral: { color: colors.textMuted },
+    emptyContainer: {
+      alignItems: "center",
+      gap: spacing.md,
+      paddingVertical: spacing.xxl,
+      width: "100%",
+    },
+    emptyTitle: {
+      ...typography.heading,
+      color: colors.text,
+      textAlign: "center",
+    },
+    emptyText: {
+      ...typography.caption,
+      color: colors.textMuted,
+      textAlign: "center",
+    },
+    loadMoreFooter: {
+      paddingVertical: spacing.lg,
+      alignItems: "center",
+    },
+  });
+}

@@ -159,9 +159,7 @@ export function createListingsApi(client?: ApiTransport) {
 
   return {
     async options(): Promise<ListingOptions> {
-      return getClient().request<ListingOptions>("/api/v1/listings/options", {
-        authenticated: false,
-      });
+      return getClient().request<ListingOptions>("/api/v1/listings/options");
     },
 
     async get(id: string): Promise<CustomerListing> {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -23,12 +23,15 @@ import {
   type SettingsProfile,
   type SettingsProfileInput,
 } from "@/lib/settings-api";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 MiB
 const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
 
 export default function SettingsProfileScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [profile, setProfile] = useState<SettingsProfile | null>(null);
   const [draft, setDraft] = useState<SettingsProfileInput>({
     firstName: "",
@@ -336,10 +339,10 @@ export default function SettingsProfileScreen() {
               size={16}
               color={
                 kycStatus === "APPROVED"
-                  ? "#166534"
+                  ? colors.success
                   : kycStatus === "PENDING_REVIEW"
-                  ? "#92400E"
-                  : colors.brandDark
+                  ? colors.warning
+                  : colors.text
               }
             />
             <Text
@@ -576,7 +579,8 @@ export default function SettingsProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -652,28 +656,32 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: radius.pill,
     alignSelf: "flex-start",
+    borderWidth: 1,
   },
   kycBadgeApproved: {
-    backgroundColor: "#DCFCE7",
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.success,
   },
   kycBadgePending: {
-    backgroundColor: "#FEF3C7",
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.warning,
   },
   kycBadgeUnverified: {
     backgroundColor: colors.surfaceMuted,
+    borderColor: colors.border,
   },
   kycBadgeText: {
     ...typography.caption,
     fontFamily: "PlusJakartaSans-SemiBold",
   },
   kycTextApproved: {
-    color: "#166534",
+    color: colors.success,
   },
   kycTextPending: {
-    color: "#92400E",
+    color: colors.warning,
   },
   kycTextUnverified: {
-    color: colors.brandDark,
+    color: colors.text,
   },
   cardTitle: {
     ...typography.subheading,
@@ -743,8 +751,9 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
   inputReadOnly: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: colors.surfaceMuted,
     color: colors.textMuted,
+    opacity: 0.8,
   },
   readOnlyLabelRow: {
     flexDirection: "row",
@@ -754,7 +763,7 @@ const styles = StyleSheet.create({
   readOnlyBadge: {
     fontSize: 10,
     color: colors.textMuted,
-    backgroundColor: "#E5E7EB",
+    backgroundColor: colors.border,
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: radius.sm,
@@ -767,19 +776,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    backgroundColor: "#DCFCE7",
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.success,
     padding: spacing.sm,
     borderRadius: radius.sm,
   },
   successText: {
     ...typography.caption,
-    color: "#166534",
+    color: colors.success,
   },
   errorBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.danger,
     padding: spacing.sm,
     borderRadius: radius.sm,
   },
@@ -787,4 +800,5 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.danger,
   },
-});
+  });
+}

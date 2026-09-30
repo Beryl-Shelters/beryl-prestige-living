@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Image,
   Pressable,
@@ -22,10 +22,13 @@ import {
   type CustomerListing,
 } from "@/lib/listings-api";
 import { formatNaira } from "@/lib/money";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 export default function OwnerListingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [listing, setListing] = useState<CustomerListing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -436,236 +439,242 @@ export default function OwnerListingDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: spacing.xl,
-  },
-  scrollContent: {
-    padding: spacing.md,
-    gap: spacing.md,
-    paddingBottom: spacing.xxl,
-  },
-  gallery: {
-    gap: spacing.sm,
-  },
-  mainImage: {
-    width: "100%",
-    height: 220,
-    borderRadius: radius.lg,
-  },
-  imagePlaceholder: {
-    backgroundColor: colors.surfaceMuted,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-  },
-  placeholderText: {
-    ...typography.caption,
-    color: colors.textMuted,
-  },
-  thumbRow: {
-    gap: spacing.xs,
-  },
-  thumbWrap: {
-    borderRadius: radius.md,
-    overflow: "hidden",
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  thumbWrapActive: {
-    borderColor: colors.brand,
-  },
-  thumb: {
-    width: 60,
-    height: 50,
-  },
-  sectionCard: {
-    gap: spacing.sm,
-  },
-  topStatusRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  codeText: {
-    ...typography.caption,
-    color: colors.textMuted,
-    fontWeight: "600",
-  },
-  propertyTitle: {
-    ...typography.title,
-    color: colors.text,
-  },
-  propertySubtitle: {
-    ...typography.body,
-    color: colors.textMuted,
-  },
-  factsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  factCell: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-  },
-  factVal: {
-    ...typography.caption,
-    color: colors.text,
-    fontWeight: "600",
-  },
-  cardHeader: {
-    ...typography.heading,
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  priceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: spacing.xs,
-  },
-  priceKey: {
-    ...typography.body,
-    color: colors.textMuted,
-  },
-  priceVal: {
-    ...typography.heading,
-    color: colors.brandDark,
-  },
-  offlineNotice: {
-    flexDirection: "row",
-    gap: spacing.xs,
-    backgroundColor: "#FBF1E5",
-    padding: spacing.sm,
-    borderRadius: radius.md,
-    alignItems: "flex-start",
-    marginTop: spacing.xs,
-  },
-  offlineNoticeText: {
-    ...typography.caption,
-    color: colors.text,
-    flex: 1,
-    fontSize: 12,
-  },
-  descriptionText: {
-    ...typography.body,
-    color: colors.text,
-    lineHeight: 22,
-  },
-  expandBtn: {
-    alignSelf: "flex-start",
-    paddingVertical: spacing.xs,
-  },
-  expandBtnText: {
-    ...typography.label,
-    color: colors.brandDark,
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: spacing.xs,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  detailKey: {
-    ...typography.body,
-    color: colors.textMuted,
-  },
-  detailVal: {
-    ...typography.body,
-    color: colors.text,
-    fontWeight: "600",
-    textAlign: "right",
-    flex: 1,
-    paddingLeft: spacing.md,
-  },
-  facilitiesWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.xs,
-  },
-  facilityPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: colors.surfaceMuted,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.pill,
-  },
-  facilityText: {
-    ...typography.caption,
-    color: colors.text,
-  },
-  pendingCard: {
-    backgroundColor: "#FEF7E0",
-    borderColor: "#FEEFC3",
-    gap: spacing.sm,
-  },
-  pendingTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  pendingHeading: {
-    ...typography.heading,
-    color: colors.warning,
-  },
-  pendingText: {
-    ...typography.body,
-    color: colors.text,
-  },
-  rejectionCard: {
-    backgroundColor: "#FDEDED",
-    borderColor: "#F5C6CB",
-    gap: spacing.sm,
-  },
-  rejectionTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  rejectionHeading: {
-    ...typography.heading,
-    color: colors.danger,
-  },
-  rejectionReasonText: {
-    ...typography.body,
-    color: colors.text,
-  },
-  rejectionBtnRow: {
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  actionsCard: {
-    gap: spacing.sm,
-  },
-  statusChip: {
-    paddingHorizontal: spacing.xs + 4,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  statusChip_success: { backgroundColor: "#E6F4EA" },
-  statusChip_warning: { backgroundColor: "#FEF7E0" },
-  statusChip_danger: { backgroundColor: "#FCE8E6" },
-  statusChip_neutral: { backgroundColor: colors.surfaceMuted },
-  statusChipText: { fontSize: 12, fontWeight: "700" },
-  statusChipText_success: { color: colors.success },
-  statusChipText_warning: { color: colors.warning },
-  statusChipText_danger: { color: colors.danger },
-  statusChipText_neutral: { color: colors.textMuted },
-});
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centered: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: spacing.xl,
+    },
+    scrollContent: {
+      padding: spacing.md,
+      gap: spacing.md,
+      paddingBottom: spacing.xxl,
+    },
+    gallery: {
+      gap: spacing.sm,
+    },
+    mainImage: {
+      width: "100%",
+      height: 220,
+      borderRadius: radius.lg,
+    },
+    imagePlaceholder: {
+      backgroundColor: colors.surfaceMuted,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.xs,
+    },
+    placeholderText: {
+      ...typography.caption,
+      color: colors.textMuted,
+    },
+    thumbRow: {
+      gap: spacing.xs,
+    },
+    thumbWrap: {
+      borderRadius: radius.md,
+      overflow: "hidden",
+      borderWidth: 2,
+      borderColor: "transparent",
+    },
+    thumbWrapActive: {
+      borderColor: colors.brand,
+    },
+    thumb: {
+      width: 60,
+      height: 50,
+    },
+    sectionCard: {
+      gap: spacing.sm,
+    },
+    topStatusRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    codeText: {
+      ...typography.caption,
+      color: colors.textMuted,
+      fontWeight: "600",
+    },
+    propertyTitle: {
+      ...typography.title,
+      color: colors.text,
+    },
+    propertySubtitle: {
+      ...typography.body,
+      color: colors.textMuted,
+    },
+    factsGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+      marginTop: spacing.xs,
+    },
+    factCell: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: colors.surfaceMuted,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.sm,
+    },
+    factVal: {
+      ...typography.caption,
+      color: colors.text,
+      fontWeight: "600",
+    },
+    cardHeader: {
+      ...typography.heading,
+      color: colors.text,
+      marginBottom: spacing.xs,
+    },
+    priceRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: spacing.xs,
+    },
+    priceKey: {
+      ...typography.body,
+      color: colors.textMuted,
+    },
+    priceVal: {
+      ...typography.heading,
+      color: colors.brandDark,
+    },
+    offlineNotice: {
+      flexDirection: "row",
+      gap: spacing.xs,
+      backgroundColor: colors.brandTint,
+      padding: spacing.sm,
+      borderRadius: radius.md,
+      alignItems: "flex-start",
+      marginTop: spacing.xs,
+    },
+    offlineNoticeText: {
+      ...typography.caption,
+      color: colors.text,
+      flex: 1,
+      fontSize: 12,
+    },
+    descriptionText: {
+      ...typography.body,
+      color: colors.text,
+      lineHeight: 22,
+    },
+    expandBtn: {
+      alignSelf: "flex-start",
+      paddingVertical: spacing.xs,
+    },
+    expandBtnText: {
+      ...typography.label,
+      color: colors.brandDark,
+    },
+    detailRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: spacing.xs,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    detailKey: {
+      ...typography.body,
+      color: colors.textMuted,
+    },
+    detailVal: {
+      ...typography.body,
+      color: colors.text,
+      fontWeight: "600",
+      textAlign: "right",
+      flex: 1,
+      paddingLeft: spacing.md,
+    },
+    facilitiesWrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.xs,
+    },
+    facilityPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: colors.surfaceMuted,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radius.pill,
+    },
+    facilityText: {
+      ...typography.caption,
+      color: colors.text,
+    },
+    pendingCard: {
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.warning,
+      gap: spacing.sm,
+    },
+    pendingTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    pendingHeading: {
+      ...typography.heading,
+      color: colors.warning,
+    },
+    pendingText: {
+      ...typography.body,
+      color: colors.text,
+    },
+    rejectionCard: {
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.danger,
+      gap: spacing.sm,
+    },
+    rejectionTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    rejectionHeading: {
+      ...typography.heading,
+      color: colors.danger,
+    },
+    rejectionReasonText: {
+      ...typography.body,
+      color: colors.text,
+    },
+    rejectionBtnRow: {
+      gap: spacing.xs,
+      marginTop: spacing.xs,
+    },
+    actionsCard: {
+      gap: spacing.sm,
+    },
+    statusChip: {
+      paddingHorizontal: spacing.xs + 4,
+      paddingVertical: 2,
+      borderRadius: radius.pill,
+      borderWidth: 1,
+      borderColor: "transparent",
+    },
+    statusChip_success: { backgroundColor: colors.surfaceMuted, borderColor: colors.success },
+    statusChip_warning: { backgroundColor: colors.surfaceMuted, borderColor: colors.warning },
+    statusChip_danger: { backgroundColor: colors.surfaceMuted, borderColor: colors.danger },
+    statusChip_neutral: { backgroundColor: colors.surfaceMuted, borderColor: colors.border },
+    statusChipText: { fontSize: 12, fontWeight: "700" },
+    statusChipText_success: { color: colors.success },
+    statusChipText_warning: { color: colors.warning },
+    statusChipText_danger: { color: colors.danger },
+    statusChipText_neutral: { color: colors.textMuted },
+  });
+}

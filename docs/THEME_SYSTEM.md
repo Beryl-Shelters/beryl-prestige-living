@@ -30,8 +30,10 @@ No backend database columns, migrations, or authentication dependencies are used
   - Key: `localStorage.getItem("beryl_admin_theme")`
   - Anti-flash: Synchronous `<head>` script in `apps/admin/app/layout.tsx` applying `data-theme` attribute before hydration.
 * **Customer Mobile (`apps/mobile`)**:
-  - Key: `SecureStore` (native) / `localStorage` (web fallback) with key `beryl.v2.customer.theme_preference`.
+  - Key: `SecureStore` (native) / `localStorage` (web fallback) with key `beryl_mobile_theme`.
+  - Existing `beryl.v2.customer.theme_preference` values are read once as a compatibility fallback and migrated to the canonical key.
   - Dynamically combines stored preference with `useColorScheme()` to drive `StatusBar` and Expo Router `Stack`/`Tabs` navigation headers.
+  - 100% dynamic theme resolution: All 47 mobile screens, components, and layouts consume `useTheme()` and memoized `createStyles(colors: ColorTokens)`. Zero screens or components import static `colors`.
 
 ---
 

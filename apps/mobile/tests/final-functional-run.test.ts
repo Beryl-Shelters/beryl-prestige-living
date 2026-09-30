@@ -409,4 +409,11 @@ test("Dashboard layout registers all canonical screens without placeholders", ()
   assert.match(feature, /feature === "messages"/);
   assert.match(feature, /feature === "settings"/);
   assert.match(feature, /feature === "kyc"/);
+  assert.match(feature, /Redirect href="\/\+not-found"/);
+  assert.doesNotMatch(feature, /FeaturePlaceholder|Later phase/);
+
+  const referralLink = read("app/referrals/[referralCode].tsx");
+  assert.match(referralLink, /pathname: "\/\(auth\)\/register"/);
+  assert.match(referralLink, /params: \{ ref: referralCode \}/);
+  assert.doesNotMatch(referralLink, /FeaturePlaceholder|Phase 5/);
 });

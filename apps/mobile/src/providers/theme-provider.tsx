@@ -32,23 +32,34 @@ export interface ThemeContextValue {
   setThemePreference: (pref: ThemePreference) => Promise<void>;
 }
 
-const STORAGE_KEY = "beryl.v2.customer.theme_preference";
+const STORAGE_KEY = "beryl_mobile_theme";
+const LEGACY_STORAGE_KEY = "beryl.v2.customer.theme_preference";
 const ThemeContext = createContext<ThemeContextValue | null>(null);
+
+function validPreference(value: string | null): value is ThemePreference {
+  return value === "light" || value === "dark" || value === "system";
+}
 
 async function readStoredTheme(): Promise<ThemePreference> {
   try {
     if (Platform.OS === "web") {
       if (typeof window !== "undefined" && window.localStorage) {
         const item = window.localStorage.getItem(STORAGE_KEY);
-        if (item === "light" || item === "dark" || item === "system") {
-          return item;
+        if (validPreference(item)) return item;
+        const legacy = window.localStorage.getItem(LEGACY_STORAGE_KEY);
+        if (validPreference(legacy)) {
+          window.localStorage.setItem(STORAGE_KEY, legacy);
+          return legacy;
         }
       }
       return "system";
     }
     const item = await SecureStore.getItemAsync(STORAGE_KEY);
-    if (item === "light" || item === "dark" || item === "system") {
-      return item;
+    if (validPreference(item)) return item;
+    const legacy = await SecureStore.getItemAsync(LEGACY_STORAGE_KEY);
+    if (validPreference(legacy)) {
+      await SecureStore.setItemAsync(STORAGE_KEY, legacy);
+      return legacy;
     }
   } catch {
     // Ignore read errors

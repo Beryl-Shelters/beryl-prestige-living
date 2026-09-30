@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -9,7 +9,6 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { AppIcon } from "@/components/app-icon";
-import { DashboardNav } from "@/components/dashboard/dashboard-nav";
 import { Button, Card, LoadingState, ScreenState, SectionHeading } from "@/components/ui";
 import { friendlyError } from "@/lib/api-error";
 import {
@@ -18,7 +17,8 @@ import {
   type ReferralPage,
 } from "@/lib/referrals-api";
 import { shareCanonicalUrl } from "@/lib/share";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 function formatMoney(minor: number): string {
   const naira = minor / 100;
@@ -42,6 +42,8 @@ function formatDate(iso: string | null): string {
 }
 
 export default function ReferralsScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [data, setData] = useState<ReferralPage | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -116,7 +118,6 @@ export default function ReferralsScreen() {
   if (error && !data) {
     return (
       <View style={styles.screen}>
-        <DashboardNav active="referrals" />
         <Card style={styles.errorCard}>
           <ScreenState
             title="Referrals Unavailable"
@@ -136,7 +137,6 @@ export default function ReferralsScreen() {
 
   return (
     <View style={styles.screen}>
-      <DashboardNav active="referrals" />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -378,7 +378,8 @@ export default function ReferralsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -602,4 +603,5 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textMuted,
   },
-});
+  });
+}

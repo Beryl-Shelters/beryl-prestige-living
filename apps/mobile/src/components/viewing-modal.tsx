@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Image,
   Modal,
@@ -14,7 +14,8 @@ import { Button, TextField } from "./ui";
 import { friendlyError } from "@/lib/api-error";
 import { formatNaira } from "@/lib/money";
 import { publicServicesApi } from "@/lib/public-services-api";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 type ViewingModalProps = {
   visible: boolean;
@@ -40,6 +41,8 @@ export function ViewingModal({
   initialUser,
   onClose,
 }: ViewingModalProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [firstName, setFirstName] = useState(initialUser?.firstName || "");
   const [lastName, setLastName] = useState(initialUser?.lastName || "");
   const [email, setEmail] = useState(initialUser?.email || "");
@@ -265,7 +268,8 @@ export function ViewingModal({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   topBar: {
     height: 56,
@@ -284,7 +288,9 @@ const styles = StyleSheet.create({
   infoBanner: {
     flexDirection: "row",
     gap: spacing.sm,
-    backgroundColor: "#FBF1E5",
+    backgroundColor: colors.brandTint,
+    borderWidth: 1,
+    borderColor: colors.brandGold,
     padding: spacing.md,
     borderRadius: radius.md,
     alignItems: "flex-start",
@@ -332,4 +338,5 @@ const styles = StyleSheet.create({
   propertyTitleText: { ...typography.label, color: colors.text },
   propertyPriceText: { ...typography.label, color: colors.brandDark },
   propertyCodeText: { ...typography.caption, color: colors.textMuted },
-});
+  });
+}

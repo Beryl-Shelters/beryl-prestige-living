@@ -1,4 +1,4 @@
-import type { PropsWithChildren, ReactNode } from "react";
+import { useState, type PropsWithChildren, type ReactNode } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -14,15 +14,23 @@ import {
   type ViewStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, elevation, radius, spacing, typography } from "@/theme/tokens";
+import { AppIcon } from "./app-icon";
+import { BrandLoader } from "./brand-loader";
+import { elevation, radius, spacing, typography } from "@/theme/tokens";
 import { useTheme } from "@/providers/theme-provider";
 
 export function Screen({
   children,
   scroll = true,
   keyboard = false,
+  edges = ["left", "right"],
   style,
-}: PropsWithChildren<{ scroll?: boolean; keyboard?: boolean; style?: ViewStyle }>) {
+}: PropsWithChildren<{
+  scroll?: boolean;
+  keyboard?: boolean;
+  edges?: readonly ("top" | "bottom" | "left" | "right")[];
+  style?: ViewStyle;
+}>) {
   const { colors: themeColors } = useTheme();
   const content = scroll ? (
     <ScrollView
@@ -37,7 +45,7 @@ export function Screen({
 
   return (
     <SafeAreaView
-      edges={["left", "right"]}
+      edges={edges}
       style={[styles.safe, { backgroundColor: themeColors.background }]}
     >
       {keyboard ? (
@@ -151,6 +159,8 @@ export function TextField({
   label,
   error,
   keyboardType,
+  secureTextEntry,
+  style,
   ...props
 }: TextInputProps & {
   label: string;
@@ -158,27 +168,54 @@ export function TextField({
   keyboardType?: KeyboardTypeOptions;
 }) {
   const { colors: themeColors } = useTheme();
+  const [hidePassword, setHidePassword] = useState(Boolean(secureTextEntry));
+  const isPassword = Boolean(secureTextEntry);
   const errorId = error ? `${String(props.nativeID ?? label)}-error` : undefined;
 
   return (
     <View style={styles.field}>
       <Text style={[styles.label, { color: themeColors.text }]}>{label}</Text>
-      <TextInput
-        accessibilityLabel={label}
-        accessibilityHint={error}
-        aria-describedby={errorId}
-        placeholderTextColor={themeColors.textMuted}
-        keyboardType={keyboardType}
+      <View
         style={[
-          styles.input,
+          styles.inputContainer,
           {
             backgroundColor: themeColors.surface,
             borderColor: error ? themeColors.danger : themeColors.border,
-            color: themeColors.text,
           },
         ]}
-        {...props}
-      />
+      >
+        <TextInput
+          accessibilityLabel={label}
+          accessibilityHint={error}
+          aria-describedby={errorId}
+          placeholderTextColor={themeColors.textMuted}
+          keyboardType={keyboardType}
+          secureTextEntry={isPassword ? hidePassword : false}
+          style={[
+            styles.inputInner,
+            {
+              color: themeColors.text,
+            },
+            style,
+          ]}
+          {...props}
+        />
+        {isPassword ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={hidePassword ? "Show password" : "Hide password"}
+            onPress={() => setHidePassword((v) => !v)}
+            hitSlop={8}
+            style={styles.eyeButton}
+          >
+            <AppIcon
+              name={hidePassword ? "eye-outline" : "eye-off-outline"}
+              size={20}
+              color={themeColors.textMuted}
+            />
+          </Pressable>
+        ) : null}
+      </View>
       {error ? (
         <Text nativeID={errorId} accessibilityRole="alert" style={[styles.error, { color: themeColors.danger }]}>
           {error}
@@ -245,26 +282,20 @@ export function ScreenState({
 }
 
 export function LoadingState({ label = "Loading" }: { label?: string }) {
-  const { colors: themeColors } = useTheme();
-  return (
-    <View accessibilityLabel={label} accessibilityRole="progressbar" style={styles.state}>
-      <ActivityIndicator color={themeColors.brandDark} />
-      <Text style={[styles.muted, { color: themeColors.textMuted }]}>{label}</Text>
-    </View>
-  );
+  return <BrandLoader label={label} />;
 }
 
 export const uiStyles = StyleSheet.create({
-  title: { ...typography.title, color: colors.text },
-  display: { ...typography.display, color: colors.text },
-  body: { ...typography.body, color: colors.text },
-  muted: { ...typography.body, color: colors.textMuted },
+  title: { ...typography.title },
+  display: { ...typography.display },
+  body: { ...typography.body },
+  muted: { ...typography.body },
   stack: { gap: spacing.lg },
   row: { flexDirection: "row", alignItems: "center", gap: spacing.md },
 });
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
+  safe: { flex: 1 },
   flex: { flex: 1 },
   screenContent: {
     flexGrow: 1,
@@ -274,17 +305,15 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   card: {
-    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
     padding: spacing.lg,
     gap: spacing.md,
     ...elevation,
   },
   headingBlock: { gap: spacing.xs },
-  heading: { ...typography.heading, color: colors.text },
-  muted: { ...typography.body, color: colors.textMuted },
+  heading: { ...typography.heading },
+  muted: { ...typography.body },
   button: {
     minHeight: 48,
     borderRadius: radius.md,
@@ -292,30 +321,45 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  buttonText: { ...typography.label, color: colors.actionText },
+  buttonText: { ...typography.label },
   disabled: { opacity: 0.48 },
   pressed: { opacity: 0.82 },
   field: { gap: spacing.sm },
-  label: { ...typography.label, color: colors.text },
+  label: { ...typography.label },
+  inputContainer: {
+    minHeight: 50,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing.md,
+  },
+  inputInner: {
+    flex: 1,
+    minHeight: 48,
+    ...typography.body,
+  },
+  eyeButton: {
+    paddingLeft: spacing.sm,
+    paddingVertical: spacing.xs,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   input: {
     minHeight: 50,
     borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    color: colors.text,
     paddingHorizontal: spacing.md,
     ...typography.body,
   },
-  error: { ...typography.caption, color: colors.danger },
+  error: { ...typography.caption },
   chip: {
     alignSelf: "flex-start",
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-    backgroundColor: colors.surfaceMuted,
   },
-  chipText: { ...typography.caption, color: colors.text, fontWeight: "600" },
+  chipText: { ...typography.caption, fontWeight: "600" },
   state: {
     flex: 1,
     minHeight: 240,

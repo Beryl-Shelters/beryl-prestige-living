@@ -57,6 +57,7 @@ test("listings API enforces private upload contract, multipart bodies and client
 
   await api.options();
   assert.equal(calls[0]!.path, "/api/v1/listings/options");
+  assert.notEqual((calls[0]!.options as { authenticated?: boolean } | undefined)?.authenticated, false);
 
   await api.createDraft({ title: "Duplex" }, []);
   assert.equal(calls[1]!.path, "/api/v1/listings");

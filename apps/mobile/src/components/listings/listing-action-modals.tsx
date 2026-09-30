@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { AppIcon } from "../app-icon";
 import { Button } from "../ui";
 import { friendlyError } from "@/lib/api-error";
 import { listingsApi, type CustomerListing } from "@/lib/listings-api";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 type UnlistModalProps = {
   visible: boolean;
@@ -14,6 +15,8 @@ type UnlistModalProps = {
 };
 
 export function UnlistModal({ visible, listing, onClose, onSuccess }: UnlistModalProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -86,6 +89,8 @@ type DeleteModalProps = {
 };
 
 export function DeleteModal({ visible, listing, onClose, onSuccess }: DeleteModalProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -165,6 +170,8 @@ export function RejectionModal({
   onMakeChanges,
   onResubmit,
 }: RejectionModalProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const rejectedDate = listing.rejected_at
     ? new Date(listing.rejected_at).toLocaleDateString("en-GB", {
         day: "numeric",
@@ -227,151 +234,157 @@ export function RejectionModal({
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: spacing.lg,
-  },
-  dialog: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.xl,
-    width: "100%",
-    maxWidth: 400,
-    gap: spacing.md,
-  },
-  iconCircleWarning: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.pill,
-    backgroundColor: "#FBF1E5",
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "center",
-  },
-  iconCircleDanger: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.pill,
-    backgroundColor: "#FDEDED",
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "center",
-  },
-  dialogTitle: {
-    ...typography.title,
-    color: colors.text,
-    textAlign: "center",
-  },
-  dialogMessage: {
-    ...typography.body,
-    color: colors.textMuted,
-    textAlign: "center",
-  },
-  bold: {
-    fontWeight: "700",
-    color: colors.text,
-  },
-  warningBox: {
-    backgroundColor: "#FBF1E5",
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  warningTitle: {
-    ...typography.label,
-    color: colors.warning,
-  },
-  warningText: {
-    ...typography.caption,
-    color: colors.text,
-  },
-  dangerBox: {
-    backgroundColor: "#FDEDED",
-  },
-  dangerTitle: {
-    color: colors.danger,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    justifyContent: "flex-end",
-    marginTop: spacing.xs,
-  },
-  errorText: {
-    ...typography.caption,
-    color: colors.danger,
-    textAlign: "center",
-  },
-  rejectionHeader: {
-    gap: spacing.xs,
-  },
-  rejectionTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  statusBadgeRejected: {
-    backgroundColor: "#FDEDED",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  statusBadgeText: {
-    ...typography.caption,
-    fontWeight: "700",
-    color: colors.danger,
-  },
-  rejectionListingCode: {
-    ...typography.caption,
-    color: colors.textMuted,
-  },
-  rejectionListingTitle: {
-    ...typography.heading,
-    color: colors.text,
-  },
-  reviewAlert: {
-    backgroundColor: "#FBF1E5",
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  reviewAlertTitle: {
-    ...typography.label,
-    color: colors.brandDark,
-  },
-  reviewAlertText: {
-    ...typography.caption,
-    color: colors.text,
-  },
-  feedbackCard: {
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  feedbackTitle: {
-    ...typography.caption,
-    color: colors.textMuted,
-    fontWeight: "700",
-  },
-  feedbackBody: {
-    ...typography.body,
-    color: colors.text,
-  },
-  rejectionActions: {
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  closeBtn: {
-    alignItems: "center",
-    paddingVertical: spacing.xs,
-  },
-  closeBtnText: {
-    ...typography.label,
-    color: colors.textMuted,
-  },
-});
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: spacing.lg,
+    },
+    dialog: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      padding: spacing.xl,
+      width: "100%",
+      maxWidth: 400,
+      gap: spacing.md,
+    },
+    iconCircleWarning: {
+      width: 56,
+      height: 56,
+      borderRadius: radius.pill,
+      backgroundColor: colors.brandTint,
+      alignItems: "center",
+      justifyContent: "center",
+      alignSelf: "center",
+    },
+    iconCircleDanger: {
+      width: 56,
+      height: 56,
+      borderRadius: radius.pill,
+      backgroundColor: colors.surfaceMuted,
+      alignItems: "center",
+      justifyContent: "center",
+      alignSelf: "center",
+    },
+    dialogTitle: {
+      ...typography.title,
+      color: colors.text,
+      textAlign: "center",
+    },
+    dialogMessage: {
+      ...typography.body,
+      color: colors.textMuted,
+      textAlign: "center",
+    },
+    bold: {
+      fontWeight: "700",
+      color: colors.text,
+    },
+    warningBox: {
+      backgroundColor: colors.brandTint,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      gap: spacing.xs,
+    },
+    warningTitle: {
+      ...typography.label,
+      color: colors.warning,
+    },
+    warningText: {
+      ...typography.caption,
+      color: colors.text,
+    },
+    dangerBox: {
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.danger,
+    },
+    dangerTitle: {
+      color: colors.danger,
+    },
+    buttonRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      justifyContent: "flex-end",
+      marginTop: spacing.xs,
+    },
+    errorText: {
+      ...typography.caption,
+      color: colors.danger,
+      textAlign: "center",
+    },
+    rejectionHeader: {
+      gap: spacing.xs,
+    },
+    rejectionTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    statusBadgeRejected: {
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.danger,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 2,
+      borderRadius: radius.pill,
+    },
+    statusBadgeText: {
+      ...typography.caption,
+      fontWeight: "700",
+      color: colors.danger,
+    },
+    rejectionListingCode: {
+      ...typography.caption,
+      color: colors.textMuted,
+    },
+    rejectionListingTitle: {
+      ...typography.heading,
+      color: colors.text,
+    },
+    reviewAlert: {
+      backgroundColor: colors.brandTint,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      gap: spacing.xs,
+    },
+    reviewAlertTitle: {
+      ...typography.label,
+      color: colors.brandDark,
+    },
+    reviewAlertText: {
+      ...typography.caption,
+      color: colors.text,
+    },
+    feedbackCard: {
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      gap: spacing.xs,
+    },
+    feedbackTitle: {
+      ...typography.caption,
+      color: colors.textMuted,
+      fontWeight: "700",
+    },
+    feedbackBody: {
+      ...typography.body,
+      color: colors.text,
+    },
+    rejectionActions: {
+      gap: spacing.sm,
+      marginTop: spacing.xs,
+    },
+    closeBtn: {
+      alignItems: "center",
+      paddingVertical: spacing.xs,
+    },
+    closeBtnText: {
+      ...typography.label,
+      color: colors.textMuted,
+    },
+  });
+}

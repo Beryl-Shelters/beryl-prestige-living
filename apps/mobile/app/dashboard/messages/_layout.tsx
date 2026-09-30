@@ -1,7 +1,9 @@
 import { Stack } from "expo-router";
-import { colors } from "@/theme/tokens";
+import { DashboardHeaderLeft } from "@/components/dashboard/dashboard-drawer";
+import { useTheme } from "@/providers/theme-provider";
 
 export default function MessagesLayout() {
+  const { colors } = useTheme();
   return (
     <Stack
       screenOptions={{
@@ -9,9 +11,16 @@ export default function MessagesLayout() {
         headerTintColor: colors.text,
         headerShadowVisible: false,
         headerBackButtonDisplayMode: "minimal",
+        contentStyle: { backgroundColor: colors.background },
       }}
     >
-      <Stack.Screen name="index" options={{ title: "Messages" }} />
+      <Stack.Screen
+        name="index"
+        options={{
+          title: "Messages",
+          headerLeft: () => <DashboardHeaderLeft />,
+        }}
+      />
       <Stack.Screen name="[id]" options={{ title: "Conversation" }} />
     </Stack>
   );

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Image,
   Pressable,
@@ -10,7 +10,8 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { AppIcon } from "./app-icon";
 import type { PickedFile } from "@/lib/file-upload-helper";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"];
@@ -36,6 +37,8 @@ export function MediaPicker({
   onRemoveExisting,
   error,
 }: MediaPickerProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [pickerError, setPickerError] = useState("");
   const totalCount = existingUrls.length + files.length;
 
@@ -149,45 +152,47 @@ export function MediaPicker({
   );
 }
 
-const styles = StyleSheet.create({
-  container: { gap: spacing.xs },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  label: { ...typography.label, color: colors.text },
-  countText: { ...typography.caption, color: colors.textMuted, fontWeight: "600" },
-  helper: { ...typography.caption, color: colors.textMuted },
-  list: { flexDirection: "row", gap: spacing.md, paddingVertical: spacing.sm },
-  addBtn: {
-    width: 96,
-    height: 96,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    borderColor: colors.brand,
-    backgroundColor: colors.surfaceMuted,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-  },
-  addBtnText: { ...typography.caption, color: colors.brandDark, fontWeight: "600" },
-  thumbWrapper: {
-    width: 96,
-    height: 96,
-    borderRadius: radius.md,
-    overflow: "hidden",
-    position: "relative",
-    backgroundColor: colors.surfaceMuted,
-  },
-  thumb: { width: "100%", height: "100%" },
-  removeBtn: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    width: 22,
-    height: 22,
-    borderRadius: radius.pill,
-    backgroundColor: colors.action,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  errorText: { ...typography.caption, color: colors.danger },
-});
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    container: { gap: spacing.xs },
+    header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+    label: { ...typography.label, color: colors.text },
+    countText: { ...typography.caption, color: colors.textMuted, fontWeight: "600" },
+    helper: { ...typography.caption, color: colors.textMuted },
+    list: { flexDirection: "row", gap: spacing.md, paddingVertical: spacing.sm },
+    addBtn: {
+      width: 96,
+      height: 96,
+      borderRadius: radius.md,
+      borderWidth: 1.5,
+      borderStyle: "dashed",
+      borderColor: colors.brand,
+      backgroundColor: colors.surfaceMuted,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.xs,
+    },
+    addBtnText: { ...typography.caption, color: colors.brandDark, fontWeight: "600" },
+    thumbWrapper: {
+      width: 96,
+      height: 96,
+      borderRadius: radius.md,
+      overflow: "hidden",
+      position: "relative",
+      backgroundColor: colors.surfaceMuted,
+    },
+    thumb: { width: "100%", height: "100%" },
+    removeBtn: {
+      position: "absolute",
+      top: 4,
+      right: 4,
+      width: 22,
+      height: 22,
+      borderRadius: radius.pill,
+      backgroundColor: colors.action,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    errorText: { ...typography.caption, color: colors.danger },
+  });
+}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -17,7 +17,8 @@ import {
   type ListingOptions,
 } from "@/lib/listings-api";
 import { formatNairaInput, nairaToKobo } from "@/lib/money";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 type PropertyDataStepProps = {
   options: ListingOptions;
@@ -32,6 +33,8 @@ export function PropertyDataStep({
   onNext,
   onDraftSaved,
 }: PropertyDataStepProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [title, setTitle] = useState(existingListing?.title || "");
   const [registeredTitle, setRegisteredTitle] = useState(
     existingListing?.registered_title_document || ""
@@ -574,67 +577,69 @@ export function PropertyDataStep({
   );
 }
 
-const styles = StyleSheet.create({
-  container: { gap: spacing.lg, paddingBottom: spacing.xxl },
-  cardTitle: { ...typography.heading, color: colors.brandDark, marginBottom: spacing.xs },
-  fieldBlock: { gap: spacing.xs },
-  label: { ...typography.label, color: colors.text },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipActive: {
-    backgroundColor: colors.action,
-    borderColor: colors.action,
-  },
-  chipText: { ...typography.caption, color: colors.text },
-  chipTextActive: { color: colors.actionText, fontWeight: "600" },
-  row: { flexDirection: "row", gap: spacing.md },
-  flexHalf: { flex: 1 },
-  textArea: { minHeight: 90, textAlignVertical: "top", paddingTop: spacing.sm },
-  facilitiesGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  facilityItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  facilityItemChecked: {
-    backgroundColor: "#FBF1E5",
-    borderColor: colors.brand,
-  },
-  facilityText: { ...typography.caption, color: colors.text },
-  facilityTextChecked: { color: colors.brandDark, fontWeight: "600" },
-  actionButtons: { gap: spacing.sm, marginTop: spacing.md },
-  serverErrorText: { ...typography.caption, color: colors.danger, paddingVertical: spacing.xs },
-  noticeBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    backgroundColor: "#E7F5ED",
-    padding: spacing.md,
-    borderRadius: radius.md,
-  },
-  noticeText: { ...typography.caption, color: colors.success, fontWeight: "600" },
-  rejectedBanner: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    backgroundColor: "#FDECEC",
-    padding: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: "#F2BABA",
-  },
-  rejectedTitle: { ...typography.label, color: colors.danger },
-  rejectedBody: { ...typography.caption, color: colors.text },
-});
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    container: { gap: spacing.lg, paddingBottom: spacing.xxl },
+    cardTitle: { ...typography.heading, color: colors.brandDark, marginBottom: spacing.xs },
+    fieldBlock: { gap: spacing.xs },
+    label: { ...typography.label, color: colors.text },
+    chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+    chip: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.pill,
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    chipActive: {
+      backgroundColor: colors.action,
+      borderColor: colors.action,
+    },
+    chipText: { ...typography.caption, color: colors.text },
+    chipTextActive: { color: colors.actionText, fontWeight: "600" },
+    row: { flexDirection: "row", gap: spacing.md },
+    flexHalf: { flex: 1 },
+    textArea: { minHeight: 90, textAlignVertical: "top", paddingTop: spacing.sm },
+    facilitiesGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+    facilityItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.sm,
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    facilityItemChecked: {
+      backgroundColor: colors.brandTint,
+      borderColor: colors.brand,
+    },
+    facilityText: { ...typography.caption, color: colors.text },
+    facilityTextChecked: { color: colors.brandDark, fontWeight: "600" },
+    actionButtons: { gap: spacing.sm, marginTop: spacing.md },
+    serverErrorText: { ...typography.caption, color: colors.danger, paddingVertical: spacing.xs },
+    noticeBox: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      backgroundColor: colors.brandTint,
+      padding: spacing.md,
+      borderRadius: radius.md,
+    },
+    noticeText: { ...typography.caption, color: colors.success, fontWeight: "600" },
+    rejectedBanner: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      backgroundColor: colors.surfaceMuted,
+      padding: spacing.md,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.danger,
+    },
+    rejectedTitle: { ...typography.label, color: colors.danger },
+    rejectedBody: { ...typography.caption, color: colors.text },
+  });
+}

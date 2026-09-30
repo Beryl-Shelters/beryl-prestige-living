@@ -3,6 +3,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { errorKind, MobileApiError } from "../src/lib/api-error";
+import { shouldClearAccountForResponse } from "../src/lib/api-auth-boundary";
 import { normalizeBaseUrl } from "../src/lib/config";
 import { clearCustomerSession, restoreCustomerSession } from "../src/lib/session-lifecycle";
 import type { SessionPurpose, SessionStore } from "../src/lib/session-store";
@@ -28,6 +29,8 @@ test("API origin normalization is centralized and rejects credentials or query f
 test("API errors classify offline, unauthorized, validation, conflict, missing and server failures",()=>{assert.equal(errorKind(401),"unauthorized");assert.equal(errorKind(403),"unauthorized");assert.equal(errorKind(400),"validation");assert.equal(errorKind(409),"conflict");assert.equal(errorKind(404),"not_found");assert.equal(errorKind(500),"server");assert.equal(new MobileApiError("network","offline").kind,"network");});
 
 test("API transport is invoked unbound so browser fetch keeps a valid receiver",()=>{const api=read("src/lib/api-client.ts");assert.match(api,/const transport=this\.transport;response=await transport\(/);assert.doesNotMatch(api,/await this\.transport\(/);});
+
+test("only authenticated 401 responses invalidate the customer session",()=>{assert.equal(shouldClearAccountForResponse(401,undefined),true);assert.equal(shouldClearAccountForResponse(401,true),true);assert.equal(shouldClearAccountForResponse(401,false),false);assert.equal(shouldClearAccountForResponse(403,true),false);});
 
 test("session restoration, expiry handling, offline retention and logout clearing are deterministic",async()=>{
   const store=new MemoryStore();assert.deepEqual(await restoreCustomerSession(store,async()=>customer),{status:"signedOut",customer:null});

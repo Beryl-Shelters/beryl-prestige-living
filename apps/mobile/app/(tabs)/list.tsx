@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { AppIcon } from "@/components/app-icon";
 import { PropertyDataStep } from "@/components/listings/property-data-step";
@@ -12,7 +12,8 @@ import {
   type ListingOptions,
 } from "@/lib/listings-api";
 import { useAuth } from "@/providers/auth-provider";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 const defaultOptions: ListingOptions = {
   occupancy_type: ["Residential", "Commercial"],
@@ -88,6 +89,8 @@ const defaultOptions: ListingOptions = {
 
 export default function ListScreen() {
   const { status } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [activeListing, setActiveListing] = useState<CustomerListing | null>(null);
   const [options, setOptions] = useState<ListingOptions>(defaultOptions);
@@ -112,7 +115,7 @@ export default function ListScreen() {
 
   if (status === "loading") {
     return (
-      <Screen>
+      <Screen edges={["top", "left", "right"]}>
         <LoadingState label="Checking your account" />
       </Screen>
     );
@@ -120,7 +123,7 @@ export default function ListScreen() {
 
   if (status !== "signedIn") {
     return (
-      <Screen>
+      <Screen edges={["top", "left", "right"]}>
         <SectionHeading
           title="List a property"
           description="Create and submit a property listing through the canonical Beryl sales flow."
@@ -175,15 +178,15 @@ export default function ListScreen() {
   }
 
   return (
-    <Screen keyboard scroll={false}>
+    <Screen edges={["top", "left", "right"]} keyboard scroll={false}>
       {/* Step Indicator Header */}
       <View style={styles.stepIndicator}>
         <View style={styles.stepBadgeGroup}>
-          <StepBadge num={1} label="Property Data" active={currentStep === 1} completed={currentStep > 1} />
+          <StepBadge num={1} label="Property Data" active={currentStep === 1} completed={currentStep > 1} styles={styles} />
           <View style={[styles.stepDivider, currentStep > 1 && styles.stepDividerActive]} />
-          <StepBadge num={2} label="Sales Mandate" active={currentStep === 2} completed={currentStep > 2} />
+          <StepBadge num={2} label="Sales Mandate" active={currentStep === 2} completed={currentStep > 2} styles={styles} />
           <View style={[styles.stepDivider, currentStep > 2 && styles.stepDividerActive]} />
-          <StepBadge num={3} label="Submitted" active={currentStep === 3} completed={false} />
+          <StepBadge num={3} label="Submitted" active={currentStep === 3} completed={false} styles={styles} />
         </View>
       </View>
 
@@ -241,11 +244,13 @@ function StepBadge({
   label,
   active,
   completed,
+  styles,
 }: {
   num: number;
   label: string;
   active: boolean;
   completed: boolean;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <View style={styles.stepBadgeContainer}>
@@ -281,58 +286,60 @@ function StepBadge({
   );
 }
 
-const styles = StyleSheet.create({
-  authButtons: { width: "100%", gap: spacing.sm, marginTop: spacing.md },
-  stepIndicator: {
-    backgroundColor: colors.surface,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.md,
-  },
-  stepBadgeGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  stepBadgeContainer: { alignItems: "center", gap: 4 },
-  stepCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stepCircleActive: {
-    backgroundColor: colors.brand,
-    borderColor: colors.brand,
-  },
-  stepCircleCompleted: {
-    backgroundColor: colors.success,
-    borderColor: colors.success,
-  },
-  stepNumber: { fontSize: 12, fontWeight: "700", color: colors.textMuted },
-  stepNumberActive: { color: "#FFF" },
-  stepLabel: { fontSize: 11, color: colors.textMuted, fontWeight: "500" },
-  stepLabelActive: { color: colors.text, fontWeight: "700" },
-  stepDivider: { flex: 1, height: 2, backgroundColor: colors.border, marginHorizontal: spacing.xs, marginBottom: 14 },
-  stepDividerActive: { backgroundColor: colors.success },
-  assistancePromo: { gap: spacing.md, marginTop: spacing.lg },
-  assistancePromoHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  assistancePromoTitle: { ...typography.heading, color: colors.text },
-  assistancePromoText: { ...typography.body, color: colors.textMuted },
-  bottomAssistanceLink: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-    paddingVertical: spacing.md,
-    marginTop: spacing.sm,
-  },
-  bottomAssistanceText: { ...typography.caption, color: colors.brandDark, fontWeight: "600" },
-});
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    authButtons: { width: "100%", gap: spacing.sm, marginTop: spacing.md },
+    stepIndicator: {
+      backgroundColor: colors.surface,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: spacing.md,
+    },
+    stepBadgeGroup: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    stepBadgeContainer: { alignItems: "center", gap: 4 },
+    stepCircle: {
+      width: 26,
+      height: 26,
+      borderRadius: radius.pill,
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    stepCircleActive: {
+      backgroundColor: colors.brand,
+      borderColor: colors.brand,
+    },
+    stepCircleCompleted: {
+      backgroundColor: colors.success,
+      borderColor: colors.success,
+    },
+    stepNumber: { fontSize: 12, fontWeight: "700", color: colors.textMuted },
+    stepNumberActive: { color: "#FFF" },
+    stepLabel: { fontSize: 11, color: colors.textMuted, fontWeight: "500" },
+    stepLabelActive: { color: colors.text, fontWeight: "700" },
+    stepDivider: { flex: 1, height: 2, backgroundColor: colors.border, marginHorizontal: spacing.xs, marginBottom: 14 },
+    stepDividerActive: { backgroundColor: colors.success },
+    assistancePromo: { gap: spacing.md, marginTop: spacing.lg },
+    assistancePromoHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+    assistancePromoTitle: { ...typography.heading, color: colors.text },
+    assistancePromoText: { ...typography.body, color: colors.textMuted },
+    bottomAssistanceLink: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.xs,
+      paddingVertical: spacing.md,
+      marginTop: spacing.sm,
+    },
+    bottomAssistanceText: { ...typography.caption, color: colors.brandDark, fontWeight: "600" },
+  });
+}

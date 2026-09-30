@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "test": "tsx --test tests/*.test.ts",
     "test:ui": "node tests/shell-ui.checks.mjs",
+    "test:release-ui": "node tests/release-shell-ui.checks.mjs",
     "validate:config": "expo config --type public",
     "validate:routes": "tsx --test tests/foundation.test.ts"
   },

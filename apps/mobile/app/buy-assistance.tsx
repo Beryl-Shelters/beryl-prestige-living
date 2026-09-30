@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -21,7 +21,8 @@ import {
   propertySubtypes,
 } from "@/lib/property-taxonomy";
 import { useAuth } from "@/providers/auth-provider";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 const countOptions = ["1", "2", "3", "4", "5", "6", "7+"] as const;
 const timingOptions = [
@@ -35,6 +36,8 @@ const timingOptions = [
 const paymentIntentOptions = ["Outright Cash Purchase", "Mortgage"] as const;
 
 export default function BuyAssistanceRoute() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { customer } = useAuth();
   const defaultName = [customer?.first_name, customer?.last_name].filter(Boolean).join(" ");
   const defaultEmail = customer?.email || "";
@@ -483,80 +486,82 @@ export default function BuyAssistanceRoute() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  topBar: {
-    height: 56,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  backBtn: { padding: spacing.xs },
-  topBarTitle: { ...typography.heading, color: colors.text },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  formStack: { gap: spacing.lg },
-  cardHeader: { ...typography.heading, color: colors.brandDark, marginBottom: spacing.xs },
-  fieldBlock: { gap: spacing.xs },
-  label: { ...typography.label, color: colors.text },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipSmall: {
-    width: 44,
-    height: 38,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipActive: {
-    backgroundColor: colors.action,
-    borderColor: colors.action,
-  },
-  chipText: { ...typography.caption, color: colors.text },
-  chipTextActive: { color: colors.actionText, fontWeight: "600" },
-  errorText: { ...typography.caption, color: colors.danger },
-  facilitiesGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
-  facilityItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  facilityItemChecked: {
-    backgroundColor: "#FBF1E5",
-    borderColor: colors.brand,
-  },
-  facilityText: { ...typography.caption, color: colors.text },
-  facilityTextChecked: { color: colors.brandDark, fontWeight: "600" },
-  errorAlert: { ...typography.caption, color: colors.danger, paddingVertical: spacing.xs },
-  successState: { alignItems: "center", gap: spacing.md, paddingVertical: spacing.lg },
-  successBadge: {
-    width: 60,
-    height: 60,
-    borderRadius: radius.pill,
-    backgroundColor: colors.success,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  successTitle: { ...typography.title, color: colors.text, textAlign: "center" },
-  successText: { ...typography.body, color: colors.textMuted, textAlign: "center" },
-  disclaimerText: { ...typography.caption, color: colors.textMuted, textAlign: "center", backgroundColor: colors.surfaceMuted, padding: spacing.md, borderRadius: radius.md },
-});
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.background },
+    topBar: {
+      height: 56,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    backBtn: { padding: spacing.xs },
+    topBarTitle: { ...typography.heading, color: colors.text },
+    content: { padding: spacing.lg, paddingBottom: spacing.xxl },
+    formStack: { gap: spacing.lg },
+    cardHeader: { ...typography.heading, color: colors.brandDark, marginBottom: spacing.xs },
+    fieldBlock: { gap: spacing.xs },
+    label: { ...typography.label, color: colors.text },
+    chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+    chip: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.pill,
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    chipSmall: {
+      width: 44,
+      height: 38,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: radius.md,
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    chipActive: {
+      backgroundColor: colors.action,
+      borderColor: colors.action,
+    },
+    chipText: { ...typography.caption, color: colors.text },
+    chipTextActive: { color: colors.actionText, fontWeight: "600" },
+    errorText: { ...typography.caption, color: colors.danger },
+    facilitiesGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+    facilityItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.sm,
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    facilityItemChecked: {
+      backgroundColor: colors.brandTint,
+      borderColor: colors.brand,
+    },
+    facilityText: { ...typography.caption, color: colors.text },
+    facilityTextChecked: { color: colors.brandDark, fontWeight: "600" },
+    errorAlert: { ...typography.caption, color: colors.danger, paddingVertical: spacing.xs },
+    successState: { alignItems: "center", gap: spacing.md, paddingVertical: spacing.lg },
+    successBadge: {
+      width: 60,
+      height: 60,
+      borderRadius: radius.pill,
+      backgroundColor: colors.success,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    successTitle: { ...typography.title, color: colors.text, textAlign: "center" },
+    successText: { ...typography.body, color: colors.textMuted, textAlign: "center" },
+    disclaimerText: { ...typography.caption, color: colors.textMuted, textAlign: "center", backgroundColor: colors.surfaceMuted, padding: spacing.md, borderRadius: radius.md },
+  });
+}

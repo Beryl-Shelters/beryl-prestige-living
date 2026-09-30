@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { join, relative } from "node:path";
 import { test } from "node:test";
 
 const root = process.cwd();
@@ -56,8 +56,11 @@ test("Mobile Account screen provides System, Light, and Dark appearance selectio
 });
 
 test("Mobile ThemeProvider handles system, light, dark and local persistence", () => {
+  const appConfig = JSON.parse(read("app.json"));
+  assert.equal(appConfig.expo.userInterfaceStyle, "automatic");
   const provider = read("src/providers/theme-provider.tsx");
-  assert.match(provider, /STORAGE_KEY = "beryl\.v2\.customer\.theme_preference"/);
+  assert.match(provider, /STORAGE_KEY = "beryl_mobile_theme"/);
+  assert.match(provider, /LEGACY_STORAGE_KEY = "beryl\.v2\.customer\.theme_preference"/);
   assert.match(provider, /useColorScheme/);
   assert.match(provider, /SecureStore/);
   assert.match(provider, /effectiveTheme/);
@@ -71,4 +74,31 @@ test("UI components integrate useTheme for dynamic styling and accessible contra
   assert.match(ui, /backgroundColor: themeColors\.surface/);
   assert.match(ui, /borderColor: themeColors\.border/);
   assert.match(ui, /color: themeColors\.text/);
+});
+
+test("Mobile app screens and components do not import static colors from tokens", () => {
+  function scan(dir: string): string[] {
+    const results: string[] = [];
+    for (const item of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, item.name);
+      if (item.isDirectory() && !["node_modules", ".expo", "dist", "tests"].includes(item.name)) {
+        results.push(...scan(full));
+      } else if (item.isFile() && /\.(tsx|ts)$/.test(item.name) && !item.name.endsWith(".d.ts") && !full.includes("tokens.ts")) {
+        results.push(full);
+      }
+    }
+    return results;
+  }
+  const files = scan(join(root, "app")).concat(scan(join(root, "src")));
+  const offenders: string[] = [];
+  for (const f of files) {
+    const content = readFileSync(f, "utf8");
+    if (/from\s+["']@\/theme\/tokens["']/.test(content)) {
+      const importMatch = content.match(/import\s+\{([^}]+)\}\s+from\s+["']@\/theme\/tokens["']/);
+      if (importMatch && importMatch[1] && /\bcolors\b/.test(importMatch[1])) {
+        offenders.push(relative(root, f));
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], `Found files importing static colors: ${offenders.join(", ")}`);
 });

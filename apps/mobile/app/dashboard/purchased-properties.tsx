@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -10,12 +10,12 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { AppIcon } from "@/components/app-icon";
-import { DashboardNav } from "@/components/dashboard/dashboard-nav";
 import { Button, Card, LoadingState, ScreenState } from "@/components/ui";
 import { friendlyError } from "@/lib/api-error";
 import { dashboardApi, type PurchasedProperty } from "@/lib/dashboard-api";
 import { formatNaira } from "@/lib/money";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 function formatClosedDate(dateStr: string): string {
   try {
@@ -31,6 +31,8 @@ function formatClosedDate(dateStr: string): string {
 }
 
 export default function PurchasedPropertiesScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [search, setSearch] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
@@ -193,8 +195,6 @@ export default function PurchasedPropertiesScreen() {
 
   return (
     <View style={styles.container}>
-      <DashboardNav active="purchased" />
-
       {/* Offline Verified Transaction Notice */}
       <View style={styles.offlineNoticeBanner}>
         <AppIcon name="shield-checkmark-outline" size={18} color={colors.brandDark} />
@@ -210,7 +210,7 @@ export default function PurchasedPropertiesScreen() {
         <TextInput
           accessibilityLabel="Search by Title, Code, State…"
           placeholder="Search by Title, Code, State…"
-          placeholderTextColor="#9C948C"
+          placeholderTextColor={colors.textMuted}
           value={search}
           onChangeText={setSearch}
           maxLength={100}
@@ -302,171 +302,175 @@ export default function PurchasedPropertiesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: spacing.xl,
-  },
-  offlineNoticeBanner: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    backgroundColor: "#FBF1E5",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    alignItems: "flex-start",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0DFCA",
-  },
-  offlineNoticeText: {
-    ...typography.caption,
-    color: colors.text,
-    fontSize: 12,
-    flex: 1,
-    lineHeight: 16,
-  },
-  searchWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    marginHorizontal: spacing.md,
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.md,
-    height: 44,
-    gap: spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    ...typography.body,
-    color: colors.text,
-    paddingVertical: 0,
-  },
-  listContent: {
-    padding: spacing.md,
-    gap: spacing.md,
-    paddingBottom: spacing.xxl,
-  },
-  card: {
-    gap: spacing.md,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    gap: spacing.md,
-    alignItems: "center",
-  },
-  placeholderBox: {
-    width: 60,
-    height: 60,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceMuted,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cardHeaderMeta: {
-    flex: 1,
-    gap: 2,
-  },
-  topBadgeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  approvedBadge: {
-    backgroundColor: "#E6F4EA",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  approvedText: {
-    ...typography.caption,
-    fontSize: 11,
-    fontWeight: "700",
-    color: colors.success,
-  },
-  propertyCode: {
-    ...typography.caption,
-    color: colors.textMuted,
-    fontWeight: "600",
-  },
-  propertyTitle: {
-    ...typography.heading,
-    fontSize: 16,
-    color: colors.text,
-  },
-  specsRow: {
-    flexDirection: "row",
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radius.sm,
-    padding: spacing.sm,
-    justifyContent: "space-around",
-  },
-  specCell: {
-    alignItems: "center",
-    gap: 2,
-  },
-  specKey: {
-    ...typography.caption,
-    fontSize: 10,
-    color: colors.textMuted,
-    textTransform: "uppercase",
-  },
-  specVal: {
-    ...typography.caption,
-    fontSize: 12,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  footerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    paddingTop: spacing.xs,
-  },
-  priceLabel: {
-    ...typography.caption,
-    fontSize: 11,
-    color: colors.textMuted,
-  },
-  priceValue: {
-    ...typography.heading,
-    fontSize: 16,
-    color: colors.brandDark,
-  },
-  dateCol: {
-    alignItems: "flex-end",
-  },
-  dateValue: {
-    ...typography.label,
-    color: colors.text,
-  },
-  emptyContainer: {
-    alignItems: "center",
-    gap: spacing.md,
-    paddingVertical: spacing.xxl,
-    width: "100%",
-  },
-  emptyTitle: {
-    ...typography.heading,
-    color: colors.text,
-    textAlign: "center",
-  },
-  emptyText: {
-    ...typography.caption,
-    color: colors.textMuted,
-    textAlign: "center",
-  },
-  loadMoreFooter: {
-    paddingVertical: spacing.lg,
-    alignItems: "center",
-  },
-});
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centered: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: spacing.xl,
+    },
+    offlineNoticeBanner: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      backgroundColor: colors.brandTint,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      alignItems: "flex-start",
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    offlineNoticeText: {
+      ...typography.caption,
+      color: colors.text,
+      fontSize: 12,
+      flex: 1,
+      lineHeight: 16,
+    },
+    searchWrapper: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      marginHorizontal: spacing.md,
+      marginTop: spacing.sm,
+      paddingHorizontal: spacing.md,
+      height: 44,
+      gap: spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      ...typography.body,
+      color: colors.text,
+      paddingVertical: 0,
+    },
+    listContent: {
+      padding: spacing.md,
+      gap: spacing.md,
+      paddingBottom: spacing.xxl,
+    },
+    card: {
+      gap: spacing.md,
+    },
+    cardHeader: {
+      flexDirection: "row",
+      gap: spacing.md,
+      alignItems: "center",
+    },
+    placeholderBox: {
+      width: 60,
+      height: 60,
+      borderRadius: radius.md,
+      backgroundColor: colors.surfaceMuted,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    cardHeaderMeta: {
+      flex: 1,
+      gap: 2,
+    },
+    topBadgeRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    approvedBadge: {
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.success,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 2,
+      borderRadius: radius.pill,
+    },
+    approvedText: {
+      ...typography.caption,
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.success,
+    },
+    propertyCode: {
+      ...typography.caption,
+      color: colors.textMuted,
+      fontWeight: "600",
+    },
+    propertyTitle: {
+      ...typography.heading,
+      fontSize: 16,
+      color: colors.text,
+    },
+    specsRow: {
+      flexDirection: "row",
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: radius.sm,
+      padding: spacing.sm,
+      justifyContent: "space-around",
+    },
+    specCell: {
+      alignItems: "center",
+      gap: 2,
+    },
+    specKey: {
+      ...typography.caption,
+      fontSize: 10,
+      color: colors.textMuted,
+      textTransform: "uppercase",
+    },
+    specVal: {
+      ...typography.caption,
+      fontSize: 12,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    footerRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.border,
+      paddingTop: spacing.xs,
+    },
+    priceLabel: {
+      ...typography.caption,
+      fontSize: 11,
+      color: colors.textMuted,
+    },
+    priceValue: {
+      ...typography.heading,
+      fontSize: 16,
+      color: colors.brandDark,
+    },
+    dateCol: {
+      alignItems: "flex-end",
+    },
+    dateValue: {
+      ...typography.label,
+      color: colors.text,
+    },
+    emptyContainer: {
+      alignItems: "center",
+      gap: spacing.md,
+      paddingVertical: spacing.xxl,
+      width: "100%",
+    },
+    emptyTitle: {
+      ...typography.heading,
+      color: colors.text,
+      textAlign: "center",
+    },
+    emptyText: {
+      ...typography.caption,
+      color: colors.textMuted,
+      textAlign: "center",
+    },
+    loadMoreFooter: {
+      paddingVertical: spacing.lg,
+      alignItems: "center",
+    },
+  });
+}

@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Line, Polyline, Text as SvgText } from "react-native-svg";
 import type { CustomerAnalytics } from "@/lib/dashboard-api";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 const seriesConfig = [
   { key: "buy", label: "Buy", color: "#2B6CB0" },
@@ -16,6 +18,8 @@ export function AnalyticsChart({
   analytics: CustomerAnalytics;
   changeYear: (year: number) => void;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const points = analytics.categoryPerformance ?? [];
   const hasActivity = points.some(
     (p) => (p.buy ?? 0) > 0 || (p.sell ?? 0) > 0 || (p.referral ?? 0) > 0
@@ -177,73 +181,75 @@ export function AnalyticsChart({
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-    gap: spacing.md,
-  },
-  header: {
-    gap: spacing.xs,
-  },
-  title: {
-    ...typography.heading,
-    color: colors.text,
-  },
-  yearRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  yearBtn: {
-    padding: spacing.xs,
-  },
-  yearArrow: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: colors.brandDark,
-  },
-  yearText: {
-    ...typography.caption,
-    color: colors.textMuted,
-  },
-  legendRow: {
-    flexDirection: "row",
-    gap: spacing.md,
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: radius.pill,
-  },
-  legendText: {
-    ...typography.caption,
-    color: colors.text,
-  },
-  chartWrapper: {
-    position: "relative",
-    alignItems: "center",
-  },
-  emptyOverlay: {
-    position: "absolute",
-    top: 50,
-    alignSelf: "center",
-    backgroundColor: "rgba(247, 245, 242, 0.85)",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-  },
-  emptyText: {
-    ...typography.caption,
-    color: colors.textMuted,
-    fontStyle: "italic",
-  },
-});
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.md,
+      gap: spacing.md,
+    },
+    header: {
+      gap: spacing.xs,
+    },
+    title: {
+      ...typography.heading,
+      color: colors.text,
+    },
+    yearRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    yearBtn: {
+      padding: spacing.xs,
+    },
+    yearArrow: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.brandDark,
+    },
+    yearText: {
+      ...typography.caption,
+      color: colors.textMuted,
+    },
+    legendRow: {
+      flexDirection: "row",
+      gap: spacing.md,
+    },
+    legendItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    legendDot: {
+      width: 10,
+      height: 10,
+      borderRadius: radius.pill,
+    },
+    legendText: {
+      ...typography.caption,
+      color: colors.text,
+    },
+    chartWrapper: {
+      position: "relative",
+      alignItems: "center",
+    },
+    emptyOverlay: {
+      position: "absolute",
+      top: 50,
+      alignSelf: "center",
+      backgroundColor: colors.surfaceMuted,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.sm,
+    },
+    emptyText: {
+      ...typography.caption,
+      color: colors.textMuted,
+      fontStyle: "italic",
+    },
+  });
+}

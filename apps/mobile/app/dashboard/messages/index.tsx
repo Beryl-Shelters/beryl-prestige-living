@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Modal,
@@ -12,7 +12,6 @@ import {
 import { router } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import { AppIcon } from "@/components/app-icon";
-import { DashboardNav } from "@/components/dashboard/dashboard-nav";
 import { Button, Card, LoadingState, ScreenState } from "@/components/ui";
 import { friendlyError } from "@/lib/api-error";
 import {
@@ -20,7 +19,8 @@ import {
   type TicketSummary,
 } from "@/lib/messages-api";
 import type { PickedFile } from "@/lib/file-upload-helper";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 type TicketFilter = "ALL" | "UNREAD" | "RESOLVED";
 
@@ -37,6 +37,8 @@ function formatDate(iso: string): string {
 }
 
 export default function MessagesListScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [search, setSearch] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [tickets, setTickets] = useState<TicketSummary[]>([]);
@@ -226,7 +228,6 @@ export default function MessagesListScreen() {
 
   return (
     <View style={styles.container}>
-      <DashboardNav active="messages" />
 
       {/* Header Bar */}
       <View style={styles.headerBar}>
@@ -256,7 +257,7 @@ export default function MessagesListScreen() {
         <TextInput
           accessibilityLabel="Search conversations"
           placeholder="Search conversations"
-          placeholderTextColor="#9C948C"
+          placeholderTextColor={colors.textMuted}
           value={search}
           onChangeText={setSearch}
           maxLength={100}
@@ -428,7 +429,7 @@ export default function MessagesListScreen() {
             <TextInput
               accessibilityLabel="Ticket subject"
               placeholder="Enter subject of the message"
-              placeholderTextColor="#9C948C"
+              placeholderTextColor={colors.textMuted}
               value={subject}
               onChangeText={setSubject}
               maxLength={160}
@@ -440,7 +441,7 @@ export default function MessagesListScreen() {
             <TextInput
               accessibilityLabel="Ticket message"
               placeholder="Enter message you want to send"
-              placeholderTextColor="#9C948C"
+              placeholderTextColor={colors.textMuted}
               value={message}
               onChangeText={setMessage}
               maxLength={3000}
@@ -500,297 +501,305 @@ export default function MessagesListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: spacing.xl,
-  },
-  headerBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xs,
-  },
-  pageTitle: {
-    ...typography.heading,
-    fontSize: 20,
-    color: colors.text,
-  },
-  newTicketBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: colors.brandDark,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: radius.md,
-  },
-  newTicketBtnText: {
-    ...typography.label,
-    color: "#FFF",
-    fontSize: 13,
-  },
-  searchWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    marginHorizontal: spacing.md,
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.md,
-    height: 44,
-    gap: spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    ...typography.body,
-    color: colors.text,
-    paddingVertical: 0,
-  },
-  filtersBar: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  filterChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  filterChipActive: {
-    borderColor: colors.brandDark,
-    backgroundColor: "#FBF1E5",
-  },
-  filterChipText: {
-    ...typography.caption,
-    fontSize: 13,
-    color: colors.text,
-  },
-  filterChipTextActive: {
-    fontWeight: "700",
-    color: colors.brandDark,
-  },
-  countBadge: {
-    backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: radius.pill,
-  },
-  countBadgeActive: {
-    backgroundColor: colors.brandDark,
-  },
-  countBadgeText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: colors.textMuted,
-  },
-  countBadgeTextActive: {
-    color: "#FFF",
-  },
-  listContent: {
-    padding: spacing.md,
-    gap: spacing.sm,
-    paddingBottom: spacing.xxl,
-  },
-  ticketCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  ticketCardPressed: {
-    backgroundColor: colors.surfaceMuted,
-  },
-  cardTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  ticketNumber: {
-    ...typography.caption,
-    fontWeight: "700",
-    color: colors.textMuted,
-  },
-  statusPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  statusPillOpen: {
-    backgroundColor: "#FEF7E0",
-  },
-  statusPillResolved: {
-    backgroundColor: "#E6F4EA",
-  },
-  statusPillText: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  statusPillTextOpen: {
-    color: colors.warning,
-  },
-  statusPillTextResolved: {
-    color: colors.success,
-  },
-  subjectRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  subjectText: {
-    ...typography.body,
-    fontWeight: "700",
-    color: colors.text,
-    flex: 1,
-  },
-  dateText: {
-    ...typography.caption,
-    fontSize: 11,
-    color: colors.textMuted,
-  },
-  previewRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  previewText: {
-    ...typography.caption,
-    color: colors.textMuted,
-    flex: 1,
-  },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.brandDark,
-    marginLeft: spacing.sm,
-  },
-  emptyCard: {
-    alignItems: "center",
-    padding: spacing.xl,
-    gap: spacing.sm,
-    width: "100%",
-  },
-  emptyTitle: {
-    ...typography.heading,
-    fontSize: 18,
-    color: colors.text,
-    textAlign: "center",
-  },
-  emptySubtext: {
-    ...typography.body,
-    color: colors.textMuted,
-    textAlign: "center",
-    marginBottom: spacing.xs,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: spacing.lg,
-  },
-  modalDialog: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.xl,
-    width: "100%",
-    maxWidth: 420,
-    gap: spacing.sm,
-  },
-  modalHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  modalTitle: {
-    ...typography.heading,
-    fontSize: 18,
-    color: colors.text,
-  },
-  modalSubtext: {
-    ...typography.caption,
-    color: colors.textMuted,
-    marginBottom: spacing.xs,
-  },
-  inputLabel: {
-    ...typography.caption,
-    fontWeight: "600",
-    color: colors.text,
-    marginTop: spacing.xs,
-  },
-  modalInput: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    ...typography.body,
-    color: colors.text,
-  },
-  modalTextarea: {
-    minHeight: 90,
-    textAlignVertical: "top",
-  },
-  attachBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
-  },
-  attachBtnText: {
-    ...typography.caption,
-    color: colors.brandDark,
-    fontWeight: "600",
-  },
-  selectedFileRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: colors.surfaceMuted,
-    padding: spacing.sm,
-    borderRadius: radius.md,
-  },
-  selectedFileName: {
-    ...typography.caption,
-    color: colors.text,
-    flex: 1,
-  },
-  errorBanner: {
-    backgroundColor: "#FCE8E6",
-    padding: spacing.sm,
-    borderRadius: radius.md,
-  },
-  errorBannerText: {
-    ...typography.caption,
-    color: colors.danger,
-    fontWeight: "600",
-  },
-  modalBtnRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    justifyContent: "flex-end",
-    marginTop: spacing.md,
-  },
-});
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centered: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: spacing.xl,
+    },
+    headerBar: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.xs,
+    },
+    pageTitle: {
+      ...typography.heading,
+      fontSize: 20,
+      color: colors.text,
+    },
+    newTicketBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: colors.brandDark,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs + 2,
+      borderRadius: radius.md,
+    },
+    newTicketBtnText: {
+      ...typography.label,
+      color: "#FFF",
+      fontSize: 13,
+    },
+    searchWrapper: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      marginHorizontal: spacing.md,
+      marginTop: spacing.sm,
+      paddingHorizontal: spacing.md,
+      height: 44,
+      gap: spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      ...typography.body,
+      color: colors.text,
+      paddingVertical: 0,
+    },
+    filtersBar: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    filterChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: radius.pill,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    filterChipActive: {
+      borderColor: colors.brandDark,
+      backgroundColor: colors.brandTint,
+    },
+    filterChipText: {
+      ...typography.caption,
+      fontSize: 13,
+      color: colors.text,
+    },
+    filterChipTextActive: {
+      fontWeight: "700",
+      color: colors.brandDark,
+    },
+    countBadge: {
+      backgroundColor: colors.surfaceMuted,
+      paddingHorizontal: 6,
+      paddingVertical: 1,
+      borderRadius: radius.pill,
+    },
+    countBadgeActive: {
+      backgroundColor: colors.brandDark,
+    },
+    countBadgeText: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: colors.textMuted,
+    },
+    countBadgeTextActive: {
+      color: "#FFF",
+    },
+    listContent: {
+      padding: spacing.md,
+      gap: spacing.sm,
+      paddingBottom: spacing.xxl,
+    },
+    ticketCard: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      padding: spacing.md,
+      gap: spacing.xs,
+    },
+    ticketCardPressed: {
+      backgroundColor: colors.surfaceMuted,
+    },
+    cardTopRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    ticketNumber: {
+      ...typography.caption,
+      fontWeight: "700",
+      color: colors.textMuted,
+    },
+    statusPill: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: radius.pill,
+      borderWidth: 1,
+      borderColor: "transparent",
+    },
+    statusPillOpen: {
+      backgroundColor: colors.surfaceMuted,
+      borderColor: colors.warning,
+    },
+    statusPillResolved: {
+      backgroundColor: colors.surfaceMuted,
+      borderColor: colors.success,
+    },
+    statusPillText: {
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    statusPillTextOpen: {
+      color: colors.warning,
+    },
+    statusPillTextResolved: {
+      color: colors.success,
+    },
+    subjectRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    subjectText: {
+      ...typography.body,
+      fontWeight: "700",
+      color: colors.text,
+      flex: 1,
+    },
+    dateText: {
+      ...typography.caption,
+      fontSize: 11,
+      color: colors.textMuted,
+    },
+    previewRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    previewText: {
+      ...typography.caption,
+      color: colors.textMuted,
+      flex: 1,
+    },
+    unreadDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: colors.brandDark,
+      marginLeft: spacing.sm,
+    },
+    emptyCard: {
+      alignItems: "center",
+      padding: spacing.xl,
+      gap: spacing.sm,
+      width: "100%",
+    },
+    emptyTitle: {
+      ...typography.heading,
+      fontSize: 18,
+      color: colors.text,
+      textAlign: "center",
+    },
+    emptySubtext: {
+      ...typography.body,
+      color: colors.textMuted,
+      textAlign: "center",
+      marginBottom: spacing.xs,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: spacing.lg,
+    },
+    modalDialog: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      padding: spacing.xl,
+      width: "100%",
+      maxWidth: 420,
+      gap: spacing.sm,
+    },
+    modalHeaderRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    modalTitle: {
+      ...typography.heading,
+      fontSize: 18,
+      color: colors.text,
+    },
+    modalSubtext: {
+      ...typography.caption,
+      color: colors.textMuted,
+      marginBottom: spacing.xs,
+    },
+    inputLabel: {
+      ...typography.caption,
+      fontWeight: "600",
+      color: colors.text,
+      marginTop: spacing.xs,
+    },
+    modalInput: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      ...typography.body,
+      color: colors.text,
+    },
+    modalTextarea: {
+      minHeight: 90,
+      textAlignVertical: "top",
+    },
+    attachBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingVertical: spacing.xs,
+    },
+    attachBtnText: {
+      ...typography.caption,
+      color: colors.brandDark,
+      fontWeight: "600",
+    },
+    selectedFileRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      backgroundColor: colors.surfaceMuted,
+      padding: spacing.sm,
+      borderRadius: radius.md,
+    },
+    selectedFileName: {
+      ...typography.caption,
+      color: colors.text,
+      flex: 1,
+    },
+    errorBanner: {
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.danger,
+      padding: spacing.sm,
+      borderRadius: radius.md,
+    },
+    errorBannerText: {
+      ...typography.caption,
+      color: colors.danger,
+      fontWeight: "600",
+    },
+    modalBtnRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      justifyContent: "flex-end",
+      marginTop: spacing.md,
+    },
+  });
+}

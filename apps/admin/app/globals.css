@@ -139,6 +139,9 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
   .dialog-actions { grid-template-columns: 1fr; }
   .phone-prefix { padding: 0 .55rem; }
   .auth-card { padding: 1.4rem; }
+  .admin-topbar-actions { min-width: 0; gap: .4rem; }
+  .admin-theme-toggle-btn { width: 26px; justify-content: center; padding: 3px; }
+  .admin-theme-toggle-label { display: none; }
 }
 
 .admin-auth-shell {

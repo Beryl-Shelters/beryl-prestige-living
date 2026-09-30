@@ -56,6 +56,7 @@ import {
   adminReferrerQuerySchema,
   adminWithdrawalIdSchema,
   adminWithdrawalRejectionSchema,
+  adminWithdrawalQuerySchema,
 } from "./referrers-model.js";
 import type { AdminReferrersRepository } from "./referrers-repository.js";
 import { AdminReferrersService } from "./referrers-service.js";
@@ -134,6 +135,10 @@ export function adminRouter(
       await sessions.establish(request, response, tokens);
       response.json({ success: true, data: { admin: profile } });
     }),
+  );
+  router.get(
+    "/referrers/withdrawals",
+    wrap(async(request,response)=>{await sessions.account(request);response.json({success:true,data:await referrers.withdrawals(adminWithdrawalQuerySchema.parse(request.query))});}),
   );
   router.get(
     "/auth/me",

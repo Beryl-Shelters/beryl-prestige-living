@@ -12,7 +12,8 @@
     "test:users": "node tests/admin-users-ui.checks.mjs",
     "test:properties": "node tests/admin-properties-ui.checks.mjs",
     "test:leads": "node tests/admin-leads-ui.checks.mjs"
-    ,"test:referrers": "node tests/admin-referrers-ui.checks.mjs"
+    ,"test:referrers": "node tests/admin-referrers-ui.checks.mjs",
+    "test:withdrawals": "node tests/admin-withdrawals-ui.checks.mjs"
   },
   "dependencies": {
     "next": "^16.3.0",

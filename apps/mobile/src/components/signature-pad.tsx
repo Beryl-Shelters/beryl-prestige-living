@@ -11,7 +11,8 @@ import Svg, { Path } from "react-native-svg";
 import { AppIcon } from "./app-icon";
 import { renderStrokesToPng, type Stroke } from "@/lib/png-encoder";
 import type { PickedFile } from "@/lib/file-upload-helper";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 export type SignaturePadRef = {
   clear: () => void;
@@ -50,6 +51,8 @@ export const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(
     { initialSignatureSaved = false, onSignatureChange, disabled = false },
     ref
   ) {
+    const { colors } = useTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
     const [strokes, setStrokes] = useState<Stroke[]>([]);
     const [hasExisting, setHasExisting] = useState(initialSignatureSaved);
     const strokesRef = useRef<Stroke[]>([]);
@@ -157,7 +160,7 @@ export const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(
               {svgPath ? (
                 <Path
                   d={svgPath}
-                  stroke={colors.action}
+                  stroke="#17120E"
                   strokeWidth={2.5}
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -167,7 +170,7 @@ export const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(
             </Svg>
             {strokes.length === 0 && (
               <View pointerEvents="none" style={styles.placeholder}>
-                <AppIcon name="pencil-outline" size={22} color={colors.textMuted} />
+                <AppIcon name="pencil-outline" size={22} color="#6F675F" />
                 <Text style={styles.placeholderText}>Sign with your finger inside this box</Text>
               </View>
             )}
@@ -202,55 +205,57 @@ function toBase64(bytes: Uint8Array): string {
   return result;
 }
 
-const styles = StyleSheet.create({
-  container: { gap: spacing.xs },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  label: { ...typography.label, color: colors.text },
-  clearBtn: { flexDirection: "row", alignItems: "center", gap: spacing.xs, paddingVertical: spacing.xs },
-  clearText: { ...typography.caption, color: colors.danger, fontWeight: "600" },
-  padWrapper: {
-    height: 150,
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    overflow: "hidden",
-    position: "relative",
-    justifyContent: "center",
-  },
-  svg: { flex: 1 },
-  placeholder: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: spacing.xs,
-    opacity: 0.6,
-  },
-  placeholderText: { ...typography.caption, color: colors.textMuted },
-  baseline: {
-    position: "absolute",
-    bottom: 28,
-    left: 20,
-    right: 20,
-    height: 1,
-    backgroundColor: colors.border,
-    borderStyle: "dashed",
-  },
-  existingBox: {
-    height: 130,
-    backgroundColor: colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-    padding: spacing.md,
-  },
-  existingTitle: { ...typography.label, color: colors.text },
-  existingSubtitle: { ...typography.caption, color: colors.textMuted, textAlign: "center" },
-});
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    container: { gap: spacing.xs },
+    header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+    label: { ...typography.label, color: colors.text },
+    clearBtn: { flexDirection: "row", alignItems: "center", gap: spacing.xs, paddingVertical: spacing.xs },
+    clearText: { ...typography.caption, color: colors.danger, fontWeight: "600" },
+    padWrapper: {
+      height: 150,
+      backgroundColor: "#FFFFFF",
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      overflow: "hidden",
+      position: "relative",
+      justifyContent: "center",
+    },
+    svg: { flex: 1 },
+    placeholder: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      justifyContent: "center",
+      alignItems: "center",
+      gap: spacing.xs,
+      opacity: 0.6,
+    },
+    placeholderText: { ...typography.caption, color: "#6F675F" },
+    baseline: {
+      position: "absolute",
+      bottom: 28,
+      left: 20,
+      right: 20,
+      height: 1,
+      backgroundColor: "#DED8D1",
+      borderStyle: "dashed",
+    },
+    existingBox: {
+      height: 130,
+      backgroundColor: colors.surfaceMuted,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.xs,
+      padding: spacing.md,
+    },
+    existingTitle: { ...typography.label, color: colors.text },
+    existingSubtitle: { ...typography.caption, color: colors.textMuted, textAlign: "center" },
+  });
+}

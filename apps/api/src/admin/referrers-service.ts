@@ -3,7 +3,7 @@ import type { MediaStorage } from "../listings/media.js";
 import type { MediaAsset } from "../listings/model.js";
 import type { CleanupAsset } from "../listings/repository.js";
 import type { UploadFile } from "../listings/uploads.js";
-import type { AdminReferrerQuery } from "./referrers-model.js";
+import type { AdminReferrerQuery, AdminWithdrawalQuery } from "./referrers-model.js";
 import type { AdminReferrersRepository } from "./referrers-repository.js";
 
 export class AdminReferrersService {
@@ -17,6 +17,7 @@ export class AdminReferrersService {
   detail(id: string, page: number, pageSize: number) {
     return this.repository.detail(id, page, pageSize);
   }
+  withdrawals(query:AdminWithdrawalQuery){return this.repository.withdrawals(query);}
   preview(admin: string, commission: string) {
     return this.repository.preview(admin, commission);
   }

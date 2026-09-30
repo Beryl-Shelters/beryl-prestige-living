@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -18,7 +18,8 @@ import {
   type WithdrawalItem,
   type WithdrawalPage,
 } from "@/lib/referrals-api";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 function formatMoney(minor: number): string {
   const naira = minor / 100;
@@ -64,6 +65,8 @@ function minorToInputString(minor: number): string {
 }
 
 export default function WithdrawalScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [data, setData] = useState<WithdrawalPage | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -463,7 +466,8 @@ export default function WithdrawalScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -501,7 +505,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.danger,
     padding: spacing.sm,
     borderRadius: radius.sm,
   },
@@ -704,35 +710,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceMuted,
   },
   statusBadgePaid: {
-    backgroundColor: "#DCFCE7",
+    borderColor: colors.success,
   },
   statusBadgePending: {
-    backgroundColor: "#FEF3C7",
+    borderColor: colors.warning,
   },
   statusBadgeProcessing: {
-    backgroundColor: "#DBEAFE",
+    borderColor: colors.brandGold,
   },
   statusBadgeFailed: {
-    backgroundColor: "#FEE2E2",
+    borderColor: colors.danger,
   },
   statusBadgeText: {
     ...typography.caption,
     fontFamily: "PlusJakartaSans-SemiBold",
     fontSize: 11,
+    color: colors.text,
   },
   statusTextPaid: {
-    color: "#166534",
+    color: colors.success,
   },
   statusTextPending: {
-    color: "#92400E",
+    color: colors.warning,
   },
   statusTextProcessing: {
-    color: "#1E40AF",
+    color: colors.brandGold,
   },
   statusTextFailed: {
-    color: "#991B1B",
+    color: colors.danger,
   },
   withdrawalRow: {
     flexDirection: "row",
@@ -749,7 +759,7 @@ const styles = StyleSheet.create({
   },
   processingNote: {
     ...typography.caption,
-    color: "#1E40AF",
+    color: colors.textMuted,
     fontStyle: "italic",
     marginTop: 2,
   },
@@ -788,4 +798,5 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textMuted,
   },
-});
+  });
+}

@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Line, Polyline, Text as SvgText } from "react-native-svg";
 import type { DashboardOverview } from "@/lib/dashboard-api";
 import { formatNaira } from "@/lib/money";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 export function RevenueChart({ revenue }: { revenue: DashboardOverview["revenue"] }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
   const points = revenue[period] ?? [];
   const total = points.reduce((sum, p) => sum + p.amount, 0);
@@ -159,64 +162,66 @@ export function RevenueChart({ revenue }: { revenue: DashboardOverview["revenue"
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-    gap: spacing.md,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  titleCol: {
-    gap: 2,
-  },
-  sectionLabel: {
-    ...typography.caption,
-    color: colors.brandDark,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  heading: {
-    ...typography.label,
-    color: colors.text,
-  },
-  totalAmount: {
-    ...typography.title,
-    color: colors.text,
-  },
-  toggleGroup: {
-    flexDirection: "row",
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radius.pill,
-    padding: 2,
-  },
-  toggleBtn: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.pill,
-  },
-  toggleBtnActive: {
-    backgroundColor: colors.surface,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-  },
-  toggleText: {
-    ...typography.caption,
-    color: colors.textMuted,
-    fontWeight: "500",
-  },
-  toggleTextActive: {
-    color: colors.text,
-    fontWeight: "700",
-  },
-  chartWrapper: {
-    alignItems: "center",
-  },
-});
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.md,
+      gap: spacing.md,
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+    },
+    titleCol: {
+      gap: 2,
+    },
+    sectionLabel: {
+      ...typography.caption,
+      color: colors.brandDark,
+      fontWeight: "700",
+      letterSpacing: 0.5,
+    },
+    heading: {
+      ...typography.label,
+      color: colors.text,
+    },
+    totalAmount: {
+      ...typography.title,
+      color: colors.text,
+    },
+    toggleGroup: {
+      flexDirection: "row",
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: radius.pill,
+      padding: 2,
+    },
+    toggleBtn: {
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radius.pill,
+    },
+    toggleBtnActive: {
+      backgroundColor: colors.surface,
+      shadowColor: "#000",
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+    },
+    toggleText: {
+      ...typography.caption,
+      color: colors.textMuted,
+      fontWeight: "500",
+    },
+    toggleTextActive: {
+      color: colors.text,
+      fontWeight: "700",
+    },
+    chartWrapper: {
+      alignItems: "center",
+    },
+  });
+}

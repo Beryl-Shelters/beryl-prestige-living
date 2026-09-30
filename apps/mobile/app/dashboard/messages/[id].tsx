@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -21,7 +21,8 @@ import {
   type TicketDetail,
   type TicketMessage,
 } from "@/lib/messages-api";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 function formatDateTime(iso?: string | null): string {
   if (!iso) return "—";
@@ -53,6 +54,8 @@ function formatTime(iso: string): string {
 
 export default function TicketConversationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -393,7 +396,7 @@ export default function TicketConversationScreen() {
                   name="send"
                   size={18}
                   color={
-                    !replyText.trim() && !attachment ? colors.textMuted : colors.surface
+                    !replyText.trim() && !attachment ? colors.textMuted : "#FFFFFF"
                   }
                 />
               </Pressable>
@@ -405,262 +408,264 @@ export default function TicketConversationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  keyboardContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-  },
-  headerCard: {
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    gap: spacing.xs,
-  },
-  headerTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  badgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  ticketNumber: {
-    ...typography.caption,
-    fontFamily: "PlusJakartaSans-Bold",
-    color: colors.textMuted,
-  },
-  statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  statusBadgeOpen: {
-    backgroundColor: colors.brandTint,
-  },
-  statusBadgeResolved: {
-    backgroundColor: colors.surfaceMuted,
-  },
-  statusBadgeText: {
-    ...typography.caption,
-    fontFamily: "PlusJakartaSans-SemiBold",
-  },
-  statusBadgeTextOpen: {
-    color: colors.brandDark,
-  },
-  statusBadgeTextResolved: {
-    color: colors.textMuted,
-  },
-  ticketSubject: {
-    ...typography.subheading,
-    color: colors.text,
-  },
-  ticketMeta: {
-    ...typography.caption,
-    color: colors.textMuted,
-  },
-  thread: {
-    flex: 1,
-  },
-  threadContent: {
-    padding: spacing.md,
-    gap: spacing.md,
-  },
-  openedBadge: {
-    alignSelf: "center",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radius.pill,
-    marginBottom: spacing.xs,
-  },
-  openedBadgeText: {
-    ...typography.caption,
-    color: colors.textMuted,
-  },
-  messageRow: {
-    flexDirection: "row",
-    marginVertical: 2,
-  },
-  messageRowCustomer: {
-    justifyContent: "flex-end",
-  },
-  messageRowSupport: {
-    justifyContent: "flex-start",
-  },
-  messageBubble: {
-    maxWidth: "82%",
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    gap: spacing.xs,
-  },
-  bubbleCustomer: {
-    backgroundColor: colors.brandDark,
-    borderBottomRightRadius: radius.xs,
-  },
-  bubbleSupport: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderBottomLeftRadius: radius.xs,
-  },
-  senderLabel: {
-    ...typography.caption,
-    fontFamily: "PlusJakartaSans-Bold",
-    color: colors.brandGold,
-    marginBottom: 2,
-  },
-  messageText: {
-    ...typography.body,
-    lineHeight: 20,
-  },
-  messageTextCustomer: {
-    color: colors.surface,
-  },
-  messageTextSupport: {
-    color: colors.text,
-  },
-  attachmentsContainer: {
-    marginTop: spacing.xs,
-    gap: spacing.xs,
-  },
-  attachmentChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: colors.surfaceMuted,
-    padding: spacing.xs,
-    borderRadius: radius.sm,
-  },
-  attachmentMeta: {
-    flex: 1,
-  },
-  attachmentName: {
-    ...typography.caption,
-    fontFamily: "PlusJakartaSans-SemiBold",
-    color: colors.text,
-  },
-  attachmentSize: {
-    ...typography.caption,
-    fontSize: 10,
-    color: colors.textMuted,
-  },
-  messageFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 4,
-    marginTop: 2,
-  },
-  timestamp: {
-    fontSize: 11,
-  },
-  timestampCustomer: {
-    color: "rgba(255, 255, 255, 0.7)",
-  },
-  timestampSupport: {
-    color: colors.textMuted,
-  },
-  sentCheckmark: {
-    fontSize: 11,
-    color: colors.brandGold,
-  },
-  resolvedBanner: {
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  resolvedTitle: {
-    ...typography.subheading,
-    color: colors.text,
-    textAlign: "center",
-  },
-  resolvedNotice: {
-    ...typography.body,
-    color: colors.textMuted,
-    textAlign: "center",
-    marginBottom: spacing.sm,
-  },
-  composerContainer: {
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    padding: spacing.sm,
-    gap: spacing.xs,
-  },
-  errorNotice: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radius.sm,
-  },
-  errorNoticeText: {
-    ...typography.caption,
-    color: colors.danger,
-    flex: 1,
-  },
-  selectedFileChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: colors.brandTint,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-    alignSelf: "flex-start",
-  },
-  selectedFileName: {
-    ...typography.caption,
-    color: colors.brandDark,
-    maxWidth: 220,
-  },
-  composerRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: spacing.xs,
-  },
-  attachButton: {
-    padding: spacing.sm,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  attachButtonPressed: {
-    opacity: 0.6,
-  },
-  composerInput: {
-    flex: 1,
-    minHeight: 40,
-    maxHeight: 120,
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    ...typography.body,
-    color: colors.text,
-  },
-  sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.pill,
-    backgroundColor: colors.brandDark,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  sendButtonDisabled: {
-    backgroundColor: colors.surfaceMuted,
-  },
-  sendButtonPressed: {
-    opacity: 0.8,
-  },
-});
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    keyboardContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    container: {
+      flex: 1,
+    },
+    headerCard: {
+      backgroundColor: colors.surface,
+      padding: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      gap: spacing.xs,
+    },
+    headerTop: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    badgeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    ticketNumber: {
+      ...typography.caption,
+      fontFamily: "PlusJakartaSans-Bold",
+      color: colors.textMuted,
+    },
+    statusBadge: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 2,
+      borderRadius: radius.pill,
+    },
+    statusBadgeOpen: {
+      backgroundColor: colors.brandTint,
+    },
+    statusBadgeResolved: {
+      backgroundColor: colors.surfaceMuted,
+    },
+    statusBadgeText: {
+      ...typography.caption,
+      fontFamily: "PlusJakartaSans-SemiBold",
+    },
+    statusBadgeTextOpen: {
+      color: colors.brandDark,
+    },
+    statusBadgeTextResolved: {
+      color: colors.textMuted,
+    },
+    ticketSubject: {
+      ...typography.subheading,
+      color: colors.text,
+    },
+    ticketMeta: {
+      ...typography.caption,
+      color: colors.textMuted,
+    },
+    thread: {
+      flex: 1,
+    },
+    threadContent: {
+      padding: spacing.md,
+      gap: spacing.md,
+    },
+    openedBadge: {
+      alignSelf: "center",
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: radius.pill,
+      marginBottom: spacing.xs,
+    },
+    openedBadgeText: {
+      ...typography.caption,
+      color: colors.textMuted,
+    },
+    messageRow: {
+      flexDirection: "row",
+      marginVertical: 2,
+    },
+    messageRowCustomer: {
+      justifyContent: "flex-end",
+    },
+    messageRowSupport: {
+      justifyContent: "flex-start",
+    },
+    messageBubble: {
+      maxWidth: "82%",
+      padding: spacing.md,
+      borderRadius: radius.lg,
+      gap: spacing.xs,
+    },
+    bubbleCustomer: {
+      backgroundColor: colors.brandDark,
+      borderBottomRightRadius: radius.xs,
+    },
+    bubbleSupport: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderBottomLeftRadius: radius.xs,
+    },
+    senderLabel: {
+      ...typography.caption,
+      fontFamily: "PlusJakartaSans-Bold",
+      color: colors.brandGold,
+      marginBottom: 2,
+    },
+    messageText: {
+      ...typography.body,
+      lineHeight: 20,
+    },
+    messageTextCustomer: {
+      color: "#FFFFFF",
+    },
+    messageTextSupport: {
+      color: colors.text,
+    },
+    attachmentsContainer: {
+      marginTop: spacing.xs,
+      gap: spacing.xs,
+    },
+    attachmentChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      backgroundColor: colors.surfaceMuted,
+      padding: spacing.xs,
+      borderRadius: radius.sm,
+    },
+    attachmentMeta: {
+      flex: 1,
+    },
+    attachmentName: {
+      ...typography.caption,
+      fontFamily: "PlusJakartaSans-SemiBold",
+      color: colors.text,
+    },
+    attachmentSize: {
+      ...typography.caption,
+      fontSize: 10,
+      color: colors.textMuted,
+    },
+    messageFooter: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      gap: 4,
+      marginTop: 2,
+    },
+    timestamp: {
+      fontSize: 11,
+    },
+    timestampCustomer: {
+      color: "rgba(255, 255, 255, 0.7)",
+    },
+    timestampSupport: {
+      color: colors.textMuted,
+    },
+    sentCheckmark: {
+      fontSize: 11,
+      color: colors.brandGold,
+    },
+    resolvedBanner: {
+      backgroundColor: colors.surface,
+      padding: spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    resolvedTitle: {
+      ...typography.subheading,
+      color: colors.text,
+      textAlign: "center",
+    },
+    resolvedNotice: {
+      ...typography.body,
+      color: colors.textMuted,
+      textAlign: "center",
+      marginBottom: spacing.sm,
+    },
+    composerContainer: {
+      backgroundColor: colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      padding: spacing.sm,
+      gap: spacing.xs,
+    },
+    errorNotice: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: radius.sm,
+    },
+    errorNoticeText: {
+      ...typography.caption,
+      color: colors.danger,
+      flex: 1,
+    },
+    selectedFileChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      backgroundColor: colors.brandTint,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.sm,
+      alignSelf: "flex-start",
+    },
+    selectedFileName: {
+      ...typography.caption,
+      color: colors.brandDark,
+      maxWidth: 220,
+    },
+    composerRow: {
+      flexDirection: "row",
+      alignItems: "flex-end",
+      gap: spacing.xs,
+    },
+    attachButton: {
+      padding: spacing.sm,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    attachButtonPressed: {
+      opacity: 0.6,
+    },
+    composerInput: {
+      flex: 1,
+      minHeight: 40,
+      maxHeight: 120,
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      ...typography.body,
+      color: colors.text,
+    },
+    sendButton: {
+      width: 40,
+      height: 40,
+      borderRadius: radius.pill,
+      backgroundColor: colors.brandDark,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    sendButtonDisabled: {
+      backgroundColor: colors.surfaceMuted,
+    },
+    sendButtonPressed: {
+      opacity: 0.8,
+    },
+  });
+}

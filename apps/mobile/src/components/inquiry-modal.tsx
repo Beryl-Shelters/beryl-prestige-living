@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -12,7 +12,8 @@ import { AppIcon } from "./app-icon";
 import { Button, TextField } from "./ui";
 import { friendlyError } from "@/lib/api-error";
 import { inquiryTypes, publicServicesApi } from "@/lib/public-services-api";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 type InquiryModalProps = {
   visible: boolean;
@@ -31,6 +32,8 @@ export function InquiryModal({
   initialUser,
   onClose,
 }: InquiryModalProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [inquiryType, setInquiryType] = useState<string>("Property Inquiry");
   const [name, setName] = useState(initialUser?.name || "");
   const [phone, setPhone] = useState(initialUser?.phone || "");
@@ -219,7 +222,8 @@ export function InquiryModal({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   topBar: {
     height: 56,
@@ -279,4 +283,5 @@ const styles = StyleSheet.create({
   },
   successTitle: { ...typography.title, color: colors.text, textAlign: "center" },
   successBody: { ...typography.body, color: colors.textMuted, textAlign: "center" },
-});
+  });
+}

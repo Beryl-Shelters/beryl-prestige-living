@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button, LoadingState, ScreenState } from "@/components/ui";
 import { AppIcon } from "@/components/app-icon";
@@ -9,19 +9,204 @@ import { propertiesApi } from "@/lib/properties-api";
 import type { ComparedProperty } from "@/lib/property-types";
 import { useAuth } from "@/providers/auth-provider";
 import { usePropertyState } from "@/providers/property-state-provider";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
-const fields:[string,(property:ComparedProperty)=>string][]=[["Property Ref No.",p=>p.code],["Property Type",p=>p.propertyType],["Property Subtype",p=>p.propertySubtype],["Property Status",p=>p.propertyStatus],["Bedrooms",p=>String(p.bedrooms)],["Bathrooms",p=>String(p.bathrooms)],["Parking Space",p=>String(p.parkingSpaces)],["Unit Size (sqft)",p=>p.unitSizeSqft===null?"—":String(p.unitSizeSqft)],["Location",p=>[p.city,p.state].filter(Boolean).join(", ")||"—"],["Year Built",p=>p.yearBuilt===null?"—":String(p.yearBuilt)],["Minimum Down Payment",p=>formatNaira(p.minimumDownPaymentMinor)]];
-export default function ComparePropertiesScreen(){
-  const {status}=useAuth();const {compared,removeCompared,clearCompared}=usePropertyState();const [items,setItems]=useState<ComparedProperty[]|null>(null);const [loading,setLoading]=useState(false);const [error,setError]=useState("");const [retry,setRetry]=useState(0);
-  useEffect(()=>{if(status!=="signedIn"||compared.length<2)return;let active=true;void propertiesApi.compare(compared.map(item=>item.code)).then(result=>{if(active)setItems(result.items)}).catch(failure=>{if(active)setError(friendlyError(failure))}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[status,compared,retry]);
-  if(status!=="signedIn")return <View style={styles.state}><ScreenState title="Sign in to compare saved properties" message="Comparison uses currently listed properties saved to your customer account." action={<Button label="Log in" onPress={()=>router.push({pathname:"/(auth)/login",params:{next:"/compare-properties"}})}/>} /></View>;
-  if(!compared.length)return <View style={styles.state}><ScreenState title="No properties selected" message="Choose up to three properties from Saved Properties. Comparison is temporary and is not stored in your account." action={<Button label="Choose saved properties" onPress={()=>router.replace("/saved-properties")}/>} /></View>;
-  if(compared.length===1)return <ScrollView style={styles.screen} contentContainerStyle={styles.content}><Text accessibilityRole="header" style={styles.title}>Compare Properties</Text><Text style={styles.subtitle}>One property selected. Choose at least two for a meaningful comparison.</Text><Selection property={compared[0]!} onRemove={()=>removeCompared(compared[0]!.code)}/><Button label="Choose another saved property" onPress={()=>router.push("/saved-properties")}/></ScrollView>;
-  if(error)return <View style={styles.state}><ScreenState title="Comparison unavailable" message={error} action={<Button label="Try again" onPress={()=>{setError("");setLoading(true);setItems(null);setRetry(value=>value+1)}}/>} /></View>;
-  if(loading||items===null)return <LoadingState label="Loading public comparison data"/>;
-  if(!items||items.length<2)return <View style={styles.state}><ScreenState title="Not enough available properties" message="One or more selected properties are no longer publicly listed. Remove them and choose at least two available saved properties." action={<Button label="Return to saved properties" onPress={()=>router.replace("/saved-properties")}/>} /></View>;
-  return <ScrollView style={styles.screen} contentContainerStyle={styles.content}><View style={styles.heading}><View style={styles.headingCopy}><Text accessibilityRole="header" style={styles.title}>Compare Properties</Text><Text style={styles.subtitle}>{items.length} of 3 selected · session only</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Clear comparison" onPress={()=>{setItems(null);clearCompared()}} hitSlop={8}><Text style={styles.clear}>Clear</Text></Pressable></View><Text style={styles.hint}>Swipe horizontally to compare every property.</Text><ScrollView horizontal showsHorizontalScrollIndicator accessibilityLabel="Saved property comparison" contentContainerStyle={styles.columns}>{items.map(property=><View key={property.code} style={styles.column}><Selection property={property} onRemove={()=>{setItems(null);setLoading(true);removeCompared(property.code)}}/>{fields.map(([label,value])=><View key={label} style={styles.field}><Text style={styles.fieldLabel}>{label}</Text><Text style={styles.fieldValue}>{value(property)}</Text></View>)}</View>)}</ScrollView><Button label="Add or change properties" variant="secondary" onPress={()=>router.push("/saved-properties")}/></ScrollView>
+const fields: [string, (property: ComparedProperty) => string][] = [
+  ["Property Ref No.", (p) => p.code],
+  ["Property Type", (p) => p.propertyType],
+  ["Property Subtype", (p) => p.propertySubtype],
+  ["Property Status", (p) => p.propertyStatus],
+  ["Bedrooms", (p) => String(p.bedrooms)],
+  ["Bathrooms", (p) => String(p.bathrooms)],
+  ["Parking Space", (p) => String(p.parkingSpaces)],
+  ["Unit Size (sqft)", (p) => (p.unitSizeSqft === null ? "—" : String(p.unitSizeSqft))],
+  ["Location", (p) => [p.city, p.state].filter(Boolean).join(", ") || "—"],
+  ["Year Built", (p) => (p.yearBuilt === null ? "—" : String(p.yearBuilt))],
+  ["Minimum Down Payment", (p) => formatNaira(p.minimumDownPaymentMinor)],
+];
+
+export default function ComparePropertiesScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { status } = useAuth();
+  const { compared, removeCompared, clearCompared } = usePropertyState();
+  const [items, setItems] = useState<ComparedProperty[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
+
+  useEffect(() => {
+    if (status !== "signedIn" || compared.length < 2) return;
+    let active = true;
+    void propertiesApi
+      .compare(compared.map((item) => item.code))
+      .then((result) => {
+        if (active) setItems(result.items);
+      })
+      .catch((failure) => {
+        if (active) setError(friendlyError(failure));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [status, compared, retry]);
+
+  if (status !== "signedIn") {
+    return (
+      <View style={styles.state}>
+        <ScreenState
+          title="Sign in to compare saved properties"
+          message="Comparison uses currently listed properties saved to your customer account."
+          action={<Button label="Log in" onPress={() => router.push({ pathname: "/(auth)/login", params: { next: "/compare-properties" } })} />}
+        />
+      </View>
+    );
+  }
+
+  if (!compared.length) {
+    return (
+      <View style={styles.state}>
+        <ScreenState
+          title="No properties selected"
+          message="Choose up to three properties from Saved Properties. Comparison is temporary and is not stored in your account."
+          action={<Button label="Choose saved properties" onPress={() => router.replace("/saved-properties")} />}
+        />
+      </View>
+    );
+  }
+
+  if (compared.length === 1) {
+    return (
+      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+        <Text accessibilityRole="header" style={styles.title}>Compare Properties</Text>
+        <Text style={styles.subtitle}>One property selected. Choose at least two for a meaningful comparison.</Text>
+        <Selection property={compared[0]!} onRemove={() => removeCompared(compared[0]!.code)} styles={styles} colors={colors} />
+        <Button label="Choose another saved property" onPress={() => router.push("/saved-properties")} />
+      </ScrollView>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.state}>
+        <ScreenState
+          title="Comparison unavailable"
+          message={error}
+          action={<Button label="Try again" onPress={() => { setError(""); setLoading(true); setItems(null); setRetry((value) => value + 1); }} />}
+        />
+      </View>
+    );
+  }
+
+  if (loading || items === null) return <LoadingState label="Loading public comparison data" />;
+
+  if (!items || items.length < 2) {
+    return (
+      <View style={styles.state}>
+        <ScreenState
+          title="Not enough available properties"
+          message="One or more selected properties are no longer publicly listed. Remove them and choose at least two available saved properties."
+          action={<Button label="Return to saved properties" onPress={() => router.replace("/saved-properties")} />}
+        />
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <View style={styles.heading}>
+        <View style={styles.headingCopy}>
+          <Text accessibilityRole="header" style={styles.title}>Compare Properties</Text>
+          <Text style={styles.subtitle}>{items.length} of 3 selected · session only</Text>
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Clear comparison" onPress={() => { setItems(null); clearCompared(); }} hitSlop={8}>
+          <Text style={styles.clear}>Clear</Text>
+        </Pressable>
+      </View>
+      <Text style={styles.hint}>Swipe horizontally to compare every property.</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator accessibilityLabel="Saved property comparison" contentContainerStyle={styles.columns}>
+        {items.map((property) => (
+          <View key={property.code} style={styles.column}>
+            <Selection
+              property={property}
+              onRemove={() => {
+                setItems(null);
+                setLoading(true);
+                removeCompared(property.code);
+              }}
+              styles={styles}
+              colors={colors}
+            />
+            {fields.map(([label, value]) => (
+              <View key={label} style={styles.field}>
+                <Text style={styles.fieldLabel}>{label}</Text>
+                <Text style={styles.fieldValue}>{value(property)}</Text>
+              </View>
+            ))}
+          </View>
+        ))}
+      </ScrollView>
+      <Button label="Add or change properties" variant="secondary" onPress={() => router.push("/saved-properties")} />
+    </ScrollView>
+  );
 }
-function Selection({property,onRemove}:{property:ComparedProperty|ReturnType<typeof usePropertyState>["compared"][number];onRemove:()=>void}){return <View style={styles.selection}>{property.images[0]?<Image source={{uri:property.images[0]}} accessibilityLabel={`Property photograph of ${property.title}`} style={styles.image}/>:<View accessibilityRole="image" accessibilityLabel={`No photograph available for ${property.title}`} style={styles.placeholder}><AppIcon name="image-outline" size={30} color={colors.textMuted}/><Text style={styles.placeholderText}>Photo unavailable</Text></View>}<Pressable accessibilityRole="button" accessibilityLabel={`Remove ${property.title} from comparison`} onPress={onRemove} style={styles.remove}><AppIcon name="close" size={20} color={colors.text}/></Pressable><Text numberOfLines={3} style={styles.propertyTitle}>{property.title}</Text><Text style={styles.price}>{formatNaira(property.priceMinor)}</Text></View>}
-const styles=StyleSheet.create({screen:{flex:1,backgroundColor:colors.background},content:{padding:spacing.lg,paddingBottom:spacing.xxl,gap:spacing.lg},state:{flex:1,backgroundColor:colors.background},heading:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:spacing.md},headingCopy:{flex:1,gap:spacing.xs},title:{...typography.title,color:colors.text},subtitle:{...typography.body,color:colors.textMuted},clear:{...typography.label,color:colors.danger},hint:{...typography.caption,color:colors.textMuted},columns:{gap:spacing.md,paddingRight:spacing.lg},column:{width:260,borderWidth:1,borderColor:colors.border,borderRadius:radius.lg,overflow:"hidden",backgroundColor:colors.surface},selection:{paddingBottom:spacing.md,gap:spacing.sm,position:"relative"},image:{width:"100%",height:160,backgroundColor:colors.surfaceMuted},placeholder:{width:"100%",height:160,alignItems:"center",justifyContent:"center",gap:spacing.sm,backgroundColor:colors.surfaceMuted},placeholderText:{...typography.caption,color:colors.textMuted},remove:{position:"absolute",right:spacing.sm,top:spacing.sm,width:40,height:40,borderRadius:radius.pill,alignItems:"center",justifyContent:"center",backgroundColor:colors.surface},propertyTitle:{...typography.heading,color:colors.text,paddingHorizontal:spacing.md},price:{...typography.label,color:colors.brandDark,paddingHorizontal:spacing.md},field:{minHeight:76,padding:spacing.md,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:colors.border,gap:spacing.xs},fieldLabel:{...typography.caption,color:colors.textMuted},fieldValue:{...typography.label,color:colors.text}});
+
+function Selection({
+  property,
+  onRemove,
+  styles,
+  colors,
+}: {
+  property: ComparedProperty | ReturnType<typeof usePropertyState>["compared"][number];
+  onRemove: () => void;
+  styles: ReturnType<typeof createStyles>;
+  colors: ColorTokens;
+}) {
+  return (
+    <View style={styles.selection}>
+      {property.images[0] ? (
+        <Image source={{ uri: property.images[0] }} accessibilityLabel={`Property photograph of ${property.title}`} style={styles.image} />
+      ) : (
+        <View accessibilityRole="image" accessibilityLabel={`No photograph available for ${property.title}`} style={styles.placeholder}>
+          <AppIcon name="image-outline" size={30} color={colors.textMuted} />
+          <Text style={styles.placeholderText}>Photo unavailable</Text>
+        </View>
+      )}
+      <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${property.title} from comparison`} onPress={onRemove} style={styles.remove}>
+        <AppIcon name="close" size={20} color={colors.text} />
+      </Pressable>
+      <Text numberOfLines={3} style={styles.propertyTitle}>{property.title}</Text>
+      <Text style={styles.price}>{formatNaira(property.priceMinor)}</Text>
+    </View>
+  );
+}
+
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.background },
+    content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
+    state: { flex: 1, backgroundColor: colors.background },
+    heading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md },
+    headingCopy: { flex: 1, gap: spacing.xs },
+    title: { ...typography.title, color: colors.text },
+    subtitle: { ...typography.body, color: colors.textMuted },
+    clear: { ...typography.label, color: colors.danger },
+    hint: { ...typography.caption, color: colors.textMuted },
+    columns: { gap: spacing.md, paddingRight: spacing.lg },
+    column: { width: 260, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, overflow: "hidden", backgroundColor: colors.surface },
+    selection: { paddingBottom: spacing.md, gap: spacing.sm, position: "relative" },
+    image: { width: "100%", height: 160, backgroundColor: colors.surfaceMuted },
+    placeholder: { width: "100%", height: 160, alignItems: "center", justifyContent: "center", gap: spacing.sm, backgroundColor: colors.surfaceMuted },
+    placeholderText: { ...typography.caption, color: colors.textMuted },
+    remove: { position: "absolute", right: spacing.sm, top: spacing.sm, width: 40, height: 40, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
+    propertyTitle: { ...typography.heading, color: colors.text, paddingHorizontal: spacing.md },
+    price: { ...typography.label, color: colors.brandDark, paddingHorizontal: spacing.md },
+    field: { minHeight: 76, padding: spacing.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, gap: spacing.xs },
+    fieldLabel: { ...typography.caption, color: colors.textMuted },
+    fieldValue: { ...typography.label, color: colors.text },
+  });
+}

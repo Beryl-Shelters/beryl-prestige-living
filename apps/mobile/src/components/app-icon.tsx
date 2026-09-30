@@ -11,6 +11,7 @@ const symbols: Partial<Record<AppIconName,string>> = {
   "analytics-outline":"⌁","chatbubble-ellipses-outline":"◌","settings-outline":"⚙","bookmark-outline":"▤",
   "people-outline":"♙","wallet-outline":"▭","shield-checkmark-outline":"✓","help-circle-outline":"?",
   "chevron-forward":"›","options-outline":"☷",close:"×","git-compare-outline":"⇄",
+  "menu-outline":"☰","arrow-back":"←","eye-outline":"👁","eye-off-outline":"Ø","log-out-outline":"🚪",
 };
 
 export function AppIcon({name,size=20,color="#21170E"}:{name:AppIconName;size?:number;color?:ColorValue}){

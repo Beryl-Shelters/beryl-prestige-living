@@ -1,3 +1,9 @@
-import { useLocalSearchParams } from "expo-router";
-import { FeaturePlaceholder } from "@/components/feature-placeholder";
-export default function ReferralLink(){const {referralCode}=useLocalSearchParams<{referralCode:string}>();return <FeaturePlaceholder title="Beryl referral" description={`Referral code: ${referralCode??"Unavailable"}`} phase="Phase 5"/>}
+import { Redirect, useLocalSearchParams } from "expo-router";
+
+const referralPattern = /^REF-[A-HJ-NP-Z2-9]{6}$/;
+
+export default function ReferralLink() {
+  const { referralCode } = useLocalSearchParams<{ referralCode?: string }>();
+  if (!referralCode || !referralPattern.test(referralCode)) return <Redirect href="/+not-found" />;
+  return <Redirect href={{ pathname: "/(auth)/register", params: { ref: referralCode } }} />;
+}

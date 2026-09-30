@@ -5,5 +5,6 @@ export const dashboardNavigation = [
   { label: "Messages", href: "/dashboard/messages", icon: "messages" },
   { label: "Properties", href: "/dashboard/properties", icon: "properties" },
   { label: "Referrals", href: "/dashboard/referrals", icon: "referrals" },
+  { label: "Withdraw Earnings", href: "/dashboard/referrals/withdraw", icon: "referrals" },
   { label: "Settings", href: "/dashboard/settings", icon: "settings" },
 ] as const;

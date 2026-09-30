@@ -246,6 +246,10 @@ class Referrers implements AdminReferrersRepository {
   detail() {
     return Promise.resolve(detail);
   }
+  withdrawals(query:import("../src/admin/referrers-model.js").AdminWithdrawalQuery){
+    this.queries.push({search:"",filter:"ALL",sort:"NEWEST",page:query.page,pageSize:query.pageSize});
+    return Promise.resolve({items:[{id:"WDR-ABC234",referrerId,referrerName:"Controlled Referrer",referrerEmail:"referrer@example.test",amountMinor:750000,status:"PENDING" as const,bankName:"Test Bank",maskedAccountNumber:"••••••6789",requestedAt:"2026-09-29T09:00:00Z",updatedAt:null,rejectionReason:null,paymentId:null}],page:query.page,pageSize:query.pageSize,total:1,totalPages:1});
+  }
   preview(_admin: string, commission: string): Promise<AdminPaymentPreview> {
     return Promise.resolve({
       commissionId: commission,
@@ -405,6 +409,7 @@ test("Admin Referrers endpoints require active Admin auth and validate bounded q
   });
   assert.equal((await f.request("/referrers?filter=ZERO")).status, 400);
 });
+test("Admin withdrawal queue is authenticated, filterable, and exposes masked bank data only",async t=>{const f=await fixture(t);assert.equal((await f.request("/referrers/withdrawals")).status,401);await f.login(adminId);const response=await f.request("/referrers/withdrawals?status=PENDING&page=1&pageSize=10");assert.equal(response.status,200);const body=await response.json() as {data:{items:{maskedAccountNumber:string;accountNumber?:string}[]}};assert.equal(body.data.items[0]?.maskedAccountNumber,"••••••6789");assert.equal(body.data.items[0]?.accountNumber,undefined);assert.equal((await f.request("/referrers/withdrawals?status=UNKNOWN")).status,400);});
 test("payment accepts only valid private receipt evidence and derives financial values server-side", async (t) => {
   const f = await fixture(t);
   await f.login(adminId);

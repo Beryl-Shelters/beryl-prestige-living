@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -9,11 +9,14 @@ import { useLocalSearchParams } from "expo-router";
 import SettingsProfileScreen from "./profile";
 import SettingsBusinessScreen from "./business";
 import SettingsPasswordScreen from "./password";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 type SettingsTab = "profile" | "business" | "password";
 
 export default function SettingsIndexScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { tab } = useLocalSearchParams<{ tab?: string }>();
   const initialTab: SettingsTab =
     tab === "business" || tab === "password" ? tab : "profile";
@@ -82,7 +85,8 @@ export default function SettingsIndexScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -118,4 +122,5 @@ const styles = StyleSheet.create({
   tabContent: {
     flex: 1,
   },
-});
+  });
+}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -10,13 +10,15 @@ import {
 } from "react-native";
 import { AppIcon } from "@/components/app-icon";
 import { AnalyticsChart } from "@/components/dashboard/analytics-chart";
-import { DashboardNav } from "@/components/dashboard/dashboard-nav";
 import { Button, Card, LoadingState, ScreenState } from "@/components/ui";
 import { friendlyError } from "@/lib/api-error";
 import { dashboardApi, type CustomerAnalytics } from "@/lib/dashboard-api";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 export default function DashboardAnalyticsScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [search, setSearch] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [year, setYear] = useState(() => new Date().getFullYear());
@@ -93,15 +95,13 @@ export default function DashboardAnalyticsScreen() {
 
   return (
     <View style={styles.container}>
-      <DashboardNav active="analytics" />
-
       {/* Search Input */}
       <View style={styles.searchWrapper}>
         <AppIcon name="search-outline" size={18} color={colors.textMuted} />
         <TextInput
           accessibilityLabel="Search your listings by title or code"
           placeholder="Search your listings by title or code"
-          placeholderTextColor="#9C948C"
+          placeholderTextColor={colors.textMuted}
           value={search}
           onChangeText={setSearch}
           maxLength={100}
@@ -301,134 +301,136 @@ export default function DashboardAnalyticsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: spacing.xl,
-  },
-  searchWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    marginHorizontal: spacing.md,
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.md,
-    height: 44,
-    gap: spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    ...typography.body,
-    color: colors.text,
-    paddingVertical: 0,
-  },
-  scrollContent: {
-    padding: spacing.md,
-    gap: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
-  overviewCard: {
-    gap: spacing.md,
-  },
-  cardHeading: {
-    ...typography.heading,
-    color: colors.text,
-  },
-  totalBadge: {
-    alignItems: "center",
-    backgroundColor: colors.surfaceMuted,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    gap: 2,
-  },
-  totalNumber: {
-    ...typography.display,
-    color: colors.text,
-    fontSize: 36,
-  },
-  totalLabel: {
-    ...typography.caption,
-    color: colors.textMuted,
-    fontWeight: "600",
-  },
-  statusBreakdown: {
-    gap: spacing.md,
-  },
-  statusItem: {
-    gap: 4,
-  },
-  statusHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  statusTitle: {
-    ...typography.label,
-    color: colors.text,
-  },
-  statusValue: {
-    ...typography.caption,
-    color: colors.textMuted,
-    fontWeight: "600",
-  },
-  progressTrack: {
-    height: 8,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceMuted,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: radius.pill,
-  },
-  fillApproved: {
-    backgroundColor: colors.success,
-  },
-  fillPending: {
-    backgroundColor: colors.warning,
-  },
-  fillRejected: {
-    backgroundColor: colors.danger,
-  },
-  fillUnlisted: {
-    backgroundColor: colors.textMuted,
-  },
-  breakdownCard: {
-    gap: spacing.md,
-  },
-  gridList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  gridItem: {
-    width: "48%",
-    flexGrow: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: colors.surfaceMuted,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: radius.md,
-  },
-  gridLabel: {
-    ...typography.caption,
-    color: colors.text,
-    fontWeight: "600",
-  },
-  gridCount: {
-    ...typography.label,
-    color: colors.brandDark,
-    fontWeight: "700",
-  },
-});
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centered: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: spacing.xl,
+    },
+    searchWrapper: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      marginHorizontal: spacing.md,
+      marginTop: spacing.sm,
+      paddingHorizontal: spacing.md,
+      height: 44,
+      gap: spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      ...typography.body,
+      color: colors.text,
+      paddingVertical: 0,
+    },
+    scrollContent: {
+      padding: spacing.md,
+      gap: spacing.lg,
+      paddingBottom: spacing.xxl,
+    },
+    overviewCard: {
+      gap: spacing.md,
+    },
+    cardHeading: {
+      ...typography.heading,
+      color: colors.text,
+    },
+    totalBadge: {
+      alignItems: "center",
+      backgroundColor: colors.surfaceMuted,
+      paddingVertical: spacing.md,
+      borderRadius: radius.md,
+      gap: 2,
+    },
+    totalNumber: {
+      ...typography.display,
+      color: colors.text,
+      fontSize: 36,
+    },
+    totalLabel: {
+      ...typography.caption,
+      color: colors.textMuted,
+      fontWeight: "600",
+    },
+    statusBreakdown: {
+      gap: spacing.md,
+    },
+    statusItem: {
+      gap: 4,
+    },
+    statusHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    statusTitle: {
+      ...typography.label,
+      color: colors.text,
+    },
+    statusValue: {
+      ...typography.caption,
+      color: colors.textMuted,
+      fontWeight: "600",
+    },
+    progressTrack: {
+      height: 8,
+      borderRadius: radius.pill,
+      backgroundColor: colors.surfaceMuted,
+      overflow: "hidden",
+    },
+    progressFill: {
+      height: "100%",
+      borderRadius: radius.pill,
+    },
+    fillApproved: {
+      backgroundColor: colors.success,
+    },
+    fillPending: {
+      backgroundColor: colors.warning,
+    },
+    fillRejected: {
+      backgroundColor: colors.danger,
+    },
+    fillUnlisted: {
+      backgroundColor: colors.textMuted,
+    },
+    breakdownCard: {
+      gap: spacing.md,
+    },
+    gridList: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+    },
+    gridItem: {
+      width: "48%",
+      flexGrow: 1,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      backgroundColor: colors.surfaceMuted,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm + 2,
+      borderRadius: radius.md,
+    },
+    gridLabel: {
+      ...typography.caption,
+      color: colors.text,
+      fontWeight: "600",
+    },
+    gridCount: {
+      ...typography.label,
+      color: colors.brandDark,
+      fontWeight: "700",
+    },
+  });
+}

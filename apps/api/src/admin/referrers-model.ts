@@ -27,6 +27,11 @@ export const adminPaymentRequestSchema = z
   .strict();
 export const adminWithdrawalIdSchema = z.string().trim().toUpperCase().regex(/^WDR-[A-HJ-NP-Z2-9]{6}$/);
 export const adminWithdrawalRejectionSchema = z.object({ reason:z.string().trim().min(1).max(2000).refine(value=>![...value].some(character=>{const code=character.charCodeAt(0);return code===127||(code<32&&code!==10&&code!==13);}),"Reason contains unsupported characters.") }).strict();
+export const adminWithdrawalQuerySchema = z.object({
+  status: z.enum(["ALL","PENDING","PROCESSING","PAID","REJECTED","CANCELLED"]).default("ALL"),
+  page: z.coerce.number().int().min(1).max(100000).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(10),
+}).strict();
 export const adminReferrerDetailQuerySchema = z
   .object({
     page: z.coerce.number().int().min(1).max(100000).default(1),
@@ -109,6 +114,8 @@ export type AdminReferrerDetail = {
   totalPages: number;
 };
 export type WithdrawalStatus="PENDING"|"PROCESSING"|"PAID"|"REJECTED"|"CANCELLED";
+export type AdminWithdrawalQuery=z.infer<typeof adminWithdrawalQuerySchema>;
+export type AdminWithdrawalQueuePage={items:{id:string;referrerId:string;referrerName:string;referrerEmail:string;amountMinor:number;status:WithdrawalStatus;bankName:string;maskedAccountNumber:string;requestedAt:string;updatedAt:string|null;rejectionReason:string|null;paymentId:string|null}[];page:number;pageSize:number;total:number;totalPages:number};
 export type AdminWithdrawalItem={id:string;amountMinor:number;status:WithdrawalStatus;requestedAt:string;processingStartedAt:string|null;paidAt:string|null;rejectedAt:string|null;rejectionReason:string|null;cancelledAt:string|null;maskedAccountNumber:string;bankName:string;paymentId:string|null};
 export type AdminPaymentPreview = {
   commissionId: string;

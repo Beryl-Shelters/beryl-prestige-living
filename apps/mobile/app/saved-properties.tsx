@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
 import { Button, LoadingState, ScreenState } from "@/components/ui";
 import { PropertyCard } from "@/components/property-card";
@@ -9,17 +9,222 @@ import { propertiesApi } from "@/lib/properties-api";
 import type { PublicProperty } from "@/lib/property-types";
 import { useAuth } from "@/providers/auth-provider";
 import { usePropertyState } from "@/providers/property-state-provider";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
-export default function SavedPropertiesScreen(){
-  const {status}=useAuth();const {compared,toggleCompared,setSaved}=usePropertyState();const [draft,setDraft]=useState("");const [query,setQuery]=useState("");const [items,setItems]=useState<PublicProperty[]>([]);const [page,setPage]=useState(1);const [totalPages,setTotalPages]=useState(0);const [loading,setLoading]=useState(true);const [loadingMore,setLoadingMore]=useState(false);const [refreshing,setRefreshing]=useState(false);const [error,setError]=useState("");const [retry,setRetry]=useState(0);const [removing,setRemoving]=useState("");
-  const load=useCallback(async()=>{if(status!=="signedIn")return;try{const search=new URLSearchParams({q:query,page:String(page),pageSize:"12"});const result=await propertiesApi.saved(search);setItems(current=>page===1?result.items:[...current.filter(item=>!result.items.some(next=>next.code===item.code)),...result.items]);setTotalPages(result.totalPages);for(const item of result.items)setSaved(item.code,true)}catch(failure){setError(friendlyError(failure));if(page===1)setItems([])}finally{setLoading(false);setLoadingMore(false);setRefreshing(false)}},[status,page,query,setSaved]);
-  useEffect(()=>{queueMicrotask(()=>void load())},[load,retry]);
-  async function unsave(property:PublicProperty){if(removing)return;setRemoving(property.code);setError("");try{await propertiesApi.unsave(property.code);setSaved(property.code,false);setItems(current=>current.filter(item=>item.code!==property.code));if(compared.some(item=>item.code===property.code))toggleCompared(property)}catch(failure){setError(friendlyError(failure))}finally{setRemoving("")}}
-  if(status==="loading")return <LoadingState label="Restoring your account"/>;
-  if(status!=="signedIn")return <View style={styles.boundary}><ScreenState title="Sign in to view saved properties" message="Saved Properties is private to your verified customer account. Public property browsing remains available without signing in." action={<View style={styles.boundaryActions}><Button label="Log in" onPress={()=>router.push({pathname:"/(auth)/login",params:{next:"/saved-properties"}})}/><Button label="Browse properties" variant="secondary" onPress={()=>router.push("/properties")}/></View>}/></View>;
-  const submitSearch=()=>{setLoading(true);setError("");setPage(1);setQuery(draft.trim())};
-  const header=<View style={styles.header}><Text accessibilityRole="header" style={styles.title}>Saved Properties</Text><Text style={styles.subtitle}>Bookmarks only—saving does not imply ownership or alter a listing.</Text><View style={styles.search}><AppIcon name="search" size={20} color={colors.textMuted}/><TextInput accessibilityLabel="Search saved properties" value={draft} onChangeText={setDraft} onSubmitEditing={submitSearch} returnKeyType="search" placeholder="Search saved properties" placeholderTextColor={colors.textMuted} style={styles.searchInput}/><Pressable accessibilityRole="button" accessibilityLabel="Search saved properties" onPress={submitSearch} style={styles.searchButton}><AppIcon name="arrow-forward" size={21} color={colors.actionText}/></Pressable></View><View style={styles.compareBar}><View><Text style={styles.compareTitle}>Compare selection</Text><Text style={styles.compareCount}>{compared.length} of 3 selected · 2 minimum</Text></View><Button label={compared.length?"Review":"Select properties"} variant="secondary" disabled={!compared.length} onPress={()=>router.push("/compare-properties")}/></View></View>;
-  return <View style={styles.screen}><FlatList data={items} keyExtractor={item=>item.code} renderItem={({item})=><PropertyCard property={item} saved saving={removing===item.code} onToggleSaved={()=>void unsave(item)} compareSelected={compared.some(selected=>selected.code===item.code)} compareDisabled={compared.length>=3&&!compared.some(selected=>selected.code===item.code)} onToggleCompare={()=>toggleCompared(item)}/>} contentContainerStyle={styles.content} ListHeaderComponent={header} ItemSeparatorComponent={()=><View style={{height:spacing.lg}}/>} ListEmptyComponent={loading?<LoadingState label="Loading saved properties"/>:error?<ScreenState title="Saved properties unavailable" message={error} action={<Button label="Try again" onPress={()=>{setLoading(true);setError("");setRetry(value=>value+1)}}/>}/>:<ScreenState title={query?"No saved properties match your search":"No saved properties yet"} message={query?"Clear the search or try another term.":"Use the heart on a currently listed property to save it here."} action={query?<Button label="Clear search" variant="secondary" onPress={()=>{setLoading(true);setDraft("");setQuery("");setPage(1)}}/>:<Button label="Browse properties" onPress={()=>router.push("/properties")}/>}/>} ListFooterComponent={items.length?<View style={styles.footer}>{error?<Text accessibilityRole="alert" style={styles.error}>{error}</Text>:null}{page<totalPages?<Button label="Load more saved properties" loading={loadingMore} onPress={()=>{setLoadingMore(true);setPage(value=>value+1)}}/>:null}</View>:null} refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.brandDark} onRefresh={()=>{setRefreshing(true);setPage(1);setRetry(value=>value+1)}}/>}/></View>
+export default function SavedPropertiesScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { status } = useAuth();
+  const { compared, toggleCompared, setSaved } = usePropertyState();
+  const [draft, setDraft] = useState("");
+  const [query, setQuery] = useState("");
+  const [items, setItems] = useState<PublicProperty[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
+  const [removing, setRemoving] = useState("");
+
+  const load = useCallback(async () => {
+    if (status !== "signedIn") return;
+    try {
+      const search = new URLSearchParams({ q: query, page: String(page), pageSize: "12" });
+      const result = await propertiesApi.saved(search);
+      setItems(current =>
+        page === 1
+          ? result.items
+          : [...current.filter(item => !result.items.some(next => next.code === item.code)), ...result.items]
+      );
+      setTotalPages(result.totalPages);
+      for (const item of result.items) setSaved(item.code, true);
+    } catch (failure) {
+      setError(friendlyError(failure));
+      if (page === 1) setItems([]);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
+    }
+  }, [status, page, query, setSaved]);
+
+  useEffect(() => {
+    queueMicrotask(() => void load());
+  }, [load, retry]);
+
+  async function unsave(property: PublicProperty) {
+    if (removing) return;
+    setRemoving(property.code);
+    setError("");
+    try {
+      await propertiesApi.unsave(property.code);
+      setSaved(property.code, false);
+      setItems(current => current.filter(item => item.code !== property.code));
+      if (compared.some(item => item.code === property.code)) toggleCompared(property);
+    } catch (failure) {
+      setError(friendlyError(failure));
+    } finally {
+      setRemoving("");
+    }
+  }
+
+  if (status === "loading") return <LoadingState label="Restoring your account" />;
+  if (status !== "signedIn") {
+    return (
+      <View style={styles.boundary}>
+        <ScreenState
+          title="Sign in to view saved properties"
+          message="Saved Properties is private to your verified customer account. Public property browsing remains available without signing in."
+          action={
+            <View style={styles.boundaryActions}>
+              <Button label="Log in" onPress={() => router.push({ pathname: "/(auth)/login", params: { next: "/saved-properties" } })} />
+              <Button label="Browse properties" variant="secondary" onPress={() => router.push("/properties")} />
+            </View>
+          }
+        />
+      </View>
+    );
+  }
+
+  const submitSearch = () => {
+    setLoading(true);
+    setError("");
+    setPage(1);
+    setQuery(draft.trim());
+  };
+
+  const header = (
+    <View style={styles.header}>
+      <Text accessibilityRole="header" style={styles.title}>Saved Properties</Text>
+      <Text style={styles.subtitle}>Bookmarks only—saving does not imply ownership or alter a listing.</Text>
+      <View style={styles.search}>
+        <AppIcon name="search" size={20} color={colors.textMuted} />
+        <TextInput
+          accessibilityLabel="Search saved properties"
+          value={draft}
+          onChangeText={setDraft}
+          onSubmitEditing={submitSearch}
+          returnKeyType="search"
+          placeholder="Search saved properties"
+          placeholderTextColor={colors.textMuted}
+          style={styles.searchInput}
+        />
+        <Pressable accessibilityRole="button" accessibilityLabel="Search saved properties" onPress={submitSearch} style={styles.searchButton}>
+          <AppIcon name="arrow-forward" size={21} color={colors.actionText} />
+        </Pressable>
+      </View>
+      <View style={styles.compareBar}>
+        <View>
+          <Text style={styles.compareTitle}>Compare selection</Text>
+          <Text style={styles.compareCount}>{compared.length} of 3 selected · 2 minimum</Text>
+        </View>
+        <Button label={compared.length ? "Review" : "Select properties"} variant="secondary" disabled={!compared.length} onPress={() => router.push("/compare-properties")} />
+      </View>
+    </View>
+  );
+
+  return (
+    <View style={styles.screen}>
+      <FlatList
+        data={items}
+        keyExtractor={item => item.code}
+        renderItem={({ item }) => (
+          <PropertyCard
+            property={item}
+            saved
+            saving={removing === item.code}
+            onToggleSaved={() => void unsave(item)}
+            compareSelected={compared.some(selected => selected.code === item.code)}
+            compareDisabled={compared.length >= 3 && !compared.some(selected => selected.code === item.code)}
+            onToggleCompare={() => toggleCompared(item)}
+          />
+        )}
+        contentContainerStyle={styles.content}
+        ListHeaderComponent={header}
+        ItemSeparatorComponent={() => <View style={{ height: spacing.lg }} />}
+        ListEmptyComponent={
+          loading ? (
+            <LoadingState label="Loading saved properties" />
+          ) : error ? (
+            <ScreenState
+              title="Saved properties unavailable"
+              message={error}
+              action={<Button label="Try again" onPress={() => { setLoading(true); setError(""); setRetry(value => value + 1); }} />}
+            />
+          ) : (
+            <ScreenState
+              title={query ? "No saved properties match your search" : "No saved properties yet"}
+              message={query ? "Clear the search or try another term." : "Use the heart on a currently listed property to save it here."}
+              action={query ? <Button label="Clear search" variant="secondary" onPress={() => { setLoading(true); setDraft(""); setQuery(""); setPage(1); }} /> : <Button label="Browse properties" onPress={() => router.push("/properties")} />}
+            />
+          )
+        }
+        ListFooterComponent={
+          items.length ? (
+            <View style={styles.footer}>
+              {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+              {page < totalPages ? (
+                <Button label="Load more saved properties" loading={loadingMore} onPress={() => { setLoadingMore(true); setPage(value => value + 1); }} />
+              ) : null}
+            </View>
+          ) : null
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            tintColor={colors.brandDark}
+            onRefresh={() => { setRefreshing(true); setPage(1); setRetry(value => value + 1); }}
+          />
+        }
+      />
+    </View>
+  );
 }
-const styles=StyleSheet.create({screen:{flex:1,backgroundColor:colors.background},content:{padding:spacing.lg,paddingBottom:spacing.xxl,flexGrow:1},boundary:{flex:1,backgroundColor:colors.background},boundaryActions:{gap:spacing.sm,minWidth:240},header:{gap:spacing.md,marginBottom:spacing.lg},title:{...typography.display,color:colors.text},subtitle:{...typography.body,color:colors.textMuted},search:{minHeight:50,flexDirection:"row",alignItems:"center",gap:spacing.sm,paddingLeft:spacing.md,borderWidth:1,borderColor:colors.border,borderRadius:radius.md,backgroundColor:colors.surface,overflow:"hidden"},searchInput:{...typography.body,color:colors.text,flex:1,minWidth:0},searchButton:{width:50,alignSelf:"stretch",alignItems:"center",justifyContent:"center",backgroundColor:colors.action},compareBar:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:spacing.md,padding:spacing.md,borderRadius:radius.md,backgroundColor:"#FBF1E5"},compareTitle:{...typography.label,color:colors.text},compareCount:{...typography.caption,color:colors.textMuted},footer:{paddingTop:spacing.lg,gap:spacing.md},error:{...typography.caption,color:colors.danger,textAlign:"center"}});
+
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.background },
+    content: { padding: spacing.lg, paddingBottom: spacing.xxl, flexGrow: 1 },
+    boundary: { flex: 1, backgroundColor: colors.background },
+    boundaryActions: { gap: spacing.sm, minWidth: 240 },
+    header: { gap: spacing.md, marginBottom: spacing.lg },
+    title: { ...typography.display, color: colors.text },
+    subtitle: { ...typography.body, color: colors.textMuted },
+    search: {
+      minHeight: 50,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      paddingLeft: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      backgroundColor: colors.surface,
+      overflow: "hidden",
+    },
+    searchInput: { ...typography.body, color: colors.text, flex: 1, minWidth: 0 },
+    searchButton: {
+      width: 50,
+      alignSelf: "stretch",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.action,
+    },
+    compareBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.md,
+      padding: spacing.md,
+      borderRadius: radius.md,
+      backgroundColor: colors.brandTint,
+    },
+    compareTitle: { ...typography.label, color: colors.text },
+    compareCount: { ...typography.caption, color: colors.textMuted },
+    footer: { paddingTop: spacing.lg, gap: spacing.md },
+    error: { ...typography.caption, color: colors.danger, textAlign: "center" },
+  });
+}

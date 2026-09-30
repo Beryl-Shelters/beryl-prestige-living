@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -20,7 +20,8 @@ import {
   type KycDocumentType,
   type KycView,
 } from "@/lib/kyc-api";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 const COUNTRIES = [
   "Nigeria",
@@ -54,6 +55,8 @@ function formatSubmittedDate(iso: string | null): string {
 }
 
 export default function KycScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [view, setView] = useState<KycView | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -251,7 +254,7 @@ export default function KycScreen() {
               <AppIcon
                 name={isApproved ? "shield-checkmark" : "time-outline"}
                 size={32}
-                color={isApproved ? "#166534" : "#92400E"}
+                color={isApproved ? colors.success : colors.warning}
               />
             </View>
 
@@ -481,7 +484,8 @@ export default function KycScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -534,22 +538,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 4,
     borderRadius: radius.pill,
+    borderWidth: 1,
   },
   statusBadgeApproved: {
-    backgroundColor: "#DCFCE7",
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.success,
   },
   statusBadgePending: {
-    backgroundColor: "#FEF3C7",
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.warning,
   },
   statusBadgeText: {
     ...typography.caption,
     fontFamily: "PlusJakartaSans-Bold",
   },
   statusTextApproved: {
-    color: "#166534",
+    color: colors.success,
   },
   statusTextPending: {
-    color: "#92400E",
+    color: colors.warning,
   },
   statusTitle: {
     ...typography.subheading,
@@ -570,11 +577,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   rejectedBanner: {
-    backgroundColor: "#FEE2E2",
+    backgroundColor: colors.surfaceMuted,
     padding: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: "#FCA5A5",
+    borderColor: colors.danger,
     gap: 4,
   },
   rejectedHeader: {
@@ -730,19 +737,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    backgroundColor: "#DCFCE7",
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.success,
     padding: spacing.sm,
     borderRadius: radius.sm,
   },
   successText: {
     ...typography.caption,
-    color: "#166534",
+    color: colors.success,
   },
   errorBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.danger,
     padding: spacing.sm,
     borderRadius: radius.sm,
   },
@@ -750,4 +761,5 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.danger,
   },
-});
+  });
+}

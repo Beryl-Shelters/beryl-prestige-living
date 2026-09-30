@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -21,7 +21,8 @@ import {
 } from "@/lib/listings-api";
 import { formatNaira } from "@/lib/money";
 import { useAuth } from "@/providers/auth-provider";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 type SalesMandateStepProps = {
   listing: CustomerListing;
@@ -35,6 +36,8 @@ export function SalesMandateStep({
   onSubmitSuccess,
 }: SalesMandateStepProps) {
   const { customer } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const signatureRef = useRef<SignaturePadRef>(null);
 
   const [loading, setLoading] = useState(true);
@@ -528,53 +531,59 @@ export function SalesMandateStep({
 }
 
 function ClauseItem({ num, title, text }: { num: number; title: string; text: string }) {
+  const { colors } = useTheme();
   return (
-    <View style={styles.clauseItem}>
-      <Text style={styles.clauseTitle}>{num}. {title}</Text>
-      <Text style={styles.clauseBody}>{text}</Text>
+    <View style={clauseStyles.clauseItem}>
+      <Text style={[clauseStyles.clauseTitle, { color: colors.text }]}>{num}. {title}</Text>
+      <Text style={[clauseStyles.clauseBody, { color: colors.textMuted }]}>{text}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { gap: spacing.lg, paddingBottom: spacing.xxl },
-  cardTitle: { ...typography.heading, color: colors.brandDark, marginBottom: spacing.xs },
-  loadingBox: { padding: spacing.xxl, alignItems: "center" },
-  loadingText: { ...typography.body, color: colors.textMuted },
-  row: { flexDirection: "row", gap: spacing.md },
-  flexHalf: { flex: 1 },
-  termsGrid: { gap: spacing.sm, backgroundColor: colors.surfaceMuted, padding: spacing.md, borderRadius: radius.md },
-  termRow: { flexDirection: "row", justifyContent: "space-between", gap: spacing.sm },
-  termLabel: { ...typography.caption, color: colors.textMuted },
-  termValue: { ...typography.label, color: colors.text },
-  clauseList: { gap: spacing.md },
+const clauseStyles = StyleSheet.create({
   clauseItem: { gap: 2 },
-  clauseTitle: { ...typography.label, color: colors.text },
-  clauseBody: { ...typography.caption, color: colors.textMuted, lineHeight: 18 },
-  consentRow: { flexDirection: "row", gap: spacing.md, alignItems: "flex-start", paddingVertical: spacing.xs },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: radius.sm,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.surface,
-    marginTop: 2,
-  },
-  checkboxChecked: { backgroundColor: colors.brand, borderColor: colors.brand },
-  consentText: { ...typography.caption, color: colors.text, flex: 1, lineHeight: 18 },
-  errorText: { ...typography.caption, color: colors.danger },
-  serverErrorText: { ...typography.caption, color: colors.danger, paddingVertical: spacing.xs },
-  buttonStack: { gap: spacing.sm, marginTop: spacing.md },
-  noticeBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    backgroundColor: "#E7F5ED",
-    padding: spacing.md,
-    borderRadius: radius.md,
-  },
-  noticeText: { ...typography.caption, color: colors.success, fontWeight: "600" },
+  clauseTitle: { ...typography.label },
+  clauseBody: { ...typography.caption, lineHeight: 18 },
 });
+
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    container: { gap: spacing.lg, paddingBottom: spacing.xxl },
+    cardTitle: { ...typography.heading, color: colors.brandDark, marginBottom: spacing.xs },
+    loadingBox: { padding: spacing.xxl, alignItems: "center" },
+    loadingText: { ...typography.body, color: colors.textMuted },
+    row: { flexDirection: "row", gap: spacing.md },
+    flexHalf: { flex: 1 },
+    termsGrid: { gap: spacing.sm, backgroundColor: colors.surfaceMuted, padding: spacing.md, borderRadius: radius.md },
+    termRow: { flexDirection: "row", justifyContent: "space-between", gap: spacing.sm },
+    termLabel: { ...typography.caption, color: colors.textMuted },
+    termValue: { ...typography.label, color: colors.text },
+    clauseList: { gap: spacing.md },
+    consentRow: { flexDirection: "row", gap: spacing.md, alignItems: "flex-start", paddingVertical: spacing.xs },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: radius.sm,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.surface,
+      marginTop: 2,
+    },
+    checkboxChecked: { backgroundColor: colors.brand, borderColor: colors.brand },
+    consentText: { ...typography.caption, color: colors.text, flex: 1, lineHeight: 18 },
+    errorText: { ...typography.caption, color: colors.danger },
+    serverErrorText: { ...typography.caption, color: colors.danger, paddingVertical: spacing.xs },
+    buttonStack: { gap: spacing.sm, marginTop: spacing.md },
+    noticeBox: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      backgroundColor: colors.brandTint,
+      padding: spacing.md,
+      borderRadius: radius.md,
+    },
+    noticeText: { ...typography.caption, color: colors.success, fontWeight: "600" },
+  });
+}

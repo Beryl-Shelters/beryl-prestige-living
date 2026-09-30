@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Linking,
@@ -21,9 +21,12 @@ import {
   type PropertyReportInput,
 } from "@/lib/support-api";
 import { useAuth } from "@/providers/auth-provider";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 export default function SupportScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { status } = useAuth();
   const [faqSearch, setFaqSearch] = useState("");
   const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(0);
@@ -399,7 +402,8 @@ export default function SupportScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
@@ -587,19 +591,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    backgroundColor: "#DCFCE7",
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.success,
     padding: spacing.sm,
     borderRadius: radius.sm,
   },
   successText: {
     ...typography.caption,
-    color: "#166534",
+    color: colors.success,
   },
   errorBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    backgroundColor: "#FEE2E2",
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.danger,
     padding: spacing.sm,
     borderRadius: radius.sm,
   },
@@ -607,4 +615,5 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.danger,
   },
-});
+  });
+}

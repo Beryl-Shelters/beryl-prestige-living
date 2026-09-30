@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Image,
   Pressable,
@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { AppIcon, type AppIconName } from "@/components/app-icon";
-import { DashboardNav } from "@/components/dashboard/dashboard-nav";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { Button, Card, LoadingState, ScreenState } from "@/components/ui";
 import { friendlyError } from "@/lib/api-error";
@@ -18,7 +17,8 @@ import { dashboardApi, type DashboardOverview } from "@/lib/dashboard-api";
 import { listingStatusPresentation } from "@/lib/listings-api";
 import { formatNaira } from "@/lib/money";
 import { useAuth } from "@/providers/auth-provider";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -29,6 +29,8 @@ function getGreeting(): string {
 
 export default function DashboardOverviewScreen() {
   const { customer } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -78,7 +80,6 @@ export default function DashboardOverviewScreen() {
   if (loading && !refreshing) {
     return (
       <View style={styles.container}>
-        <DashboardNav active="overview" />
         <View style={styles.centered}>
           <LoadingState label="Loading dashboard overview…" />
         </View>
@@ -89,7 +90,6 @@ export default function DashboardOverviewScreen() {
   if (error && !overview) {
     return (
       <View style={styles.container}>
-        <DashboardNav active="overview" />
         <View style={styles.centered}>
           <ScreenState
             title="Overview Unavailable"
@@ -147,8 +147,6 @@ export default function DashboardOverviewScreen() {
 
   return (
     <View style={styles.container}>
-      <DashboardNav active="overview" />
-
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
@@ -338,188 +336,192 @@ export default function DashboardOverviewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: spacing.xl,
-  },
-  scrollContent: {
-    padding: spacing.md,
-    gap: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
-  greetingBox: {
-    gap: spacing.xs,
-  },
-  greetingText: {
-    ...typography.title,
-    color: colors.text,
-  },
-  greetingSubtext: {
-    ...typography.caption,
-    color: colors.textMuted,
-  },
-  kpiGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  kpiWrapper: {
-    width: "48%",
-    flexGrow: 1,
-  },
-  kpiCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  kpiIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.pill,
-    backgroundColor: "#FBF1E5",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  kpiTextCol: {
-    flex: 1,
-    gap: 2,
-  },
-  kpiLabel: {
-    ...typography.caption,
-    fontSize: 11,
-    color: colors.textMuted,
-  },
-  kpiValue: {
-    ...typography.label,
-    fontSize: 15,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  sectionTitle: {
-    ...typography.heading,
-    color: colors.text,
-  },
-  seeAllLink: {
-    ...typography.label,
-    color: colors.brandDark,
-  },
-  listingsList: {
-    gap: spacing.sm,
-  },
-  recentListingCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  recentListingImg: {
-    width: 64,
-    height: 56,
-    borderRadius: radius.sm,
-  },
-  recentListingImgPlaceholder: {
-    backgroundColor: colors.surfaceMuted,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  recentListingMeta: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  recentListingTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  statusChip: {
-    paddingHorizontal: spacing.xs + 2,
-    paddingVertical: 1,
-    borderRadius: radius.pill,
-  },
-  statusChip_success: { backgroundColor: "#E6F4EA" },
-  statusChip_warning: { backgroundColor: "#FEF7E0" },
-  statusChip_danger: { backgroundColor: "#FCE8E6" },
-  statusChip_neutral: { backgroundColor: colors.surfaceMuted },
-  statusChipText: { fontSize: 11, fontWeight: "700" },
-  statusChipText_success: { color: colors.success },
-  statusChipText_warning: { color: colors.warning },
-  statusChipText_danger: { color: colors.danger },
-  statusChipText_neutral: { color: colors.textMuted },
-  recentListingPrice: {
-    ...typography.label,
-    color: colors.brandDark,
-  },
-  recentListingTitle: {
-    ...typography.body,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  emptyCard: {
-    alignItems: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.xl,
-  },
-  emptyTitle: {
-    ...typography.heading,
-    color: colors.text,
-  },
-  emptyMessage: {
-    ...typography.caption,
-    color: colors.textMuted,
-    textAlign: "center",
-  },
-  messagesList: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: "hidden",
-  },
-  messageRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    padding: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  messageAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.pill,
-    backgroundColor: "#FBF1E5",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  messageAvatarText: {
-    ...typography.label,
-    color: colors.brandDark,
-    fontWeight: "700",
-  },
-  messageSubject: {
-    ...typography.body,
-    color: colors.text,
-    flex: 1,
-  },
-});
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    centered: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: spacing.xl,
+    },
+    scrollContent: {
+      padding: spacing.md,
+      gap: spacing.lg,
+      paddingBottom: spacing.xxl,
+    },
+    greetingBox: {
+      gap: spacing.xs,
+    },
+    greetingText: {
+      ...typography.title,
+      color: colors.text,
+    },
+    greetingSubtext: {
+      ...typography.caption,
+      color: colors.textMuted,
+    },
+    kpiGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+    },
+    kpiWrapper: {
+      width: "48%",
+      flexGrow: 1,
+    },
+    kpiCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.md,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    kpiIconCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: radius.pill,
+      backgroundColor: colors.brandTint,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    kpiTextCol: {
+      flex: 1,
+      gap: 2,
+    },
+    kpiLabel: {
+      ...typography.caption,
+      fontSize: 11,
+      color: colors.textMuted,
+    },
+    kpiValue: {
+      ...typography.label,
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.text,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    sectionTitle: {
+      ...typography.heading,
+      color: colors.text,
+    },
+    seeAllLink: {
+      ...typography.label,
+      color: colors.brandDark,
+    },
+    listingsList: {
+      gap: spacing.sm,
+    },
+    recentListingCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.sm,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+    },
+    recentListingImg: {
+      width: 64,
+      height: 56,
+      borderRadius: radius.sm,
+    },
+    recentListingImgPlaceholder: {
+      backgroundColor: colors.surfaceMuted,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    recentListingMeta: {
+      flex: 1,
+      gap: spacing.xs,
+    },
+    recentListingTopRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    statusChip: {
+      paddingHorizontal: spacing.xs + 2,
+      paddingVertical: 1,
+      borderRadius: radius.pill,
+      borderWidth: 1,
+      borderColor: "transparent",
+    },
+    statusChip_success: { backgroundColor: colors.surfaceMuted, borderColor: colors.success },
+    statusChip_warning: { backgroundColor: colors.surfaceMuted, borderColor: colors.warning },
+    statusChip_danger: { backgroundColor: colors.surfaceMuted, borderColor: colors.danger },
+    statusChip_neutral: { backgroundColor: colors.surfaceMuted, borderColor: colors.border },
+    statusChipText: { fontSize: 11, fontWeight: "700" },
+    statusChipText_success: { color: colors.success },
+    statusChipText_warning: { color: colors.warning },
+    statusChipText_danger: { color: colors.danger },
+    statusChipText_neutral: { color: colors.textMuted },
+    recentListingPrice: {
+      ...typography.label,
+      color: colors.brandDark,
+    },
+    recentListingTitle: {
+      ...typography.body,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    emptyCard: {
+      alignItems: "center",
+      gap: spacing.sm,
+      paddingVertical: spacing.xl,
+    },
+    emptyTitle: {
+      ...typography.heading,
+      color: colors.text,
+    },
+    emptyMessage: {
+      ...typography.caption,
+      color: colors.textMuted,
+      textAlign: "center",
+    },
+    messagesList: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: "hidden",
+    },
+    messageRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+      padding: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    messageAvatar: {
+      width: 32,
+      height: 32,
+      borderRadius: radius.pill,
+      backgroundColor: colors.brandTint,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    messageAvatarText: {
+      ...typography.label,
+      color: colors.brandDark,
+      fontWeight: "700",
+    },
+    messageSubject: {
+      ...typography.body,
+      color: colors.text,
+      flex: 1,
+    },
+  });
+}

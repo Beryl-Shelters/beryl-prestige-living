@@ -73,12 +73,12 @@ export async function checkDashboard({ page, origin, calls, failures, screenshot
   await page.waitForURL("**/dashboard/messages");
   for (const name of sections.slice(1)) {
     await page.getByRole("link", { name, exact: true }).click();
-    await page.getByRole("heading", { name: name === "Listings" ? "My Listings" : name === "Messages" ? "My Tickets" : name === "Properties" ? "Purchased Properties" : name === "Settings" ? "Account Settings" : name, exact: true, level: 1 }).waitFor();
+    await page.getByRole("heading", { name: name === "Messages" ? "My Tickets" : name === "Properties" ? "Purchased Properties" : name === "Settings" ? "Account Settings" : name, exact: true, level: 1 }).waitFor();
     assert.equal(await page.locator('.dashboard-navigation [aria-current="page"]').innerText(), name);
-    if (name === "Listings") await page.getByText("No listings.", {exact:true}).waitFor();
+    if (name === "Listings") await page.getByRole("heading", { name: "No listings yet", exact: true }).waitFor();
     else if (name === "Analytics") await page.getByRole("heading", {name:"Category Performance",exact:true}).waitFor();
-    else if (name === "Messages") await page.getByText("No messages found.", {exact:true}).waitFor();
-    else if (name === "Properties") await page.getByText("No purchases made yet.", {exact:true}).waitFor();
+    else if (name === "Messages") await page.getByRole("heading", { name: "No messages yet", exact: true }).waitFor();
+    else if (name === "Properties") await page.getByRole("heading", { name: "No purchased properties yet", exact: true }).waitFor();
     else if (name === "Referrals") await page.getByText("No referrals yet", {exact:true}).waitFor();
     else if(name === "Settings") await page.getByRole("heading",{name:"Personal Information",exact:true}).waitFor();
   }

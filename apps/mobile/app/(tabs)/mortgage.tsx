@@ -7,19 +7,193 @@ import { formatMoneyInput, formatNaira, moneyInputFromMinor, nairaToKobo } from 
 import { calculateMortgage, mortgageTerms, type MortgageCalculation } from "@/lib/mortgage";
 import { isValidPropertyCode } from "@/lib/property-links";
 import { propertiesApi } from "@/lib/properties-api";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
-type Errors={purchasePrice?:string;downPayment?:string;loanTerm?:string;interestRate?:string};
-const zero:MortgageCalculation={monthlyPaymentMinor:0,totalRepaymentMinor:0,totalInterestMinor:0};
-export default function MortgageScreen(){
-  const params=useLocalSearchParams<{code?:string;priceMinor?:string}>();const propertyCode=typeof params.code==="string"?params.code:"";const passedMinor=typeof params.priceMinor==="string"&&/^\d{1,15}$/.test(params.priceMinor)?Number(params.priceMinor):null;
-  const [prefill,setPrefill]=useState<number|null>(passedMinor);const [purchasePrice,setPurchasePrice]=useState(passedMinor===null?"":moneyInputFromMinor(passedMinor));const [downPayment,setDownPayment]=useState("");const [loanTerm,setLoanTerm]=useState<number|null>(null);const [interestRate,setInterestRate]=useState("");const [errors,setErrors]=useState<Errors>({});const [result,setResult]=useState<MortgageCalculation|null>(null);const [prefillError,setPrefillError]=useState("");
-  useEffect(()=>{if(passedMinor!==null||!propertyCode||!isValidPropertyCode(propertyCode))return;let active=true;void propertiesApi.detail(propertyCode).then(({property})=>{if(!active)return;setPrefill(property.priceMinor);setPurchasePrice(moneyInputFromMinor(property.priceMinor));}).catch(failure=>{if(active)setPrefillError(friendlyError(failure))});return()=>{active=false}},[passedMinor,propertyCode]);
-  const purchaseMinor=useMemo(()=>nairaToKobo(purchasePrice),[purchasePrice]);const downMinor=useMemo(()=>downPayment.trim()?nairaToKobo(downPayment):null,[downPayment]);const percentage=purchaseMinor!==null&&purchaseMinor>0&&downMinor!==null?downMinor/purchaseMinor*100:0;
-  function calculate(){const next:Errors={};const rate=interestRate.trim()===""?Number.NaN:Number(interestRate);if(purchaseMinor===null||purchaseMinor<=0)next.purchasePrice="Enter a valid Home Purchase Price greater than zero.";if(downMinor===null||downMinor<0)next.downPayment="Enter a valid non-negative Down Payment.";else if(purchaseMinor!==null&&downMinor>purchaseMinor)next.downPayment="Down Payment cannot exceed Home Purchase Price.";if(loanTerm===null||!mortgageTerms.includes(loanTerm as typeof mortgageTerms[number]))next.loanTerm="Select a valid Loan Term.";if(!Number.isFinite(rate)||rate<0||rate>100)next.interestRate="Enter an Interest Rate from 0 to 100%.";setErrors(next);if(Object.keys(next).length||purchaseMinor===null||downMinor===null||loanTerm===null){setResult(null);return}setResult(calculateMortgage(purchaseMinor,downMinor,loanTerm,rate))}
-  function reset(){setPurchasePrice(prefill===null?"":moneyInputFromMinor(prefill));setDownPayment("");setLoanTerm(null);setInterestRate("");setErrors({});setResult(null)}
-  const shown=result??zero;
-  return <Screen keyboard><SectionHeading title="Mortgage Calculator" description="Estimate fixed-rate repayments. This is informational only—not an application, approval, offer, or property checkout."/>{propertyCode?<Text style={styles.context}>Property code: {propertyCode}{prefillError?` · Price unavailable: ${prefillError}`:""}</Text>:null}<Card><View style={styles.cardHeading}><Text style={styles.heading}>Your estimate</Text><Pressable accessibilityRole="button" accessibilityLabel="Reset mortgage calculator" onPress={reset} hitSlop={8}><Text style={styles.reset}>Reset</Text></Pressable></View><MoneyField label="Home Purchase Price" value={purchasePrice} error={errors.purchasePrice} onChange={setPurchasePrice}/><MoneyField label="Down Payment" value={downPayment} error={errors.downPayment} onChange={setDownPayment}/><Text style={styles.percentage}>{Number.isFinite(percentage)?percentage.toFixed(2):"0.00"}% down payment</Text><Text style={styles.label}>Loan Term</Text><View style={styles.terms}>{mortgageTerms.map(years=><Pressable key={years} accessibilityRole="radio" accessibilityLabel={`${years} year loan term`} accessibilityState={{checked:loanTerm===years}} onPress={()=>setLoanTerm(years)} style={[styles.term,loanTerm===years&&styles.termSelected]}><Text style={[styles.termText,loanTerm===years&&styles.termTextSelected]}>{years} yr</Text></Pressable>)}</View>{errors.loanTerm?<Text accessibilityRole="alert" style={styles.error}>{errors.loanTerm}</Text>:null}<TextField label="Annual Interest Rate (%)" keyboardType="decimal-pad" value={interestRate} onChangeText={setInterestRate} error={errors.interestRate} placeholder="e.g. 12.5"/><Button label="Calculate estimate" onPress={calculate}/></Card><Card><Text style={styles.resultLabel}>Estimated Monthly Payment</Text><Text accessibilityLiveRegion="polite" style={styles.resultMain}>{formatNaira(shown.monthlyPaymentMinor,true)}</Text><View style={styles.resultRow}><Text style={styles.resultKey}>Total repayment</Text><Text style={styles.resultValue}>{formatNaira(shown.totalRepaymentMinor,true)}</Text></View><View style={styles.resultRow}><Text style={styles.resultKey}>Total interest</Text><Text style={styles.resultValue}>{formatNaira(shown.totalInterestMinor,true)}</Text></View><Text style={styles.disclaimer}>Estimate only. No financial API mutation, loan application, mortgage approval, purchase, or payment is performed.</Text></Card></Screen>
+type Errors = { purchasePrice?: string; downPayment?: string; loanTerm?: string; interestRate?: string };
+const zero: MortgageCalculation = { monthlyPaymentMinor: 0, totalRepaymentMinor: 0, totalInterestMinor: 0 };
+
+export default function MortgageScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const params = useLocalSearchParams<{ code?: string; priceMinor?: string }>();
+  const propertyCode = typeof params.code === "string" ? params.code : "";
+  const passedMinor = typeof params.priceMinor === "string" && /^\d{1,15}$/.test(params.priceMinor) ? Number(params.priceMinor) : null;
+  const [prefill, setPrefill] = useState<number | null>(passedMinor);
+  const [purchasePrice, setPurchasePrice] = useState(passedMinor === null ? "" : moneyInputFromMinor(passedMinor));
+  const [downPayment, setDownPayment] = useState("");
+  const [loanTerm, setLoanTerm] = useState<number | null>(null);
+  const [interestRate, setInterestRate] = useState("");
+  const [errors, setErrors] = useState<Errors>({});
+  const [result, setResult] = useState<MortgageCalculation | null>(null);
+  const [prefillError, setPrefillError] = useState("");
+
+  useEffect(() => {
+    if (passedMinor !== null || !propertyCode || !isValidPropertyCode(propertyCode)) return;
+    let active = true;
+    void propertiesApi.detail(propertyCode).then(({ property }) => {
+      if (!active) return;
+      setPrefill(property.priceMinor);
+      setPurchasePrice(moneyInputFromMinor(property.priceMinor));
+    }).catch(failure => {
+      if (active) setPrefillError(friendlyError(failure));
+    });
+    return () => { active = false; };
+  }, [passedMinor, propertyCode]);
+
+  const purchaseMinor = useMemo(() => nairaToKobo(purchasePrice), [purchasePrice]);
+  const downMinor = useMemo(() => downPayment.trim() ? nairaToKobo(downPayment) : null, [downPayment]);
+  const percentage = purchaseMinor !== null && purchaseMinor > 0 && downMinor !== null ? (downMinor / purchaseMinor) * 100 : 0;
+
+  function calculate() {
+    const next: Errors = {};
+    const rate = interestRate.trim() === "" ? Number.NaN : Number(interestRate);
+    if (purchaseMinor === null || purchaseMinor <= 0) next.purchasePrice = "Enter a valid Home Purchase Price greater than zero.";
+    if (downMinor === null || downMinor < 0) next.downPayment = "Enter a valid non-negative Down Payment.";
+    else if (purchaseMinor !== null && downMinor > purchaseMinor) next.downPayment = "Down Payment cannot exceed Home Purchase Price.";
+    if (loanTerm === null || !mortgageTerms.includes(loanTerm as typeof mortgageTerms[number])) next.loanTerm = "Select a valid Loan Term.";
+    if (!Number.isFinite(rate) || rate < 0 || rate > 100) next.interestRate = "Enter an Interest Rate from 0 to 100%.";
+    setErrors(next);
+    if (Object.keys(next).length || purchaseMinor === null || downMinor === null || loanTerm === null) {
+      setResult(null);
+      return;
+    }
+    setResult(calculateMortgage(purchaseMinor, downMinor, loanTerm, rate));
+  }
+
+  function reset() {
+    setPurchasePrice(prefill === null ? "" : moneyInputFromMinor(prefill));
+    setDownPayment("");
+    setLoanTerm(null);
+    setInterestRate("");
+    setErrors({});
+    setResult(null);
+  }
+
+  const shown = result ?? zero;
+
+  return (
+    <Screen keyboard edges={["top", "left", "right"]}>
+      <SectionHeading
+        title="Mortgage Calculator"
+        description="Estimate fixed-rate repayments. This is informational only—not an application, approval, offer, or property checkout."
+      />
+      {propertyCode ? (
+        <Text style={styles.context}>
+          Property code: {propertyCode}{prefillError ? ` · Price unavailable: ${prefillError}` : ""}
+        </Text>
+      ) : null}
+      <Card>
+        <View style={styles.cardHeading}>
+          <Text style={styles.heading}>Your estimate</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Reset mortgage calculator" onPress={reset} hitSlop={8}>
+            <Text style={styles.reset}>Reset</Text>
+          </Pressable>
+        </View>
+        <MoneyField label="Home Purchase Price" value={purchasePrice} error={errors.purchasePrice} onChange={setPurchasePrice} />
+        <MoneyField label="Down Payment" value={downPayment} error={errors.downPayment} onChange={setDownPayment} />
+        <Text style={styles.percentage}>{Number.isFinite(percentage) ? percentage.toFixed(2) : "0.00"}% down payment</Text>
+        <Text style={styles.label}>Loan Term</Text>
+        <View style={styles.terms}>
+          {mortgageTerms.map(years => (
+            <Pressable
+              key={years}
+              accessibilityRole="radio"
+              accessibilityLabel={`${years} year loan term`}
+              accessibilityState={{ checked: loanTerm === years }}
+              onPress={() => setLoanTerm(years)}
+              style={[styles.term, loanTerm === years && styles.termSelected]}
+            >
+              <Text style={[styles.termText, loanTerm === years && styles.termTextSelected]}>{years} yr</Text>
+            </Pressable>
+          ))}
+        </View>
+        {errors.loanTerm ? <Text accessibilityRole="alert" style={styles.error}>{errors.loanTerm}</Text> : null}
+        <TextField
+          label="Annual Interest Rate (%)"
+          keyboardType="decimal-pad"
+          value={interestRate}
+          onChangeText={setInterestRate}
+          error={errors.interestRate}
+          placeholder="e.g. 12.5"
+        />
+        <Button label="Calculate estimate" onPress={calculate} />
+      </Card>
+      <Card>
+        <Text style={styles.resultLabel}>Estimated Monthly Payment</Text>
+        <Text accessibilityLiveRegion="polite" style={styles.resultMain}>{formatNaira(shown.monthlyPaymentMinor, true)}</Text>
+        <View style={styles.resultRow}>
+          <Text style={styles.resultKey}>Total repayment</Text>
+          <Text style={styles.resultValue}>{formatNaira(shown.totalRepaymentMinor, true)}</Text>
+        </View>
+        <View style={styles.resultRow}>
+          <Text style={styles.resultKey}>Total interest</Text>
+          <Text style={styles.resultValue}>{formatNaira(shown.totalInterestMinor, true)}</Text>
+        </View>
+        <Text style={styles.disclaimer}>Estimate only. No financial API mutation, loan application, mortgage approval, purchase, or payment is performed.</Text>
+      </Card>
+    </Screen>
+  );
 }
-function MoneyField({label,value,error,onChange}:{label:string;value:string;error?:string;onChange:(value:string)=>void}){return <TextField label={label} keyboardType="decimal-pad" value={value} onChangeText={next=>{const formatted=formatMoneyInput(next);if(formatted!==null)onChange(formatted)}} error={error} placeholder="Enter amount in NGN"/>}
-const styles=StyleSheet.create({context:{...typography.caption,color:colors.brandDark},cardHeading:{flexDirection:"row",alignItems:"center",justifyContent:"space-between"},heading:{...typography.heading,color:colors.text},reset:{...typography.label,color:colors.brandDark},percentage:{...typography.caption,color:colors.textMuted,textAlign:"right",marginTop:-spacing.sm},label:{...typography.label,color:colors.text},terms:{flexDirection:"row",flexWrap:"wrap",gap:spacing.sm},term:{minWidth:68,minHeight:44,alignItems:"center",justifyContent:"center",borderWidth:1,borderColor:colors.border,borderRadius:radius.pill,backgroundColor:colors.surface},termSelected:{backgroundColor:colors.action,borderColor:colors.action},termText:{...typography.label,color:colors.text},termTextSelected:{color:colors.actionText},error:{...typography.caption,color:colors.danger},resultLabel:{...typography.label,color:colors.textMuted,textAlign:"center"},resultMain:{...typography.title,color:colors.brandDark,textAlign:"center"},resultRow:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:spacing.lg,paddingVertical:spacing.sm,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:colors.border},resultKey:{...typography.caption,color:colors.textMuted},resultValue:{...typography.label,color:colors.text},disclaimer:{...typography.caption,color:colors.textMuted,backgroundColor:colors.surfaceMuted,padding:spacing.md,borderRadius:radius.md}});
+
+function MoneyField({ label, value, error, onChange }: { label: string; value: string; error?: string; onChange: (value: string) => void }) {
+  return (
+    <TextField
+      label={label}
+      keyboardType="decimal-pad"
+      value={value}
+      onChangeText={next => {
+        const formatted = formatMoneyInput(next);
+        if (formatted !== null) onChange(formatted);
+      }}
+      error={error}
+      placeholder="Enter amount in NGN"
+    />
+  );
+}
+
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    context: { ...typography.caption, color: colors.brandDark },
+    cardHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+    heading: { ...typography.heading, color: colors.text },
+    reset: { ...typography.label, color: colors.brandDark },
+    percentage: { ...typography.caption, color: colors.textMuted, textAlign: "right", marginTop: -spacing.sm },
+    label: { ...typography.label, color: colors.text },
+    terms: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+    term: {
+      minWidth: 68,
+      minHeight: 44,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.pill,
+      backgroundColor: colors.surface,
+    },
+    termSelected: { backgroundColor: colors.action, borderColor: colors.action },
+    termText: { ...typography.label, color: colors.text },
+    termTextSelected: { color: colors.actionText },
+    error: { ...typography.caption, color: colors.danger },
+    resultLabel: { ...typography.label, color: colors.textMuted, textAlign: "center" },
+    resultMain: { ...typography.title, color: colors.brandDark, textAlign: "center" },
+    resultRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.lg,
+      paddingVertical: spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    resultKey: { ...typography.caption, color: colors.textMuted },
+    resultValue: { ...typography.label, color: colors.text },
+    disclaimer: {
+      ...typography.caption,
+      color: colors.textMuted,
+      backgroundColor: colors.surfaceMuted,
+      padding: spacing.md,
+      borderRadius: radius.md,
+    },
+  });
+}

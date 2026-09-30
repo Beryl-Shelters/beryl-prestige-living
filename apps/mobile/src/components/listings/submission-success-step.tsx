@@ -1,9 +1,11 @@
 import { router } from "expo-router";
+import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { AppIcon } from "../app-icon";
 import { Button, Card } from "../ui";
 import type { CustomerListing } from "@/lib/listings-api";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 type SubmissionSuccessStepProps = {
   listing: CustomerListing;
@@ -11,6 +13,8 @@ type SubmissionSuccessStepProps = {
 };
 
 export function SubmissionSuccessStep({ listing, onReset }: SubmissionSuccessStepProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const submittedTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const submittedDate = new Date().toLocaleDateString("en-GB");
 
@@ -92,44 +96,46 @@ export function SubmissionSuccessStep({ listing, onReset }: SubmissionSuccessSte
   );
 }
 
-const styles = StyleSheet.create({
-  container: { gap: spacing.lg, alignItems: "center", paddingVertical: spacing.lg },
-  iconCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: radius.pill,
-    backgroundColor: colors.success,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: { ...typography.title, color: colors.text, textAlign: "center" },
-  subtext: { ...typography.body, color: colors.textMuted, textAlign: "center", paddingHorizontal: spacing.md },
-  timelineCard: { width: "100%", gap: spacing.md },
-  timelineHeader: { ...typography.heading, color: colors.brandDark },
-  stepRow: { flexDirection: "row", gap: spacing.md },
-  stepIndicatorCol: { alignItems: "center", width: 24 },
-  stepDot: {
-    width: 24,
-    height: 24,
-    borderRadius: radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stepDotActive: { backgroundColor: colors.success },
-  stepDotPending: { backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border },
-  stepNum: { fontSize: 11, fontWeight: "700", color: colors.textMuted },
-  stepLine: { width: 2, flex: 1, minHeight: 24, backgroundColor: colors.border, marginVertical: 2 },
-  stepContent: { flex: 1, gap: 2, paddingBottom: spacing.sm },
-  stepTitle: { ...typography.label, color: colors.text },
-  stepDesc: { ...typography.caption, color: colors.textMuted },
-  listingSummary: {
-    width: "100%",
-    backgroundColor: colors.surfaceMuted,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    gap: 2,
-  },
-  listingSummaryCode: { ...typography.caption, color: colors.brandDark, fontWeight: "700" },
-  listingSummaryTitle: { ...typography.label, color: colors.text },
-  actionButtons: { width: "100%", gap: spacing.sm },
-});
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    container: { gap: spacing.lg, alignItems: "center", paddingVertical: spacing.lg },
+    iconCircle: {
+      width: 68,
+      height: 68,
+      borderRadius: radius.pill,
+      backgroundColor: colors.success,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: { ...typography.title, color: colors.text, textAlign: "center" },
+    subtext: { ...typography.body, color: colors.textMuted, textAlign: "center", paddingHorizontal: spacing.md },
+    timelineCard: { width: "100%", gap: spacing.md },
+    timelineHeader: { ...typography.heading, color: colors.brandDark },
+    stepRow: { flexDirection: "row", gap: spacing.md },
+    stepIndicatorCol: { alignItems: "center", width: 24 },
+    stepDot: {
+      width: 24,
+      height: 24,
+      borderRadius: radius.pill,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    stepDotActive: { backgroundColor: colors.success },
+    stepDotPending: { backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border },
+    stepNum: { fontSize: 11, fontWeight: "700", color: colors.textMuted },
+    stepLine: { width: 2, flex: 1, minHeight: 24, backgroundColor: colors.border, marginVertical: 2 },
+    stepContent: { flex: 1, gap: 2, paddingBottom: spacing.sm },
+    stepTitle: { ...typography.label, color: colors.text },
+    stepDesc: { ...typography.caption, color: colors.textMuted },
+    listingSummary: {
+      width: "100%",
+      backgroundColor: colors.surfaceMuted,
+      padding: spacing.md,
+      borderRadius: radius.md,
+      gap: 2,
+    },
+    listingSummaryCode: { ...typography.caption, color: colors.brandDark, fontWeight: "700" },
+    listingSummaryTitle: { ...typography.label, color: colors.text },
+    actionButtons: { width: "100%", gap: spacing.sm },
+  });
+}

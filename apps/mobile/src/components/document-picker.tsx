@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -8,7 +8,8 @@ import {
 import * as DocumentPicker from "expo-document-picker";
 import { AppIcon } from "./app-icon";
 import type { PickedFile } from "@/lib/file-upload-helper";
-import { colors, radius, spacing, typography } from "@/theme/tokens";
+import { useTheme } from "@/providers/theme-provider";
+import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 const MAX_DOC_BYTES = 10 * 1024 * 1024; // 10 MB
 const DEFAULT_TYPES = ["application/pdf", "image/png", "image/jpeg"];
@@ -45,6 +46,8 @@ export function DocumentPickerComponent({
   onRemoveExisting,
   error,
 }: DocumentPickerProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [pickerError, setPickerError] = useState("");
   const totalCount = existingDocs.length + files.length;
 
@@ -182,53 +185,55 @@ export function DocumentPickerComponent({
   );
 }
 
-const styles = StyleSheet.create({
-  container: { gap: spacing.xs },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  label: { ...typography.label, color: colors.text },
-  countText: { ...typography.caption, color: colors.textMuted, fontWeight: "600" },
-  helper: { ...typography.caption, color: colors.textMuted },
-  uploadBtn: {
-    minHeight: 48,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    borderColor: colors.brand,
-    backgroundColor: colors.surfaceMuted,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    marginVertical: spacing.xs,
-  },
-  uploadBtnText: { ...typography.label, color: colors.brandDark },
-  docCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-  },
-  badge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  badgePdf: { backgroundColor: "#FDECEC" },
-  badgeImg: { backgroundColor: "#E7F5ED" },
-  badgeText: { fontSize: 11, fontWeight: "700", color: colors.text },
-  docInfo: { flex: 1, gap: 2 },
-  docTitle: { ...typography.label, color: colors.text },
-  docMeta: { ...typography.caption, color: colors.textMuted },
-  removeBtn: {
-    padding: spacing.xs,
-    borderRadius: radius.pill,
-  },
-  errorText: { ...typography.caption, color: colors.danger },
-});
+function createStyles(colors: ColorTokens) {
+  return StyleSheet.create({
+    container: { gap: spacing.xs },
+    header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+    label: { ...typography.label, color: colors.text },
+    countText: { ...typography.caption, color: colors.textMuted, fontWeight: "600" },
+    helper: { ...typography.caption, color: colors.textMuted },
+    uploadBtn: {
+      minHeight: 48,
+      borderRadius: radius.md,
+      borderWidth: 1.5,
+      borderStyle: "dashed",
+      borderColor: colors.brand,
+      backgroundColor: colors.surfaceMuted,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.sm,
+      paddingHorizontal: spacing.md,
+      marginVertical: spacing.xs,
+    },
+    uploadBtnText: { ...typography.label, color: colors.brandDark },
+    docCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      padding: spacing.md,
+    },
+    badge: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.sm,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    badgePdf: { backgroundColor: colors.surfaceMuted },
+    badgeImg: { backgroundColor: colors.brandTint },
+    badgeText: { fontSize: 11, fontWeight: "700", color: colors.text },
+    docInfo: { flex: 1, gap: 2 },
+    docTitle: { ...typography.label, color: colors.text },
+    docMeta: { ...typography.caption, color: colors.textMuted },
+    removeBtn: {
+      padding: spacing.xs,
+      borderRadius: radius.pill,
+    },
+    errorText: { ...typography.caption, color: colors.danger },
+  });
+}
