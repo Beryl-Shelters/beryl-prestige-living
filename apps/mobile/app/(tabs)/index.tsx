@@ -19,8 +19,8 @@ const heroImage = require("../../../web/public/landing/landingpagehero_desktop.p
 export default function HomeScreen() {
   const params = useLocalSearchParams<{ ref?: string }>();
   const referralCode = typeof params.ref === "string" ? params.ref : undefined;
-  const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { colors, effectiveTheme } = useTheme();
+  const styles = useMemo(() => createStyles(colors, effectiveTheme === "dark"), [colors, effectiveTheme]);
   const { status } = useAuth();
   const { savedCodes, refreshSaved, setSaved } = usePropertyState();
   const [searchMode, setSearchMode] = useState<SearchMode>("refer");
@@ -310,7 +310,7 @@ export default function HomeScreen() {
   );
 }
 
-function createStyles(colors: ColorTokens) {
+function createStyles(colors: ColorTokens, isDark: boolean) {
   return StyleSheet.create({
     topBrandBar: {
       flexDirection: "row",
@@ -338,7 +338,7 @@ function createStyles(colors: ColorTokens) {
     heroImage: { width: "100%", height: 190 },
     heroHeadline: {
       ...typography.heading,
-      color: "#FFFFFF",
+      color: isDark ? "#1F2937" : "#FFFFFF",
       fontSize: 22,
       lineHeight: 28,
       fontWeight: "800",
@@ -350,7 +350,7 @@ function createStyles(colors: ColorTokens) {
     },
     heroCopy: {
       ...typography.body,
-      color: "#FFFFFF",
+      color: isDark ? "#1F2937" : "#FFFFFF",
       fontSize: 14,
       lineHeight: 20,
     },
