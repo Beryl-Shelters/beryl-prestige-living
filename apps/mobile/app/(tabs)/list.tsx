@@ -11,6 +11,7 @@ import {
   type CustomerListing,
   type ListingOptions,
 } from "@/lib/listings-api";
+import { nigerianStates } from "@/lib/property-taxonomy";
 import { useAuth } from "@/providers/auth-provider";
 import { useTheme } from "@/providers/theme-provider";
 import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
@@ -46,45 +47,7 @@ const defaultOptions: ListingOptions = {
     "24Hrs Security",
   ],
   document_type: ["Ownership", "Survey", "Other"],
-  state: [
-    "Abia",
-    "Adamawa",
-    "Akwa Ibom",
-    "Anambra",
-    "Bauchi",
-    "Bayelsa",
-    "Benue",
-    "Borno",
-    "Cross River",
-    "Delta",
-    "Ebonyi",
-    "Edo",
-    "Ekiti",
-    "Enugu",
-    "Gombe",
-    "Imo",
-    "Jigawa",
-    "Kaduna",
-    "Kano",
-    "Katsina",
-    "Kebbi",
-    "Kogi",
-    "Kwara",
-    "Lagos",
-    "Nasarawa",
-    "Niger",
-    "Ogun",
-    "Ondo",
-    "Osun",
-    "Oyo",
-    "Plateau",
-    "Rivers",
-    "Sokoto",
-    "Taraba",
-    "Yobe",
-    "Zamfara",
-    "Federal Capital Territory (FCT)",
-  ],
+  state: nigerianStates,
 };
 
 export default function ListScreen() {

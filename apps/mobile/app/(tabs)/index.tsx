@@ -338,7 +338,7 @@ function createStyles(colors: ColorTokens) {
     heroImage: { width: "100%", height: 190 },
     heroHeadline: {
       ...typography.heading,
-      color: colors.text,
+      color: "#FFFFFF",
       fontSize: 22,
       lineHeight: 28,
       fontWeight: "800",
@@ -350,7 +350,7 @@ function createStyles(colors: ColorTokens) {
     },
     heroCopy: {
       ...typography.body,
-      color: colors.textMuted,
+      color: "#FFFFFF",
       fontSize: 14,
       lineHeight: 20,
     },
