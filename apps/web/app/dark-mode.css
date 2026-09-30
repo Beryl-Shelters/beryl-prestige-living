@@ -7,6 +7,11 @@
 [data-theme="dark"] textarea { color: var(--ink); }
 [data-theme="dark"] input::placeholder,
 [data-theme="dark"] textarea::placeholder { color: var(--muted); opacity: 1; }
+[data-theme="dark"] select option,
+[data-theme="dark"] select optgroup {
+  background: #ffffff;
+  color: #111827;
+}
 [data-theme="dark"] input:disabled,
 [data-theme="dark"] select:disabled,
 [data-theme="dark"] textarea:disabled,
