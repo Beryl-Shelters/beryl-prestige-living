@@ -18,10 +18,10 @@
 .landing-hero-copy p { color: #4b3516; font-size: 16px; font-weight: 600; line-height: 1.5; margin: 25px 0; }
 .property-search { background: #fff; border-radius: 10px; bottom: 0; box-shadow: 0 10px 24px #3c2c1624; left: 50%; padding: 48px 24px 22px; position: absolute; transform: translateX(-50%); width: min(84%, 1120px); z-index: 2; }
 .search-tabs { display: flex; left: 0; position: absolute; top: -44px; }
-.search-tabs button { background: #fff; border: 0; color: #3b301f; font-size: 13px; font-weight: 700; height: 44px; min-width: 90px; padding: 0 25px; text-transform: uppercase; }
-.search-tabs button:first-child { border-radius: 5px 0 0; }
-.search-tabs button:last-child { border-radius: 0 5px 0 0; }
-.search-tabs button[aria-selected="true"] { background: #9f711e; color: #fff; }
+.search-tabs a { align-items: center; background: #fff; color: #3b301f; display: flex; font-size: 13px; font-weight: 700; height: 44px; justify-content: center; min-width: 90px; padding: 0 25px; text-decoration: none; text-transform: uppercase; }
+.search-tabs a:first-child { border-radius: 5px 0 0; }
+.search-tabs a:last-child { border-radius: 0 5px 0 0; }
+.search-tabs a.active { background: #9f711e; color: #fff; }
 .hero-account-link { align-items: center; background: #fff; border: 1px solid #b7864b; border-bottom: 0; border-radius: 5px 5px 0 0; box-shadow: none; color: #94651d; display: flex; font-size: 13px; font-weight: 700; height: 44px; padding: 0 18px; position: absolute; right: 0; text-decoration: none; top: -44px; }
 .hero-account-link:hover { text-decoration: underline; }
 .search-query { align-items: center; background: #f9f9f9; border: 1px solid #e4e4e4; border-radius: 5px; color: #707784; display: flex; height: 44px; padding: 0 12px; }
@@ -112,7 +112,7 @@
   .landing-hero-copy p { font-size: 15px; margin-top: 20px; }
   .property-search { bottom: 18px; padding: 44px 16px 20px; width: calc(100% - 44px); }
   .search-tabs { top: -43px; }
-  .search-tabs button { height: 43px; min-width: 78px; padding: 0 20px; }
+  .search-tabs a { height: 43px; min-width: 78px; padding: 0 20px; }
   .hero-account-link { height: 43px; top: -43px; }
   .search-fields { grid-template-columns: 1fr; }
   .search-fields label { border-bottom: 1px solid #eee; border-right: 0; font-size: 13px; padding: 12px 4px; }
@@ -149,7 +149,7 @@
   .landing-hero-copy h1 { font-size: 28px; }
   .landing-hero-copy p { font-size: 14px; }
   .property-search { bottom: 10px; width: calc(100% - 28px); }
-  .search-tabs button { font-size: 12px; min-width: 68px; padding: 0 15px; }
+  .search-tabs a { font-size: 12px; min-width: 68px; padding: 0 15px; }
   .hero-account-link { font-size: 12px; }
   .search-query input { font-size: 16px; }
   .how-section { padding-top: 46px; }
@@ -165,6 +165,6 @@
 }
 
 @media (max-width: 360px) {
-  .search-tabs button { min-width: 60px; padding-inline: 11px; }
+  .search-tabs a { min-width: 60px; padding-inline: 11px; }
   .hero-account-link { font-size: 11px; }
 }
