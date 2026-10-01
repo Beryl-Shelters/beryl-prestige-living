@@ -31,6 +31,9 @@
 [data-theme="dark"] .referral-choice-grid article p { color: var(--text-secondary); }
 [data-theme="dark"] .latest-empty { background: var(--card-bg); border-color: var(--line); color: var(--text-secondary); }
 [data-theme="dark"] .latest-empty strong { color: var(--ink); }
+[data-theme="dark"] .latest-card { background: var(--card-bg); border-color: var(--line); color: var(--ink); }
+[data-theme="dark"] .latest-card-image { background: var(--surface-muted); color: var(--text-secondary); }
+[data-theme="dark"] .latest-card > div > span { color: var(--text-secondary); }
 [data-theme="dark"] .search-made-easy { background: var(--surface); color: var(--ink); }
 [data-theme="dark"] .search-made-easy p { color: var(--text-secondary); }
 [data-theme="dark"] .app-section { background: var(--card-bg); border-color: var(--line); color: var(--ink); }
