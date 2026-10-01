@@ -56,5 +56,4 @@
   .support-or { margin:24px auto 42px; }.support-contact-grid { display:flex; flex-direction:column; gap:38px; }.support-contact-grid p,.support-contact-grid a { font-size:15px; }
   .support-report { padding-block:120px 80px; }.support-report header { text-align:center; }.support-report h2 { font-size:34px; }.support-report header p { font-size:16px; }
   .support-report form { margin-top:55px; }.support-report-fields { grid-template-columns:1fr; }.support-report label { font-size:15px; }
-  .support-page .site-footer { display:none; }
 }

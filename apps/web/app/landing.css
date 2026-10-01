@@ -157,10 +157,19 @@
   .app-section { display: flex; flex-direction: column; margin: 30px 16px 0; max-height: none; padding: 32px 22px 0; }
   .app-section h2 { font-size: 28px; }
   .app-section > img { margin-top: 22px; max-height: 430px; }
-  .site-footer { display: none; }
+  .site-footer { display: block; padding: 46px 24px; }
+  .site-footer-grid { gap: 36px 28px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .site-footer-about, .site-footer-contact, .site-footer-app { grid-column: auto; }
+  .site-footer-about p { max-width: none; }
+  .site-footer-app { grid-column: 1 / -1; }
 }
 
 @media (max-width: 520px) {
+  .site-footer { padding: 42px 22px; }
+  .site-footer-grid { grid-template-columns: minmax(0, 1fr); }
+  .site-footer-app { grid-column: auto; }
+  .store-badges { align-items: flex-start; flex-wrap: wrap; }
+  .store-badges img { height: 40px; max-width: 100%; }
   .landing-hero { height: 900px; }
   .landing-hero-copy { left: 30px; top: 55px; }
   .landing-hero-copy h1 { font-size: 28px; }

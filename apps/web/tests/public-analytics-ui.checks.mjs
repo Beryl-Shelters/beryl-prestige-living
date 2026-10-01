@@ -16,7 +16,7 @@ export async function checkPublicAnalytics({page,origin,calls,failures,screensho
     assert.equal(await page.locator('.public-nav a[aria-current="page"],.public-nav a.active').filter({hasText:"Analytics & Insights"}).count(),1);
     const layout=await page.evaluate(()=>{const price=document.querySelector(".public-price-card").getBoundingClientRect();const summary=document.querySelector(".public-summary-card").getBoundingClientRect();return{summaryRight:summary.left>=price.right,summaryBelow:summary.top>=price.bottom,footer:!!document.querySelector(".site-footer")&&getComputedStyle(document.querySelector(".site-footer")).display!=="none",visibleMonths:[...document.querySelectorAll(".public-chart-months span")].filter(element=>getComputedStyle(element).display!=="none").length};});
     assert(width>900?layout.summaryRight:layout.summaryBelow);
-    assert.equal(layout.footer,width>900);
+    assert.equal(layout.footer,true);
     assert.equal(layout.visibleMonths,width>900?12:7);
     assert.equal(calls.some(call=>call.endpoint==="/dashboard/analytics"),false,"Public Analytics must not request private Analytics data");
     assert.equal(calls.some(call=>call.endpoint==="/public/property-searches"),false,"Analytics page views must not record searches");

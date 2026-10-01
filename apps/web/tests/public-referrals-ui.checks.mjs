@@ -24,7 +24,7 @@ export async function checkPublicReferrals({ page, origin, calls, failures, scre
     assert.equal(layout.overflow, false, `Referrals overflow at ${width}`);
     assert.equal(layout.beside, width > 700);
     assert.equal(layout.stacked, width <= 700);
-    assert.equal(layout.footerVisible, width > 900);
+    assert.equal(layout.footerVisible, true);
     assert.equal(await cards.locator("svg.public-referral-icon").count(), 2);
     assert.equal(await cards.locator("img").count(), 0);
     await cards.first().getByRole("button", { name: /Click Here/ }).click();
