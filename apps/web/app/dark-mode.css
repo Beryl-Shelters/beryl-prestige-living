@@ -71,14 +71,20 @@
 [data-theme="dark"] .public-period-control button { color: var(--ink); }
 [data-theme="dark"] .public-chart-plot i,
 [data-theme="dark"] .public-search-plot i,
-[data-theme="dark"] .public-search-dates { border-color: var(--line); }
+[data-theme="dark"] .public-search-dates { border-color: var(--line); color: #fff; }
 [data-theme="dark"] .public-donut { background: var(--gold-light); }
 [data-theme="dark"] .public-donut::before { background: var(--panel); }
 [data-theme="dark"] .careers-hero,
-[data-theme="dark"] .career-application { background-color: var(--surface); color: var(--ink); }
+[data-theme="dark"] .career-application { background: var(--surface); color: var(--ink); }
 [data-theme="dark"] .career-application :is(input,select,textarea) { background: var(--input-bg); border-color: var(--input-border); color: var(--ink); }
 [data-theme="dark"] .career-fields small { color: var(--muted); }
 [data-theme="dark"] .career-notice { background: var(--gold-light); color: var(--text-secondary); }
+[data-theme="dark"] .public-sell-card { background: var(--card-bg); border-color: var(--line); color: var(--ink); }
+[data-theme="dark"] .public-sell-icon-wrapper { background: var(--surface-muted); border-color: var(--line); }
+[data-theme="dark"] .public-sell-title { color: var(--ink); }
+[data-theme="dark"] .public-sell-body { color: var(--text-secondary); }
+[data-theme="dark"] .public-sell-btn-secondary { background: var(--surface-muted); border-color: var(--line); color: #fff; }
+[data-theme="dark"] .public-sell-btn-secondary:hover { background: var(--surface-elevated); border-color: var(--gold); }
 [data-theme="dark"] .site-footer { background: #130d06; color: #f4ede3; }
 
 /* Public property details. */
@@ -97,6 +103,7 @@
 
 /* Dashboard shared surfaces and controls. */
 [data-theme="dark"] .dashboard-main { background: var(--surface); color: var(--ink); }
+[data-theme="dark"] .revenue-toggle button { color: #fff; }
 [data-theme="dark"] :is(.listings-panel,.customer-listing-card,.listings-empty,.quick-preview-card,.listing-dialog,.analytics-performance,.analytics-overview,.analytics-breakdown,.messages-workspace,.tickets-pane,.conversation-pane,.referrals-earn,.referrals-invite,.referral-kpi,.referrals-history,.withdrawal-balance,.withdrawal-form,.withdrawal-history,.settings-card,.properties-zero-state,.properties-request-state) { background: var(--card-bg); border-color: var(--line); color: var(--ink); }
 [data-theme="dark"] :is(.listings-toolbar input,.listings-toolbar select,.listings-search,.listing-status-filters button,.listing-form input:not([type=checkbox]),.listing-form select,.listing-form textarea,.listing-detail-field>div,.analytics-search,.analytics-breakdown dd,.tickets-search input,.reply-composer textarea,.new-ticket-content input,.new-ticket-content textarea,.withdrawal-amount,.settings-fields input,.settings-fields textarea,.settings-password-fields input,.properties-header input) { background: var(--input-bg); border-color: var(--input-border); color: var(--ink); }
 [data-theme="dark"] :is(.listings-toolbar>span,.listings-empty,.listings-no-results p,.listing-card-information p,.customer-listing-card small,.listing-performance>p,.quick-preview-body p,.analytics-axis,.analytics-months,.analytics-chart-empty,.tickets-empty,.conversation-empty,.conversation-header p,.conversation-status small,.ticket-row-bottom,.settings-section p,.settings-person-title span,.settings-company-title span,.properties-count,.properties-request-state p) { color: var(--muted); }
