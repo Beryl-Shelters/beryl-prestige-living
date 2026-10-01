@@ -18,7 +18,7 @@
 [data-theme="dark"] button:disabled { color: var(--disabled-text); }
 
 /* Public canvases, content surfaces, and footer. */
-[data-theme="dark"] :is(.landing-page,.public-page,.public-referrals-page,.public-buy-page,.public-sell-page,.buy-assistance-page,.sell-assistance-page,.public-analytics-page,.support-page,.saved-properties-page,.mortgage-page) { background: var(--surface); color: var(--ink); }
+[data-theme="dark"] :is(.landing-page,.public-page,.public-referrals-page,.public-buy-page,.public-sell-page,.buy-assistance-page,.sell-assistance-page,.public-analytics-page,.support-page,.saved-properties-page,.mortgage-page,.compare-properties-page,.compare-results-page) { background: var(--surface); color: var(--ink); }
 [data-theme="dark"] .landing-hero-copy :is(h1,p) { color: #1f2937; }
 [data-theme="dark"] .landing-hero-copy em { color: #a85d29; }
 [data-theme="dark"] .how-section h2 u { color: #fff; }
@@ -34,6 +34,25 @@
 [data-theme="dark"] .latest-card { background: var(--card-bg); border-color: var(--line); color: var(--ink); }
 [data-theme="dark"] .latest-card-image { background: var(--surface-muted); color: var(--text-secondary); }
 [data-theme="dark"] .latest-card > div > span { color: var(--text-secondary); }
+[data-theme="dark"] .latest-save { background: var(--surface-muted); color: var(--ink); }
+[data-theme="dark"] .latest-save[aria-pressed="true"] { color: var(--gold-dark); }
+[data-theme="dark"] .saved-properties-state strong { color: #fff; }
+[data-theme="dark"] :is(.compare-properties-page main,.compare-results-page main) { background: var(--surface); }
+[data-theme="dark"] :is(.compare-properties-hero,.compare-results-hero) { background: var(--surface); color: var(--ink); }
+[data-theme="dark"] .compare-properties-search { background: var(--input-bg); color: var(--text-secondary); }
+[data-theme="dark"] .compare-properties-search input { color: var(--ink); }
+[data-theme="dark"] .compare-properties-search input::placeholder { color: var(--muted); }
+[data-theme="dark"] :is(.compare-properties-content,.compare-selection-panel,.comparison-scroll) { background: var(--card-bg); color: var(--ink); }
+[data-theme="dark"] :is(.compare-property-image,.compare-selection-thumb,.compare-selection-empty,.comparison-placeholder) { background: var(--surface-muted); border-color: var(--line); color: var(--text-secondary); }
+[data-theme="dark"] :is(.compare-card-action,.compare-selection-thumb button) { background: var(--surface-elevated); color: var(--ink); }
+[data-theme="dark"] .compare-card-bottom button[aria-pressed="true"] { background: var(--gold-light); color: var(--badge-text); }
+[data-theme="dark"] .compare-clear { background: var(--surface-muted); color: var(--ink); }
+[data-theme="dark"] :is(.compare-state,.compare-results-state) { color: var(--text-secondary); }
+[data-theme="dark"] :is(.compare-state strong,.compare-results-state strong) { color: #fff; }
+[data-theme="dark"] .compare-results-hero a { background: var(--surface-muted); color: var(--gold-dark); }
+[data-theme="dark"] :is(.comparison-label,.comparison-value) { background: var(--card-bg)!important; color: var(--ink); }
+[data-theme="dark"] .comparison-row-alt { background: var(--surface-muted)!important; }
+[data-theme="dark"] .comparison-value::before { color: var(--text-secondary); }
 [data-theme="dark"] .search-made-easy { background: var(--surface); color: var(--ink); }
 [data-theme="dark"] .search-made-easy p { color: var(--text-secondary); }
 [data-theme="dark"] .app-section { background: var(--card-bg); border-color: var(--line); color: var(--ink); }
@@ -74,6 +93,7 @@
 [data-theme="dark"] .public-search-dates { border-color: var(--line); color: #fff; }
 [data-theme="dark"] .public-donut { background: var(--gold-light); }
 [data-theme="dark"] .public-donut::before { background: var(--panel); }
+[data-theme="dark"] .mortgage-percentage { background: var(--surface-elevated); border: 1px solid var(--gold); color: #fff; }
 [data-theme="dark"] .careers-hero,
 [data-theme="dark"] .career-application { background: var(--surface); color: var(--ink); }
 [data-theme="dark"] .career-application :is(input,select,textarea) { background: var(--input-bg); border-color: var(--input-border); color: var(--ink); }
@@ -93,12 +113,14 @@
 [data-theme="dark"] .property-breadcrumb span:last-child,
 [data-theme="dark"] :is(.property-detail-location,.property-payment>p,.property-estimate-note,.similar-properties>p,.similar-property-card small,.property-detail-state p) { color: var(--text-secondary); }
 [data-theme="dark"] :is(.property-detail-location,.property-description,.property-facilities,.property-location-grid,.property-payment,.property-viewing-form,.property-mortgage) { border-color: var(--line); }
-[data-theme="dark"] :is(.property-facilities li,.property-location-grid span,.similar-property-card a>div,.similar-empty,.property-detail-placeholder) { background: var(--surface-muted); color: var(--ink); }
+[data-theme="dark"] :is(.property-facilities li,.property-location-grid span,.similar-property-card a>div,.similar-property-image,.similar-empty,.property-detail-placeholder) { background: var(--surface-muted); color: var(--ink); }
 [data-theme="dark"] :is(.property-payment dl,.property-mortgage-results) { background: var(--card-bg); border-color: var(--line); }
 [data-theme="dark"] :is(.property-payment dl>div+div,.property-mortgage-results>div+div) { border-color: var(--line); }
 [data-theme="dark"] :is(.property-payment dd,.property-mortgage-results dd) { background: var(--surface-muted); color: var(--ink); }
 [data-theme="dark"] .property-viewing-fields input { background: var(--input-bg); border-color: var(--input-border); color: var(--ink); }
 [data-theme="dark"] .property-detail-save { background: var(--surface-muted); border-color: var(--line); color: var(--ink); }
+[data-theme="dark"] .similar-save { background: var(--surface-muted); color: var(--ink); }
+[data-theme="dark"] .similar-save[aria-pressed="true"] { color: var(--gold-dark); }
 [data-theme="dark"] :is(.viewing-success-dialog,.viewing-success-property) { background: var(--card-bg); color: var(--ink); }
 
 /* Dashboard shared surfaces and controls. */
