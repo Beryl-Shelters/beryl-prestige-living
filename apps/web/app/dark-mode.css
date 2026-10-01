@@ -53,6 +53,14 @@
 [data-theme="dark"] .property-search :is(input,select) { color: var(--ink); }
 [data-theme="dark"] .property-search :is(input,select)::placeholder { color: var(--muted); }
 [data-theme="dark"] .public-buy-page :is(.buy-card,.buy-referral) { background: var(--panel); border-color: var(--line); color: var(--ink); }
+[data-theme="dark"] .buy-results-band { background: var(--surface); }
+[data-theme="dark"] :is(.buy-property-card,.buy-sort) { background: var(--card-bg); border-color: var(--line); color: var(--ink); }
+[data-theme="dark"] :is(.buy-search input,.buy-quick-chips button) { background: var(--surface-muted); border-color: var(--line); color: var(--ink); }
+[data-theme="dark"] .buy-quick-chips button[aria-pressed="true"] { background: var(--gold-light); border-color: var(--gold); color: var(--badge-text); }
+[data-theme="dark"] .buy-disclaimer { background: #342b19; color: #f4dfaa; }
+[data-theme="dark"] :is(.buy-results-toolbar p,.buy-description,.buy-location,.buy-facility-filter label) { color: var(--text-secondary); }
+[data-theme="dark"] .buy-save { background: var(--surface-muted); color: var(--ink); }
+[data-theme="dark"] .buy-image-placeholder { background: var(--surface-muted); color: var(--text-secondary); }
 [data-theme="dark"] .buy-card-bottom { border-color: var(--line); }
 [data-theme="dark"] .buy-results-state strong { color: var(--ink); }
 [data-theme="dark"] .buy-filter-fields :is(label,legend) { color: var(--ink); }
@@ -72,6 +80,20 @@
 [data-theme="dark"] .career-fields small { color: var(--muted); }
 [data-theme="dark"] .career-notice { background: var(--gold-light); color: var(--text-secondary); }
 [data-theme="dark"] .site-footer { background: #130d06; color: #f4ede3; }
+
+/* Public property details. */
+[data-theme="dark"] .property-detail-page { background: var(--surface); color: var(--ink); }
+[data-theme="dark"] .property-detail-actions > a { background: var(--surface-muted); color: var(--ink); }
+[data-theme="dark"] .property-breadcrumb span:last-child,
+[data-theme="dark"] :is(.property-detail-location,.property-payment>p,.property-estimate-note,.similar-properties>p,.similar-property-card small,.property-detail-state p) { color: var(--text-secondary); }
+[data-theme="dark"] :is(.property-detail-location,.property-description,.property-facilities,.property-location-grid,.property-payment,.property-viewing-form,.property-mortgage) { border-color: var(--line); }
+[data-theme="dark"] :is(.property-facilities li,.property-location-grid span,.similar-property-card a>div,.similar-empty,.property-detail-placeholder) { background: var(--surface-muted); color: var(--ink); }
+[data-theme="dark"] :is(.property-payment dl,.property-mortgage-results) { background: var(--card-bg); border-color: var(--line); }
+[data-theme="dark"] :is(.property-payment dl>div+div,.property-mortgage-results>div+div) { border-color: var(--line); }
+[data-theme="dark"] :is(.property-payment dd,.property-mortgage-results dd) { background: var(--surface-muted); color: var(--ink); }
+[data-theme="dark"] .property-viewing-fields input { background: var(--input-bg); border-color: var(--input-border); color: var(--ink); }
+[data-theme="dark"] .property-detail-save { background: var(--surface-muted); border-color: var(--line); color: var(--ink); }
+[data-theme="dark"] :is(.viewing-success-dialog,.viewing-success-property) { background: var(--card-bg); color: var(--ink); }
 
 /* Dashboard shared surfaces and controls. */
 [data-theme="dark"] .dashboard-main { background: var(--surface); color: var(--ink); }
