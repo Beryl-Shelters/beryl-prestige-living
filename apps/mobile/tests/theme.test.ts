@@ -102,3 +102,12 @@ test("Mobile app screens and components do not import static colors from tokens"
   }
   assert.deepEqual(offenders, [], `Found files importing static colors: ${offenders.join(", ")}`);
 });
+
+test("Signature pad follows the active theme without a forced light canvas", () => {
+  const signaturePad = read("src/components/signature-pad.tsx");
+  assert.match(signaturePad, /stroke=\{colors\.text\}/);
+  assert.match(signaturePad, /backgroundColor:\s*colors\.surface/);
+  assert.match(signaturePad, /color:\s*colors\.textMuted/);
+  assert.match(signaturePad, /backgroundColor:\s*colors\.border/);
+  assert.doesNotMatch(signaturePad, /#FFFFFF|#17120E|#6F675F|#DED8D1/);
+});

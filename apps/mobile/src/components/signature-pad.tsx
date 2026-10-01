@@ -160,7 +160,7 @@ export const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(
               {svgPath ? (
                 <Path
                   d={svgPath}
-                  stroke="#17120E"
+                  stroke={colors.text}
                   strokeWidth={2.5}
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -170,7 +170,7 @@ export const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(
             </Svg>
             {strokes.length === 0 && (
               <View pointerEvents="none" style={styles.placeholder}>
-                <AppIcon name="pencil-outline" size={22} color="#6F675F" />
+                <AppIcon name="pencil-outline" size={22} color={colors.textMuted} />
                 <Text style={styles.placeholderText}>Sign with your finger inside this box</Text>
               </View>
             )}
@@ -214,7 +214,7 @@ function createStyles(colors: ColorTokens) {
     clearText: { ...typography.caption, color: colors.danger, fontWeight: "600" },
     padWrapper: {
       height: 150,
-      backgroundColor: "#FFFFFF",
+      backgroundColor: colors.surface,
       borderWidth: 1.5,
       borderColor: colors.border,
       borderRadius: radius.md,
@@ -234,14 +234,14 @@ function createStyles(colors: ColorTokens) {
       gap: spacing.xs,
       opacity: 0.6,
     },
-    placeholderText: { ...typography.caption, color: "#6F675F" },
+    placeholderText: { ...typography.caption, color: colors.textMuted },
     baseline: {
       position: "absolute",
       bottom: 28,
       left: 20,
       right: 20,
       height: 1,
-      backgroundColor: "#DED8D1",
+      backgroundColor: colors.border,
       borderStyle: "dashed",
     },
     existingBox: {
