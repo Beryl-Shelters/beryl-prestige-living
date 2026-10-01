@@ -53,7 +53,7 @@ export function PublicReferralsPage() {
     {session === "guest" && <PublicSiteFooter />}
     {destination && <div className="referral-auth-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) close(); }}><div ref={dialog} className="referral-auth-dialog" role="dialog" aria-modal="true" aria-labelledby="referral-auth-title" onKeyDown={keys}>
       <button ref={closeButton} className="referral-auth-close" type="button" aria-label="Close referral sign-in prompt" onClick={close}>×</button>
-      <span className="referral-auth-icon" aria-hidden="true"><svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="14" r="7" fill="currentColor" opacity=".55"/><path d="M8 32c0-7 5-11 12-11s12 4 12 11" fill="currentColor" opacity=".55"/><path d="m28 25 3 3 6-7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+      <span className="referral-auth-icon" aria-hidden="true"><svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="14" r="7" fill="currentColor" opacity=".55"/><path d="M8 32c0-7 5-11 12-11s12 4 12 11" fill="currentColor" opacity=".55"/></svg></span>
       <h2 id="referral-auth-title">Sign in to refer a friend</h2><p>Please log in to your account to start referring and track your earnings. If you don&apos;t have an account yet, you can easily create one to get started.</p>
       <Link className="referral-auth-register" href={`/register?next=${encodeURIComponent(destination)}`}>Create free account</Link>
       <Link className="referral-auth-login" href={`/login?next=${encodeURIComponent(destination)}`}>Log In</Link>
