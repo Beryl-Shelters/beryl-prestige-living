@@ -106,11 +106,16 @@
 [data-theme="dark"] .revenue-toggle button { color: #fff; }
 [data-theme="dark"] :is(.listings-panel,.customer-listing-card,.listings-empty,.quick-preview-card,.listing-dialog,.analytics-performance,.analytics-overview,.analytics-breakdown,.messages-workspace,.tickets-pane,.conversation-pane,.referrals-earn,.referrals-invite,.referral-kpi,.referrals-history,.withdrawal-balance,.withdrawal-form,.withdrawal-history,.settings-card,.properties-zero-state,.properties-request-state) { background: var(--card-bg); border-color: var(--line); color: var(--ink); }
 [data-theme="dark"] :is(.listings-toolbar input,.listings-toolbar select,.listings-search,.listing-status-filters button,.listing-form input:not([type=checkbox]),.listing-form select,.listing-form textarea,.listing-detail-field>div,.analytics-search,.analytics-breakdown dd,.tickets-search input,.reply-composer textarea,.new-ticket-content input,.new-ticket-content textarea,.withdrawal-amount,.settings-fields input,.settings-fields textarea,.settings-password-fields input,.properties-header input) { background: var(--input-bg); border-color: var(--input-border); color: var(--ink); }
+[data-theme="dark"] .properties-header form { background: var(--input-bg); border-color: var(--input-border); }
+[data-theme="dark"] .properties-header svg { color: var(--text-secondary); }
+[data-theme="dark"] .properties-header input::placeholder { color: var(--muted); }
 [data-theme="dark"] :is(.listings-toolbar>span,.listings-empty,.listings-no-results p,.listing-card-information p,.customer-listing-card small,.listing-performance>p,.quick-preview-body p,.analytics-axis,.analytics-months,.analytics-chart-empty,.tickets-empty,.conversation-empty,.conversation-header p,.conversation-status small,.ticket-row-bottom,.settings-section p,.settings-person-title span,.settings-company-title span,.properties-count,.properties-request-state p) { color: var(--muted); }
 
 /* Listings and property detail. */
 [data-theme="dark"] :is(.listings-page .listings-title,.listings-pagination,.listing-card-information,.listing-card-financial,.listing-performance,.listing-card-status,.listing-editor-fields section,.listing-detail-information hr) { border-color: var(--line); }
 [data-theme="dark"] .listing-status-filters button.active { background: var(--gold-light); color: var(--badge-text); }
+[data-theme="dark"] .listing-status-filters button span { background: var(--surface-muted); color: var(--ink); }
+[data-theme="dark"] .listing-status-filters button.active span { background: var(--gold); color: #fff; }
 [data-theme="dark"] .listing-photo,
 [data-theme="dark"] .quick-preview-image { background: var(--surface-muted); }
 [data-theme="dark"] .listing-action-menu>div { background: var(--surface-elevated); border-color: var(--line); }
@@ -122,6 +127,13 @@
 [data-theme="dark"] :is(.listing-confirmation-actions,.delete-actions) { background: var(--surface-muted); }
 [data-theme="dark"] :is(.listing-confirmation-actions button,.delete-actions button) { background: var(--panel); border-color: var(--line); color: var(--ink); }
 [data-theme="dark"] .listing-image-strip button { background: var(--panel); color: var(--ink); }
+[data-theme="dark"] .listing-image-empty { background: var(--surface-muted); color: var(--text-secondary); }
+[data-theme="dark"] :is(.listing-detail-description,.listing-detail-facilities,.listing-detail-documents,.listing-payment) { border-color: var(--line); }
+[data-theme="dark"] .listing-detail-facilities li { background: var(--surface-muted); color: var(--ink); }
+[data-theme="dark"] .listing-detail-documents button { background: var(--surface-muted); border-color: var(--line); color: var(--ink); }
+[data-theme="dark"] .listing-payment > div { background: var(--card-bg); border-color: var(--line); }
+[data-theme="dark"] .listing-payment strong { background: var(--surface-muted); color: var(--ink); }
+[data-theme="dark"] :is(.listing-detail-location,.listing-payment>p) { color: var(--text-secondary); }
 
 /* Dashboard analytics. */
 [data-theme="dark"] .analytics-search svg,
@@ -138,6 +150,10 @@
 [data-theme="dark"] .messages-workspace { border-color: var(--line); }
 [data-theme="dark"] .tickets-pane { border-color: var(--line); }
 [data-theme="dark"] :is(.ticket-filters button,.ticket-row,.conversation-header,.reply-composer,.reply-area,.resolved-ticket,.tickets-back,.messages-retry button,.new-ticket-dialog,.new-ticket-dialog footer,.messages-workspace .attach-message-button) { background: var(--panel); border-color: var(--line); color: var(--ink); }
+[data-theme="dark"] .ticket-filters button span { background: var(--surface-muted); color: var(--ink); }
+[data-theme="dark"] .ticket-filters button.active { background: var(--gold-light); border-color: var(--gold); color: var(--badge-text); }
+[data-theme="dark"] .ticket-filters button.active span { background: var(--gold); color: #fff; }
+[data-theme="dark"] .tickets-empty h2 { color: #fff; }
 [data-theme="dark"] :is(.ticket-row:hover,.ticket-row.selected) { background: var(--surface-muted); }
 [data-theme="dark"] .conversation-pane { background: var(--surface); }
 [data-theme="dark"] .conversation-history { background: #111820; }
