@@ -103,7 +103,8 @@
 
 /* Dashboard shared surfaces and controls. */
 [data-theme="dark"] .dashboard-main { background: var(--surface); color: var(--ink); }
-[data-theme="dark"] .revenue-toggle button { color: #fff; }
+[data-theme="dark"] .revenue-toggle button,
+[data-theme="dark"] .revenue-toggle button[aria-pressed="true"] { color: #fff; }
 [data-theme="dark"] :is(.listings-panel,.customer-listing-card,.listings-empty,.quick-preview-card,.listing-dialog,.analytics-performance,.analytics-overview,.analytics-breakdown,.messages-workspace,.tickets-pane,.conversation-pane,.referrals-earn,.referrals-invite,.referral-kpi,.referrals-history,.withdrawal-balance,.withdrawal-form,.withdrawal-history,.settings-card,.properties-zero-state,.properties-request-state) { background: var(--card-bg); border-color: var(--line); color: var(--ink); }
 [data-theme="dark"] :is(.listings-toolbar input,.listings-toolbar select,.listings-search,.listing-status-filters button,.listing-form input:not([type=checkbox]),.listing-form select,.listing-form textarea,.listing-detail-field>div,.analytics-search,.analytics-breakdown dd,.tickets-search input,.reply-composer textarea,.new-ticket-content input,.new-ticket-content textarea,.withdrawal-amount,.settings-fields input,.settings-fields textarea,.settings-password-fields input,.properties-header input) { background: var(--input-bg); border-color: var(--input-border); color: var(--ink); }
 [data-theme="dark"] .properties-header form { background: var(--input-bg); border-color: var(--input-border); }
@@ -189,6 +190,19 @@
 [data-theme="dark"] .settings-upload { border-color: var(--muted); color: #79aef2; }
 [data-theme="dark"] .settings-upload small { color: var(--text-secondary); }
 [data-theme="dark"] .settings-card>footer button { background: var(--panel); color: var(--gold-dark); }
+
+/* Identity verification. */
+[data-theme="dark"] .kyc-page { color: var(--ink); }
+[data-theme="dark"] .kyc-intro p,
+[data-theme="dark"] .kyc-selectors small,
+[data-theme="dark"] .kyc-upload p,
+[data-theme="dark"] .kyc-status :is(p,small) { color: var(--text-secondary); }
+[data-theme="dark"] .kyc-selectors select { background: var(--input-bg); border-color: var(--input-border); color: var(--ink); }
+[data-theme="dark"] .kyc-upload { background: var(--surface-muted); border-color: var(--gold); color: var(--ink); }
+[data-theme="dark"] .kyc-upload > svg { color: var(--text-secondary); }
+[data-theme="dark"] .kyc-upload em { color: #fff; }
+[data-theme="dark"] .kyc-rejected { background: #3b2026; color: var(--ink); }
+[data-theme="dark"] .kyc-status-icon { background: var(--surface-muted); }
 
 @media (max-width:700px) {
   [data-theme="dark"] :is(.mortgage-page main,.saved-properties-page main) { background: var(--surface); }
