@@ -5,7 +5,7 @@
   --ink: #080b10;
   --muted: #475569;
   --line: #dce0e7;
-  --surface: #f7f7fa;
+  --surface: #F2F2FF;
   --panel: #ffffff;
   --card-bg: #ffffff;
   --gold: #b7864b;
@@ -93,6 +93,30 @@
 html, body { margin: 0; min-height: 100%; }
 html { scroll-padding-top: calc(var(--header-height) + 24px); }
 body { background: var(--surface); color: var(--ink); font-family: var(--font-jakarta), Arial, sans-serif; font-size: 14px; transition: background-color .15s ease, color .15s ease; }
+
+/* Keep legacy route styles on the shared Light-mode canvas without changing
+   their intentional cards, controls, artwork, or branded sections. */
+:root:not([data-theme="dark"]) :is(
+  .landing-page,
+  .public-page,
+  .saved-properties-page,
+  .mortgage-page,
+  .compare-properties-page,
+  .compare-results-page,
+  .property-detail-page,
+  .auth-page,
+  .dashboard-shell
+) { background: var(--surface); }
+
+:root:not([data-theme="dark"]) :is(
+  .buy-results-band,
+  .saved-properties-page main,
+  .mortgage-page main,
+  .compare-properties-page main,
+  .compare-results-page main,
+  .app-section
+) { background: var(--surface); }
+
 a { color: inherit; }
 button, input, select { font: inherit; }
 button { cursor: pointer; }

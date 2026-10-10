@@ -14,7 +14,6 @@ const contexts:Record<string,{title:string;copy:string;source:string}>={
   "/buy/assistance":{title:"Buy Assistance",copy:"Tell Beryl what you want to buy and request help finding suitable properties.",source:"buy"},
   "/sell":{title:"Sell / List a Property",copy:"Sign in or create an account to list a property and manage its submission.",source:"sell"},
   "/sell/assistance":{title:"Sell Assistance",copy:"Tell Beryl about a property you want to sell and request help finding potential buyers.",source:"sell"},
-  "/analytics":{title:"Analytics & Insights",copy:"Review current public property and search insights across Beryl Shelter.",source:"analytics"},
   "/careers":{title:"Careers",copy:"Explore available roles and submit an application to join the Beryl team.",source:"careers"},
   "/support":{title:"Support",copy:"Browse common questions, contact Beryl, or report a property or agent.",source:"support"},
   "/saved-properties":{title:"Saved Properties",copy:"Review and manage the currently listed properties saved to your account.",source:"saved-properties"},

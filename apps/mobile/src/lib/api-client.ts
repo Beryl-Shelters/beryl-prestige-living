@@ -1,5 +1,5 @@
 import { apiBaseUrl } from "./config";
-import { errorKind, MobileApiError, transportFailure } from "./api-error";
+import { MobileApiError, responseFailure, transportFailure } from "./api-error";
 import { secureSessionStore, type SessionPurpose, type SessionStore } from "./session-store";
 import { shouldClearAccountForResponse } from "./api-auth-boundary";
 
@@ -23,8 +23,8 @@ export class MobileApiClient {
     catch (error) { throw transportFailure(error); }
     for(const purpose of Object.keys(responseHeaders) as SessionPurpose[]){const value=response.headers.get(responseHeaders[purpose]);if(value!==null){if(value)await this.store.set(purpose,value);else await this.store.remove(purpose);}}
     const payload=await response.json().catch(()=>null) as Envelope<T>|null;
-    if(!response.ok){if(shouldClearAccountForResponse(response.status,options.authenticated)){await this.store.remove("account");await unauthorizedHandler?.();}const message=payload&&"error" in payload&&payload.error?.message?payload.error.message:"Beryl Shelter could not complete this request.";const code=payload&&"error" in payload?payload.error?.code:undefined;throw new MobileApiError(errorKind(response.status),message,response.status,code);}
-    if(!payload||!("success" in payload)||!payload.success)throw new MobileApiError("server","Beryl Shelter returned an invalid response.");
+    if(!response.ok){if(shouldClearAccountForResponse(response.status,options.authenticated)){await this.store.remove("account");await unauthorizedHandler?.();}throw responseFailure(response.status,payload);}
+    if(!payload||typeof payload!=="object"||!("success" in payload)||payload.success!==true)throw new MobileApiError("server","Beryl Shelter returned an invalid response.",response.status,"INVALID_API_RESPONSE");
     return payload.data;
   }
 }

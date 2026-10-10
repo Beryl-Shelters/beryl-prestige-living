@@ -17,7 +17,6 @@ import { settingsResponse,settingsState,settingsRequestBody,checkSettings } from
 import { checkKyc,kycRequestBody,kycResponse } from "./kyc-ui.checks.mjs";
 import { checkLanding } from "./landing-ui.checks.mjs";
 import { checkPublicPages } from "./public-pages-ui.checks.mjs";
-import { checkPublicAnalytics,publicAnalyticsState } from "./public-analytics-ui.checks.mjs";
 import { checkPublicReferrals } from "./public-referrals-ui.checks.mjs";
 import { checkPublicSupport, supportState } from "./public-support-ui.checks.mjs";
 import { checkPublicBuy, buyResponse, buyState } from "./public-buy-ui.checks.mjs";
@@ -33,7 +32,7 @@ import { checkPropertyDetails, propertyDetailResponse, propertyDetailsState } fr
 import { isMain, runSuites } from "./run-ui-suite.mjs";
 
 export async function runBrowserSuite(suite) {
-assert(["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals", "settings", "kyc", "landing", "public-pages", "public-analytics", "public-referrals", "public-support", "public-buy", "property-details", "public-header", "saved-properties", "compare-properties", "mortgage-calculator", "inquiry", "sell-assistance", "buy-assistance"].includes(suite));
+assert(["auth", "dashboard", "listings", "analytics", "messages", "properties", "referrals", "settings", "kyc", "landing", "public-pages", "public-referrals", "public-support", "public-buy", "property-details", "public-header", "saved-properties", "compare-properties", "mortgage-calculator", "inquiry", "sell-assistance", "buy-assistance"].includes(suite));
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE
   ? pathToFileURL(process.env.PLAYWRIGHT_MODULE).href : "playwright");
 const origin = process.env.AUTH_UI_ORIGIN || "http://localhost:3000";
@@ -107,9 +106,7 @@ await context.route("**/*", async (route) => {
       return route.fulfill({status:error?error.status??503:200,contentType:"application/json",headers:{"access-control-allow-origin":origin},body:JSON.stringify(error?{success:false,error}:{success:true,data:buyResponse(url)})});
     }
     const error=failures.get(endpoint);
-    const monthly=Array.from({length:12},(_,index)=>({label:["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][index],valueMinor:index===0?25000000000:index===1?null:index===2?50000000000:null}));
-    const data=endpoint==="/public/analytics"?{period:url.searchParams.get("period")??"monthly",priceSeries:url.searchParams.get("period")==="annually"?(publicAnalyticsState.zero?[]:[{label:"2025",valueMinor:30000000000},{label:"2026",valueMinor:50000000000}]):publicAnalyticsState.zero?monthly.map(item=>({...item,valueMinor:null})):monthly,propertyPercentage:publicAnalyticsState.zero?{totalListedProperties:0,residentialListedProperties:0,residentialPercentage:0}:{totalListedProperties:4,residentialListedProperties:1,residentialPercentage:25},searchesPerDay:Array.from({length:7},(_,index)=>({date:`2026-09-${String(index+10).padStart(2,"0")}`,count:publicAnalyticsState.zero?0:index===2?3:0}))}:{recorded:true};
-    return route.fulfill({status:error?error.status??503:endpoint==="/public/property-searches"?201:200,contentType:"application/json",headers:{"access-control-allow-origin":origin},body:JSON.stringify(error?{success:false,error}:{success:true,data})});
+    return route.fulfill({status:error?error.status??503:endpoint==="/public/property-searches"?201:200,contentType:"application/json",headers:{"access-control-allow-origin":origin},body:JSON.stringify(error?{success:false,error}:{success:true,data:{recorded:true}})});
   }
   if (url.pathname.startsWith("/api/v1/listings")) return mockListings(route, origin);
   if (url.pathname.startsWith("/api/v1/auth/") || url.pathname.startsWith("/api/v1/messages/") || url.pathname.startsWith("/api/v1/saved-properties") || url.pathname.startsWith("/api/v1/dashboard/kyc") || ["/api/v1/dashboard/overview", "/api/v1/dashboard/analytics", "/api/v1/dashboard/properties", "/api/v1/dashboard/referrals", "/api/v1/dashboard/referrals/public-property", "/api/v1/dashboard/settings/profile", "/api/v1/dashboard/settings/password", "/api/v1/dashboard/settings/business"].includes(url.pathname)) {
@@ -238,7 +235,7 @@ try {
       assert.equal(layout.overflow, false, `${path} overflows at ${width}`);
       assert.equal(layout.fixed, "fixed");
       assert.equal(layout.white, "rgb(255, 255, 255)");
-      assert.equal(layout.background, "rgb(247, 247, 250)");
+      assert.equal(layout.background, "rgb(242, 242, 255)");
       assert.match(layout.font, /jakarta/i);
       assert(layout.belowHeader && !layout.footer && layout.logo === "Beryl Shelter");
       assert.equal(await page.locator(".brand .brand-name").innerText(), "Beryl Shelter");
@@ -492,7 +489,6 @@ try {
   if (suite === "kyc") await checkKyc({page,origin,calls,failures,screenshot,passed,pauseRequest,resume,toast});
   if (suite === "landing") await checkLanding({page,origin,calls,screenshot,passed});
   if (suite === "public-pages") await checkPublicPages({page,origin,calls,failures,screenshot,passed,pauseRequest,resume});
-  if (suite === "public-analytics") await checkPublicAnalytics({page,origin,calls,failures,screenshot,passed});
   if (suite === "public-referrals") await checkPublicReferrals({page,origin,calls,failures,screenshot,passed});
   if (suite === "public-support") await checkPublicSupport({page,origin,calls,failures,screenshot,passed,pauseRequest,resume});
   if (suite === "public-buy") await checkPublicBuy({page,origin,calls,failures,screenshot,passed,pauseRequest,resume});

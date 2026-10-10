@@ -18,6 +18,7 @@ import {
   type ListingOptions,
 } from "@/lib/listings-api";
 import { formatNairaInput, nairaToKobo } from "@/lib/money";
+import { createListingFormInitialState } from "@/lib/listing-edit";
 import { useTheme } from "@/providers/theme-provider";
 import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
@@ -36,59 +37,29 @@ export function PropertyDataStep({
 }: PropertyDataStepProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [title, setTitle] = useState(existingListing?.title || "");
-  const [registeredTitle, setRegisteredTitle] = useState(
-    existingListing?.registered_title_document || ""
-  );
-  const [description, setDescription] = useState(existingListing?.description || "");
-  const [occupancyType, setOccupancyType] = useState<string>(
-    existingListing?.occupancy_type || options.occupancy_type[0] || "Residential"
-  );
-  const [ownershipType, setOwnershipType] = useState<string>(
-    existingListing?.ownership_type || options.ownership_type[0] || "Personal"
-  );
-  const [propertyType, setPropertyType] = useState<string>(
-    existingListing?.property_type || options.property_type[0] || "Residential"
-  );
-  const [propertySubtype, setPropertySubtype] = useState<string>(
-    existingListing?.property_subtype || options.property_subtype[0] || "Bungalow"
-  );
-  const [hasLien, setHasLien] = useState<boolean>(existingListing?.has_lien ?? false);
-  const [location, setLocation] = useState(existingListing?.location || "");
-  const [selectedState, setSelectedState] = useState<string>(
-    existingListing?.state || "Lagos"
-  );
-  const [city, setCity] = useState(existingListing?.city || "");
-
-  const [bedrooms, setBedrooms] = useState(String(existingListing?.bedrooms ?? 3));
-  const [bathrooms, setBathrooms] = useState(String(existingListing?.bathrooms ?? 3));
-  const [parkingSpaces, setParkingSpaces] = useState(String(existingListing?.parking_spaces ?? 2));
-  const [units, setUnits] = useState(existingListing?.units ? String(existingListing.units) : "");
-  const [landArea, setLandArea] = useState(
-    existingListing?.land_area ? String(existingListing.land_area) : ""
-  );
-  const [yearBuilt, setYearBuilt] = useState(
-    existingListing?.year_built ? String(existingListing.year_built) : ""
-  );
-  const [facilities, setFacilities] = useState<string[]>(existingListing?.facilities || []);
-
-  const [propertyCost, setPropertyCost] = useState(
-    existingListing
-      ? (existingListing.property_cost_minor / 100).toLocaleString()
-      : ""
-  );
-  const [downPayment, setDownPayment] = useState(
-    existingListing
-      ? (existingListing.minimum_down_payment_minor / 100).toLocaleString()
-      : "0"
-  );
-  const [additionalInfo, setAdditionalInfo] = useState(
-    existingListing?.additional_information || ""
-  );
-
-  const [retainedImages, setRetainedImages] = useState<{ id: string; url: string }[]>(
-    existingListing?.images.map((img) => ({ id: img.id, url: img.url })) || []
-  );
+  const initial = createListingFormInitialState(existingListing, options);
+  const [title, setTitle] = useState(initial.title);
+  const [registeredTitle, setRegisteredTitle] = useState(initial.registeredTitle);
+  const [description, setDescription] = useState(initial.description);
+  const [occupancyType, setOccupancyType] = useState(initial.occupancyType);
+  const [ownershipType, setOwnershipType] = useState(initial.ownershipType);
+  const [propertyType, setPropertyType] = useState(initial.propertyType);
+  const [propertySubtype, setPropertySubtype] = useState(initial.propertySubtype);
+  const [hasLien, setHasLien] = useState(initial.hasLien);
+  const [location, setLocation] = useState(initial.location);
+  const [selectedState, setSelectedState] = useState(initial.selectedState);
+  const [city, setCity] = useState(initial.city);
+  const [bedrooms, setBedrooms] = useState(initial.bedrooms);
+  const [bathrooms, setBathrooms] = useState(initial.bathrooms);
+  const [parkingSpaces, setParkingSpaces] = useState(initial.parkingSpaces);
+  const [units, setUnits] = useState(initial.units);
+  const [landArea, setLandArea] = useState(initial.landArea);
+  const [yearBuilt, setYearBuilt] = useState(initial.yearBuilt);
+  const [facilities, setFacilities] = useState<string[]>(initial.facilities);
+  const [propertyCost, setPropertyCost] = useState(initial.propertyCost);
+  const [downPayment, setDownPayment] = useState(initial.downPayment);
+  const [additionalInfo, setAdditionalInfo] = useState(initial.additionalInfo);
+  const [retainedImages, setRetainedImages] = useState(initial.retainedImages);
   const [newImages, setNewImages] = useState<PickedFile[]>([]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -170,18 +141,17 @@ export function PropertyDataStep({
     };
 
     try {
-      let savedListing: CustomerListing;
-      if (existingListing) {
-        savedListing = await listingsApi.updateDraft(
-          existingListing.id,
-          existingListing.version,
-          content,
-          retainedImages.map((img) => img.id),
-          newImages
-        );
-      } else {
-        savedListing = await listingsApi.createDraft(content, newImages);
-      }
+      const savedListing = await listingsApi.saveDraftInPhotoBatches(
+        content,
+        existingListing,
+        retainedImages.map((img) => img.id),
+        newImages,
+        ({ listing, remainingImages }) => {
+          setNewImages(remainingImages);
+          setRetainedImages(listing.images.map((img) => ({ id: img.id, url: img.url })));
+          onDraftSaved?.(listing);
+        }
+      );
 
       setNewImages([]);
       setRetainedImages(savedListing.images.map((img) => ({ id: img.id, url: img.url })));

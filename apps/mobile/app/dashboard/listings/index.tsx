@@ -25,6 +25,7 @@ import {
   type ListingStatus,
 } from "@/lib/listings-api";
 import { formatNaira } from "@/lib/money";
+import { canEditListing } from "@/lib/listing-edit";
 import { useTheme } from "@/providers/theme-provider";
 import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
@@ -184,8 +185,7 @@ export default function MyListingsScreen() {
         ? `${item.time_on_market} days`
         : "Not listed";
 
-    const isEditable =
-      item.listing_status === "UNLISTED" || item.listing_status === "REJECTED";
+    const isEditable = canEditListing(item.listing_status);
 
     return (
       <Card style={styles.card}>

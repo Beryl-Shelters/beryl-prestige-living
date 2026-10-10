@@ -15,7 +15,6 @@ const navigation = [
   ["Referrals", "/referrals"],
   ["Buy", "/buy"],
   ["Sell / List a Property", "/sell"],
-  ["Analytics & Insights", "/analytics"],
   ["Careers", "/careers"],
   ["Support", "/support"],
 ] as const;

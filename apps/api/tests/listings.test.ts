@@ -59,6 +59,21 @@ test("Listings API and actual local migration transactions",async t=>{
 });
 
 test("listing completeness and exact money are deterministic, bounded and not browser-authoritative",()=>{assert.equal(minorUnits("9999999999999.99"),999999999999999);assert.equal(minorUnits("0.01"),1);assert.throws(()=>minorUnits("1.001"));const listing={...parseContent(validContent),images:[{}],facilities:[]} as Parameters<typeof completeness>[0];assert.equal(completeness(listing),80);assert.equal(completeness({...listing,units:2,land_area:100,year_built:2020,longitude:0,latitude:0,facilities:["CCTV"]}),100);});
+test("single-photo multipart requests can create and incrementally complete a Mobile draft",async t=>{
+  const f=await listingFixture(t);
+  let result=await f.request("","POST",listingForm(validContent,[{bytes:imageBytes,mime:"image/png"}]));
+  assert.equal(result.response.status,201,JSON.stringify(result.payload));
+  for(let expected=2;expected<=3;expected++){
+    const listing=result.payload.data;
+    result=await f.request(`/${listing.id}`,"PATCH",listingForm(validContent,[{bytes:imageBytes,mime:"image/png"}],{
+      version:listing.version,
+      retained_images:listing.images.map((image:{id:string})=>image.id),
+    }));
+    assert.equal(result.response.status,200,JSON.stringify(result.payload));
+    assert.equal(result.payload.data.images.length,expected);
+    assert.deepEqual(result.payload.data.images.map((image:{sort_order:number})=>image.sort_order),Array.from({length:expected},(_,index)=>index));
+  }
+});
 test("image/document MIME magic, file-size and executable restrictions",()=>{validateFile({field:"images",mime:"image/png",bytes:imageBytes},false);for(const [mime,bytes,document] of [["image/png",Buffer.from("MZ executable"),false],["application/pdf",Buffer.from("%PDF-1.4"),false],["image/webp",imageBytes,true],["image/png",Buffer.alloc(5242881),false],["application/pdf",Buffer.alloc(10485761),true]] as const)assert.throws(()=>validateFile({field:"x",mime,bytes},document));});
 test("expanded listing taxonomy accepts all states, subtypes and conveniences while rejecting unsupported values",async t=>{
   assert.equal(listingOptions.state.length,37);

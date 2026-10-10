@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { AppIcon } from "@/components/app-icon";
@@ -12,6 +12,8 @@ import {
   type ListingOptions,
 } from "@/lib/listings-api";
 import { nigerianStates } from "@/lib/property-taxonomy";
+import { friendlyError } from "@/lib/api-error";
+import { loadEditableListing } from "@/lib/listing-edit";
 import { useAuth } from "@/providers/auth-provider";
 import { useTheme } from "@/providers/theme-provider";
 import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
@@ -51,12 +53,44 @@ const defaultOptions: ListingOptions = {
 };
 
 export default function ListScreen() {
+  const params = useLocalSearchParams<{ draftId?: string | string[] }>();
+  const draftId =
+    typeof params.draftId === "string" && params.draftId.trim()
+      ? params.draftId.trim()
+      : null;
   const { status } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
-  const [activeListing, setActiveListing] = useState<CustomerListing | null>(null);
+  const routeKey = draftId ?? "new-listing";
+  const [workflow, setWorkflow] = useState<{
+    routeKey: string;
+    currentStep: 1 | 2 | 3;
+    listing: CustomerListing | null;
+  }>({ routeKey: "new-listing", currentStep: 1, listing: null });
   const [options, setOptions] = useState<ListingOptions>(defaultOptions);
+  const [editLoadAttempt, setEditLoadAttempt] = useState(0);
+  const editRequestKey = draftId ? `${draftId}:${editLoadAttempt}` : null;
+  const [editResult, setEditResult] = useState<{ key: string; error: string } | null>(null);
+  const currentStep = workflow.routeKey === routeKey ? workflow.currentStep : 1;
+  const activeListing = workflow.routeKey === routeKey ? workflow.listing : null;
+  const editLoading = Boolean(draftId && editResult?.key !== editRequestKey);
+  const editError = editResult?.key === editRequestKey ? editResult.error : "";
+
+  function setActiveListing(listing: CustomerListing | null) {
+    setWorkflow((current) => ({
+      routeKey,
+      currentStep: current.routeKey === routeKey ? current.currentStep : 1,
+      listing,
+    }));
+  }
+
+  function setCurrentStep(currentStep: 1 | 2 | 3) {
+    setWorkflow((current) => ({
+      routeKey,
+      currentStep,
+      listing: current.routeKey === routeKey ? current.listing : null,
+    }));
+  }
 
   useEffect(() => {
     let active = true;
@@ -70,6 +104,25 @@ export default function ListScreen() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (status !== "signedIn" || !draftId || !editRequestKey) return;
+
+    let active = true;
+    void loadEditableListing(draftId, listingsApi.get)
+      .then((listing) => {
+        if (!active) return;
+        setWorkflow({ routeKey: draftId, currentStep: 1, listing });
+        setEditResult({ key: editRequestKey, error: "" });
+      })
+      .catch((error) => {
+        if (active) setEditResult({ key: editRequestKey, error: friendlyError(error) });
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [draftId, editRequestKey, status]);
 
   function handleReset() {
     setActiveListing(null);
@@ -85,6 +138,9 @@ export default function ListScreen() {
   }
 
   if (status !== "signedIn") {
+    const nextPath = draftId
+      ? `/(tabs)/list?draftId=${encodeURIComponent(draftId)}`
+      : "/(tabs)/list";
     return (
       <Screen edges={["top", "left", "right"]}>
         <SectionHeading
@@ -102,7 +158,7 @@ export default function ListScreen() {
                   onPress={() =>
                     router.push({
                       pathname: "/(auth)/login",
-                      params: { next: "/(tabs)/list" },
+                      params: { next: nextPath },
                     })
                   }
                 />
@@ -112,7 +168,7 @@ export default function ListScreen() {
                   onPress={() =>
                     router.push({
                       pathname: "/(auth)/register",
-                      params: { next: "/(tabs)/list" },
+                      params: { next: nextPath },
                     })
                   }
                 />
@@ -140,6 +196,40 @@ export default function ListScreen() {
     );
   }
 
+  if (draftId && editLoading) {
+    return (
+      <Screen edges={["top", "left", "right"]}>
+        <LoadingState label="Loading your saved listing…" />
+      </Screen>
+    );
+  }
+
+  if (draftId && (editError || !activeListing)) {
+    return (
+      <Screen edges={["top", "left", "right"]}>
+        <Card>
+          <ScreenState
+            title="Could not open this listing"
+            message={editError || "The saved listing could not be loaded."}
+            action={
+              <View style={styles.authButtons}>
+                <Button
+                  label="Try again"
+                  onPress={() => setEditLoadAttempt((attempt) => attempt + 1)}
+                />
+                <Button
+                  label="Back to My Listings"
+                  variant="secondary"
+                  onPress={() => router.replace("/dashboard/listings" as never)}
+                />
+              </View>
+            }
+          />
+        </Card>
+      </Screen>
+    );
+  }
+
   return (
     <Screen edges={["top", "left", "right"]} keyboard scroll={false}>
       {/* Step Indicator Header */}
@@ -155,6 +245,7 @@ export default function ListScreen() {
 
       {currentStep === 1 && (
         <PropertyDataStep
+          key={draftId ?? "new-listing"}
           options={options}
           existingListing={activeListing}
           onNext={(saved) => {

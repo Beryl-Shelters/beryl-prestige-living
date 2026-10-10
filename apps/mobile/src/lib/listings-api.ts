@@ -1,4 +1,5 @@
 import { appendPickedFile, type PickedFile } from "./file-upload-helper";
+import type { FileAppender } from "./file-upload-core";
 
 export type ListingStatus = "UNLISTED" | "PENDING" | "LISTED" | "REJECTED";
 
@@ -150,11 +151,59 @@ export type ApiTransport = {
   request<T>(path: string, options?: { method?: string; body?: unknown; authenticated?: boolean }): Promise<T>;
 };
 
-export function createListingsApi(client?: ApiTransport) {
+export type DraftUploadProgress = {
+  listing: CustomerListing;
+  remainingImages: PickedFile[];
+};
+
+export function createListingsApi(
+  client?: ApiTransport,
+  appendFile: FileAppender = appendPickedFile
+) {
   const getClient = (): ApiTransport => {
     if (client) return client;
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     return (require("./api-client") as typeof import("./api-client")).apiClient;
+  };
+
+  const createDraft = async (
+    content: Record<string, unknown>,
+    images: PickedFile[]
+  ): Promise<CustomerListing> => {
+    const formData = new FormData();
+    formData.append("data", JSON.stringify({ content }));
+    for (const img of images) {
+      await appendFile(formData, "images", img);
+    }
+    return getClient().request<CustomerListing>("/api/v1/listings", {
+      method: "POST",
+      body: formData,
+    });
+  };
+
+  const updateDraft = async (
+    id: string,
+    version: number,
+    content: Record<string, unknown>,
+    retainedImageIds: string[],
+    newImages: PickedFile[]
+  ): Promise<CustomerListing> => {
+    const formData = new FormData();
+    formData.append(
+      "data",
+      JSON.stringify({
+        version,
+        content,
+        retained_images: retainedImageIds,
+      })
+    );
+    for (const img of newImages) {
+      await appendFile(formData, "images", img);
+    }
+    return getClient().request<CustomerListing>(`/api/v1/listings/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: formData,
+    });
   };
 
   return {
@@ -166,44 +215,52 @@ export function createListingsApi(client?: ApiTransport) {
       return getClient().request<CustomerListing>(`/api/v1/listings/${encodeURIComponent(id)}`);
     },
 
-    async createDraft(
-      content: Record<string, unknown>,
-      images: PickedFile[]
-    ): Promise<CustomerListing> {
-      const formData = new FormData();
-      formData.append("data", JSON.stringify({ content }));
-      for (const img of images) {
-        await appendPickedFile(formData, "images", img);
-      }
-      return getClient().request<CustomerListing>("/api/v1/listings", {
-        method: "POST",
-        body: formData,
-      });
-    },
+    createDraft,
 
-    async updateDraft(
-      id: string,
-      version: number,
+    updateDraft,
+
+    async saveDraftInPhotoBatches(
       content: Record<string, unknown>,
+      existingListing: CustomerListing | null,
       retainedImageIds: string[],
-      newImages: PickedFile[]
+      newImages: PickedFile[],
+      onProgress?: (progress: DraftUploadProgress) => void
     ): Promise<CustomerListing> {
-      const formData = new FormData();
-      formData.append(
-        "data",
-        JSON.stringify({
-          version,
-          content,
-          retained_images: retainedImageIds,
-        })
-      );
-      for (const img of newImages) {
-        await appendPickedFile(formData, "images", img);
+      let listing = existingListing;
+      const remainingImages = [...newImages];
+      let retainedForNextRequest = [...retainedImageIds];
+
+      const reportProgress = (saved: CustomerListing) => {
+        listing = saved;
+        retainedForNextRequest = saved.images.map((image) => image.id);
+        onProgress?.({ listing: saved, remainingImages: [...remainingImages] });
+      };
+
+      if (!listing) {
+        const firstImage = remainingImages.shift();
+        if (!firstImage) throw new Error("At least one property photograph is required.");
+        reportProgress(await createDraft(content, [firstImage]));
+      } else if (remainingImages.length === 0) {
+        reportProgress(
+          await updateDraft(listing.id, listing.version, content, retainedImageIds, [])
+        );
       }
-      return getClient().request<CustomerListing>(`/api/v1/listings/${encodeURIComponent(id)}`, {
-        method: "PATCH",
-        body: formData,
-      });
+
+      while (listing && remainingImages.length > 0) {
+        const nextImage = remainingImages.shift()!;
+        reportProgress(
+          await updateDraft(
+            listing.id,
+            listing.version,
+            content,
+            retainedForNextRequest,
+            [nextImage]
+          )
+        );
+      }
+
+      if (!listing) throw new Error("Listing draft could not be saved.");
+      return listing;
     },
 
     async getMandate(listingId: string): Promise<SalesMandate | null> {
@@ -231,7 +288,7 @@ export function createListingsApi(client?: ApiTransport) {
       const formData = new FormData();
       formData.append("data", JSON.stringify(files.map(f => f.title)));
       for (const item of files) {
-        await appendPickedFile(formData, "documents", item.file);
+        await appendFile(formData, "documents", item.file);
       }
       return getClient().request<MandateDocumentUpload[]>(
         `/api/v1/listings/${encodeURIComponent(listingId)}/mandate/documents`,
@@ -247,7 +304,7 @@ export function createListingsApi(client?: ApiTransport) {
       file: PickedFile
     ): Promise<{ upload_id: string; mime_type: "image/png"; size_bytes: number }> {
       const formData = new FormData();
-      await appendPickedFile(formData, "signature", file);
+      await appendFile(formData, "signature", file);
       return getClient().request<{ upload_id: string; mime_type: "image/png"; size_bytes: number }>(
         `/api/v1/listings/${encodeURIComponent(listingId)}/mandate/signature`,
         {

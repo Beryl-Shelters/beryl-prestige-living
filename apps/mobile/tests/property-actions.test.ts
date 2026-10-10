@@ -5,6 +5,7 @@ import { test } from "node:test";
 import { createListingsApi } from "../src/lib/listings-api";
 import { createAssistanceApi } from "../src/lib/assistance-api";
 import { createPublicServicesApi } from "../src/lib/public-services-api";
+import { appendPickedFile } from "../src/lib/file-upload-helper";
 import { renderStrokesToPng, type Stroke } from "../src/lib/png-encoder";
 
 const root = existsSync(join(process.cwd(), "apps/mobile"))
@@ -18,7 +19,8 @@ test("signed-out List auth boundary enforces customer login and offers assistanc
   assert.match(listScreen, /Sign in to list a property/);
   assert.match(listScreen, /\/\(auth\)\/login/);
   assert.match(listScreen, /\/\(auth\)\/register/);
-  assert.match(listScreen, /next:\s*"\/(\(tabs\)\/)?list"/);
+  assert.match(listScreen, /const nextPath = draftId/);
+  assert.match(listScreen, /params:\s*\{ next: nextPath \}/);
   assert.match(listScreen, /Request Sell Assistance/);
   assert.match(listScreen, /\/sell-assistance/);
 });
@@ -45,12 +47,47 @@ test("canonical property fields and required validation are preserved in Propert
   assert.match(step, /Minimum down payment cannot exceed total property cost/);
   assert.match(step, /OptionSelect label="State \*"/);
   assert.doesNotMatch(step, /State \*<\/Text>[\s\S]{0,200}<ScrollView horizontal/);
+  // Both actions persist the same resumable photo draft. Only Next advances.
+  assert.match(step, /onPress=\{\(\) => void handleSave\(true\)\}/);
+  assert.match(step, /onPress=\{\(\) => void handleSave\(false\)\}/);
+  assert.match(step, /if \(proceedToMandate\) \{\s*onNext\(savedListing\)/);
+  assert.match(step, /setDraftNotice\("Listing draft saved successfully \(UNLISTED\)\."\)/);
 });
 
 test("long Nigerian state lists use the shared vertical selector",()=>{
-  const selector=read("src/components/option-select.tsx"),buy=read("app/buy-assistance.tsx"),upload=read("src/lib/file-upload-helper.ts");
+  const selector=read("src/components/option-select.tsx"),buy=read("app/buy-assistance.tsx");
   assert.match(selector,/ScrollView/);assert.match(selector,/accessibilityRole="radio"/);assert.match(selector,/setOpen\(false\)/);
-  assert.match(buy,/OptionSelect label="State \*"/);assert.match(upload,/await fetch\(file\.uri\)/);assert.match(upload,/await localResponse\.blob\(\)/);
+  assert.match(buy,/OptionSelect label="State \*"/);
+});
+
+test("browser image uploads preserve bytes, filename and validated MIME type", async () => {
+  const jpegBytes = new Uint8Array([255, 216, 255, 224, 0, 16, 74, 70, 73, 70]);
+  const uri = `data:image/jpeg;base64,${Buffer.from(jpegBytes).toString("base64")}`;
+  const formData = new FormData();
+  await appendPickedFile(formData, "images", {
+    uri,
+    name: "property-front.jpg",
+    type: "image/jpeg",
+    size: jpegBytes.length,
+  });
+  const uploaded = formData.get("images");
+  assert.ok(uploaded instanceof Blob);
+  assert.equal(uploaded.type, "image/jpeg");
+  assert.equal((uploaded as File).name, "property-front.jpg");
+  assert.deepEqual(new Uint8Array(await uploaded.arrayBuffer()), jpegBytes);
+
+  const signatureBytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+  const signatureForm = new FormData();
+  await appendPickedFile(signatureForm, "signature", {
+    uri: "data:image/png;base64,unused",
+    name: "signature.png",
+    type: "image/png",
+    bytes: signatureBytes,
+  });
+  const signature = signatureForm.get("signature");
+  assert.ok(signature instanceof Blob);
+  assert.equal((signature as File).name, "signature.png");
+  assert.deepEqual(new Uint8Array(await signature.arrayBuffer()), signatureBytes);
 });
 
 test("assistance routes own one human-readable header",()=>{
@@ -94,6 +131,66 @@ test("listings API enforces private upload contract, multipart bodies and client
   await api.submit("11111111-1111-4111-8111-111111111111");
   assert.equal(calls[5]!.path, "/api/v1/listings/11111111-1111-4111-8111-111111111111/submit");
   assert.equal((calls[5]!.options as { method: string }).method, "POST");
+});
+
+test("Mobile saves property photos in resumable one-file requests", async () => {
+  const calls: {
+    path: string;
+    method: string;
+    data: { version?: number; retained_images?: string[] };
+    fileCount: number;
+  }[] = [];
+  const client = {
+    request: async <T>(path: string, options?: unknown) => {
+      const request = options as { method: string; body: FormData };
+      const data = JSON.parse(String(request.body.get("data"))) as {
+        version?: number;
+        retained_images?: string[];
+      };
+      calls.push({
+        path,
+        method: request.method,
+        data,
+        fileCount: request.body.getAll("images").length,
+      });
+      const version = calls.length;
+      return {
+        id: "11111111-1111-4111-8111-111111111111",
+        version,
+        images: Array.from({ length: version }, (_, index) => ({
+          id: `00000000-0000-4000-8000-00000000000${index + 1}`,
+          url: `https://images.example.test/${index + 1}.jpg`,
+          sort_order: index,
+        })),
+      } as T;
+    },
+  };
+  const api = createListingsApi(client as never);
+  const images = [1, 2, 3].map((number) => ({
+    uri: `data:image/jpeg;base64,${Buffer.from([255, 216, 255, number]).toString("base64")}`,
+    name: `property-${number}.jpg`,
+    type: "image/jpeg",
+  }));
+  const progress: number[] = [];
+
+  const saved = await api.saveDraftInPhotoBatches(
+    { title: "Duplex" },
+    null,
+    [],
+    images,
+    ({ listing }) => progress.push(listing.images.length)
+  );
+
+  assert.equal(saved.images.length, 3);
+  assert.deepEqual(progress, [1, 2, 3]);
+  assert.deepEqual(calls.map((call) => call.method), ["POST", "PATCH", "PATCH"]);
+  assert.deepEqual(calls.map((call) => call.fileCount), [1, 1, 1]);
+  assert.deepEqual(calls[1]!.data.retained_images, ["00000000-0000-4000-8000-000000000001"]);
+  assert.deepEqual(calls[2]!.data.retained_images, [
+    "00000000-0000-4000-8000-000000000001",
+    "00000000-0000-4000-8000-000000000002",
+  ]);
+  assert.deepEqual(calls.slice(1).map((call) => call.data.version), [1, 2]);
 });
 
 test("blank signature is rejected and valid touch stroke produces compliant PNG", () => {

@@ -22,6 +22,7 @@ import {
   type CustomerListing,
 } from "@/lib/listings-api";
 import { formatNaira } from "@/lib/money";
+import { canEditListing } from "@/lib/listing-edit";
 import { useTheme } from "@/providers/theme-provider";
 import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
@@ -94,8 +95,7 @@ export default function OwnerListingDetailScreen() {
     listing.listing_status
   );
   const place = [listing.city, listing.state].filter(Boolean).join(", ") || listing.location;
-  const isEditable =
-    listing.listing_status === "UNLISTED" || listing.listing_status === "REJECTED";
+  const isEditable = canEditListing(listing.listing_status);
 
   const mainImage = listing.images[selectedImgIndex] || listing.images[0];
 

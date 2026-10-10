@@ -4,7 +4,7 @@ import { runIfMain } from "./run-ui-suite.mjs";
 runIfMain(import.meta.url, "public-header");
 
 export async function checkPublicHeader({ page, origin, calls, failures, screenshot, passed }) {
-  const routes = ["/", "/about", "/careers", "/analytics", "/support", "/buy"];
+  const routes = ["/", "/about", "/careers", "/support", "/buy"];
   const trigger = page.locator(".public-account-trigger");
   const dropdown = page.locator(".public-account-dropdown");
   failures.set("/me", { status: 401, code: "UNAUTHENTICATED" });
@@ -12,6 +12,7 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
   await page.getByRole("link", { name: "Login" }).waitFor();
   assert.equal(await trigger.count(), 0);
   assert.equal(await page.getByRole("link", { name: "Register" }).count(), 1);
+  assert.equal(await page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Analytics & Insights" }).count(), 0);
   assert.equal(await page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell / List a Property" }).getAttribute("href"), "/sell");
   await page.goto(origin + "/sell");
   await page.getByRole("heading", { name: "Sign in to list a property" }).waitFor();
@@ -27,6 +28,7 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
     assert.equal(await page.locator(".header-actions > .header-button").count(), 0, route);
     assert.equal(await page.locator(".header-actions .public-account-menu").count(), 1, route);
     const nav = page.getByRole("navigation", { name: "Public navigation" });
+    assert.equal(await nav.getByRole("link", { name: "Analytics & Insights" }).count(), 0, route);
     assert.equal(await nav.getByRole("link", { name: "Sell / List a Property" }).getAttribute("href"), "/sell", route);
     assert.equal(await nav.getByRole("link", { name: "Buy", exact: true }).getAttribute("href"), "/buy", route);
   }
@@ -45,6 +47,7 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
     await page.setViewportSize({ width, height: 900 });
     await page.goto(origin + "/buy");
     if (width <= 700) await page.getByRole("button", { name: "Toggle navigation" }).click();
+    assert.equal(await page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Analytics & Insights" }).count(), 0, `public navigation at ${width}`);
     await trigger.waitFor();
     assert.equal(await trigger.getAttribute("aria-haspopup"), "true");
     assert.equal(await trigger.getAttribute("aria-expanded"), "false");
@@ -92,6 +95,10 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
   await dropdown.getByRole("button", { name: "Log Out" }).click();
   await page.getByRole("link", { name: "Login" }).waitFor();
   assert.equal(calls.filter(call => call.endpoint === "/logout").length, beforeLogout + 1);
-  passed.push("Shared authenticated public header uses session identity on six public routes; signed-in Referrals redirects to dashboard");
+  const retiredResponse = await page.goto(origin + "/analytics");
+  assert.equal(retiredResponse?.status(), 404);
+  assert.equal(await page.getByText("Analytics & Insights", { exact: true }).count(), 0);
+  passed.push("Shared authenticated public header uses session identity on five public routes; signed-in Referrals redirects to dashboard");
+  passed.push("Public desktop/mobile navigation omits Analytics & Insights and retired /analytics returns 404");
   passed.push("Signed-out controls, six widths, menu toggle/outside/Escape, truthful unavailable items, valid routes and existing logout work");
 }

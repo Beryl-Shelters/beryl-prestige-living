@@ -17,6 +17,27 @@ export function friendlyError(error: unknown): string {
   return "Beryl Shelter could not complete this request. Please try again.";
 }
 
+export function responseFailure(status: number, payload: unknown): MobileApiError {
+  const envelope = payload && typeof payload === "object" ? payload : null;
+  const detail = envelope && "error" in envelope && envelope.error && typeof envelope.error === "object"
+    ? envelope.error : null;
+  const message = detail && "message" in detail && typeof detail.message === "string" && detail.message.trim()
+    ? detail.message : undefined;
+  const code = detail && "code" in detail && typeof detail.code === "string" ? detail.code : undefined;
+  const fallback = status === 413
+    ? "The server could not accept this file size. Please choose a smaller file."
+    : status === 401
+      ? "Your session has expired. Please log in again."
+      : status === 403
+        ? "This request is not permitted for your account."
+        : status === 429
+          ? "Too many requests. Please wait a moment and try again."
+          : status === 408 || status === 504
+            ? "The server took too long to respond. Please try again."
+            : `Beryl Shelter could not complete this request (HTTP ${status}). Please try again.`;
+  return new MobileApiError(errorKind(status), message ?? fallback, status, code);
+}
+
 export function transportFailure(error: unknown): MobileApiError {
   if (typeof DOMException !== "undefined" && error instanceof DOMException && ["AbortError", "TimeoutError"].includes(error.name)) {
     return new MobileApiError("network", "The request timed out. Please try again.");
