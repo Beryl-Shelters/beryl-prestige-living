@@ -46,6 +46,7 @@ import { ResendAdminInvitationEmail, type AdminInvitationEmail } from "./admin/e
 import { SupabaseAdminIdentity, type AdminIdentity } from "./admin/identity.js";
 import { SupabaseAdminRepository, type AdminRepository } from "./admin/repository.js";
 import { adminRouter } from "./admin/routes.js";
+import { createOpenApiDocument, swaggerAssets, swaggerPage } from "./api-docs.js";
 import { SupabaseAdminCustomersRepository, type AdminCustomersRepository } from "./admin/customers-repository.js";
 import { SupabaseAdminPropertiesRepository, type AdminPropertiesRepository } from "./admin/properties-repository.js";
 import { SupabaseAdminLeadsRepository, type AdminLeadsRepository } from "./admin/leads-repository.js";
@@ -85,6 +86,7 @@ export interface AppConfig {
   buyAssistanceRepository?: BuyAssistanceRepository;
   propertyViewingsRepository?: PropertyViewingsRepository;
   trustProxyHops?: number;
+  enableApiDocs?: boolean;
 }
 
 export function createApp(config: AppConfig): Express {
@@ -92,6 +94,13 @@ export function createApp(config: AppConfig): Express {
 
   app.disable("x-powered-by");
   app.set("trust proxy", config.trustProxyHops ?? 0);
+  if (config.enableApiDocs) {
+    app.get("/api-docs/openapi.json", (request, response) => {
+      const serverUrl = `${request.protocol}://${request.get("host")}`;
+      response.json(createOpenApiDocument(serverUrl));
+    });
+    app.use("/api-docs", swaggerAssets, swaggerPage);
+  }
   app.use(helmet());
   const allowedOrigins=new Set([config.auth?.webOrigin,config.webAppUrl,config.admin?.appOrigin].filter((value):value is string=>Boolean(value)));
   app.use(cors({ origin:(origin,callback)=>callback(null,!origin||allowedOrigins.has(origin)), credentials: true, methods: ["GET", "POST", "PATCH", "DELETE"], allowedHeaders: ["Content-Type","Authorization","X-Beryl-Client","X-Beryl-Verify-Token","X-Beryl-Forgot-Token","X-Beryl-Recovery-Token","X-Beryl-OAuth-Token"] }));

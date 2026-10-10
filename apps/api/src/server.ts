@@ -8,7 +8,7 @@ import { loadAdminConfig } from "./admin/config.js";
 const environment = loadEnvironment();
 const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS || 0);
 if (!Number.isInteger(trustProxyHops) || trustProxyHops < 0 || trustProxyHops > 5) throw new Error("TRUST_PROXY_HOPS must be an integer from 0 to 5.");
-const app = createApp({ webAppUrl: environment.webAppUrl, auth: loadAuthConfig(process.env), admin: loadAdminConfig(process.env), trustProxyHops });
+const app = createApp({ webAppUrl: environment.webAppUrl, auth: loadAuthConfig(process.env), admin: loadAdminConfig(process.env), trustProxyHops, enableApiDocs: environment.nodeEnv === "development" });
 
 app.listen(environment.port, () => {
   console.log(`Beryl Shelter API listening on port ${environment.port}`);
