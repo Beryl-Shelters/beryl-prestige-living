@@ -47,8 +47,6 @@ test("Admin Property Review Reject button hover defect is definitively resolved"
   // Approve button hover state
   assert.match(css, /\.property-approve:hover\s*\{[^}]*background:\s*#116938/);
 
-  // Withdrawal reject button hover state
-  assert.match(css, /\.withdrawal-admin-actions \.reject-withdrawal:hover\s*\{[^}]*background:\s*#fee2e2/);
 });
 
 test("Admin Dark mode styles satisfy Executive Update palette", () => {

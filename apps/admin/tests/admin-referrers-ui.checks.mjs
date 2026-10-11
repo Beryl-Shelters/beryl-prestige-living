@@ -246,9 +246,9 @@ try {
   await page.getByText("Controlled Referrer", { exact: true }).waitFor();
   await page.getByRole("link", { name: "View Controlled Referrer" }).click();
   await page.getByRole("heading", { name: "Controlled Referrer" }).waitFor();
-  assert.equal(await page.getByText("••••••6789").count(), 2);
+  assert.equal(await page.getByText("••••••6789").count(), 1);
   assert.equal(await page.getByText("0123456789").count(), 0);
-  await page.getByRole("button", { name: /Pay available/ }).click();
+  await page.getByRole("button", { name: /Record payment/ }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByText("0123456789").waitFor();
   assert.equal(
@@ -273,17 +273,7 @@ try {
     ),
     true,
   );
-  paid=false;withdrawalStatus="PENDING";await page.reload();await page.getByRole("heading",{name:"Controlled Referrer"}).waitFor();
-  await page.getByRole("button",{name:"Begin Processing"}).click();
-  await page.getByRole("button",{name:"Record Payment"}).waitFor();
-  await page.getByRole("button",{name:"Record Payment"}).click();
-  const withdrawalDialog=page.getByRole("dialog");
-  await withdrawalDialog.getByText("WDR-ABC234").waitFor();
-  await withdrawalDialog.locator('input[type="file"]').setInputFiles({name:"receipt.pdf",mimeType:"application/pdf",buffer:Buffer.from("%PDF-test")});
-  await withdrawalDialog.getByRole("button",{name:"Confirm Payment"}).click();
-  await page.getByRole("heading",{name:"Payment Recorded"}).waitFor();
-  await page.getByRole("button",{name:"Done"}).click();
-  await page.getByText("PAID",{exact:true}).waitFor();
+  assert.equal(await page.getByRole("link",{name:"Withdrawals"}).count(),0);
   empty = true;
   await page.goto(`${origin}/dashboard/referrers`);
   await page.getByRole("heading", { name: "No referrers yet" }).waitFor();

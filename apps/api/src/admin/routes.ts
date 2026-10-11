@@ -54,9 +54,6 @@ import {
   adminReferrerDetailQuerySchema,
   adminReferrerIdSchema,
   adminReferrerQuerySchema,
-  adminWithdrawalIdSchema,
-  adminWithdrawalRejectionSchema,
-  adminWithdrawalQuerySchema,
 } from "./referrers-model.js";
 import type { AdminReferrersRepository } from "./referrers-repository.js";
 import { AdminReferrersService } from "./referrers-service.js";
@@ -137,10 +134,6 @@ export function adminRouter(
     }),
   );
   router.get(
-    "/referrers/withdrawals",
-    wrap(async(request,response)=>{await sessions.account(request);response.json({success:true,data:await referrers.withdrawals(adminWithdrawalQuerySchema.parse(request.query))});}),
-  );
-  router.get(
     "/auth/me",
     wrap(async (request, response) => {
       response.json({
@@ -148,25 +141,6 @@ export function adminRouter(
         data: { admin: await sessions.account(request) },
       });
     }),
-  );
-  router.post(
-    "/referrers/withdrawals/:withdrawalId/processing",
-    limited(30),
-    wrap(async(request,response)=>{const caller=await sessions.account(request);if(Object.keys(request.body??{}).length)throw new AuthError(400,"INVALID_WITHDRAWAL_REQUEST","This action does not accept extra fields.");response.json({success:true,data:{withdrawal:await referrers.beginWithdrawal(caller.userId,adminWithdrawalIdSchema.parse(request.params.withdrawalId))}});}),
-  );
-  router.post(
-    "/referrers/withdrawals/:withdrawalId/reject",
-    limited(30),
-    wrap(async(request,response)=>{const caller=await sessions.account(request),input=adminWithdrawalRejectionSchema.parse(request.body);response.json({success:true,data:{withdrawal:await referrers.rejectWithdrawal(caller.userId,adminWithdrawalIdSchema.parse(request.params.withdrawalId),input.reason)}});}),
-  );
-  router.get(
-    "/referrers/withdrawals/:withdrawalId/payment",
-    wrap(async(request,response)=>{const caller=await sessions.account(request);response.json({success:true,data:{payment:await referrers.withdrawalPreview(caller.userId,adminWithdrawalIdSchema.parse(request.params.withdrawalId))}});}),
-  );
-  router.post(
-    "/referrers/withdrawals/:withdrawalId/payment",
-    limited(20),
-    wrap(async(request,response)=>{const caller=await sessions.account(request),withdrawal=adminWithdrawalIdSchema.parse(request.params.withdrawalId),upload=await readPaymentReceipt(request),input=adminPaymentRequestSchema.parse(upload.data);response.status(201).json({success:true,data:{payment:await referrers.payWithdrawal(input.requestId,caller.userId,withdrawal,upload.file)}});}),
   );
   router.post(
     "/auth/logout",
@@ -416,6 +390,15 @@ export function adminRouter(
       response.send(Buffer.from(bytes));
     }),
   );
+  router.use("/referrers/withdrawals", (_request, response) => {
+    response.status(404).json({
+      success: false,
+      error: {
+        code: "NOT_FOUND",
+        message: "This endpoint is not available.",
+      },
+    });
+  });
   router.get(
     "/referrers/:referrerId",
     wrap(async (request, response) => {

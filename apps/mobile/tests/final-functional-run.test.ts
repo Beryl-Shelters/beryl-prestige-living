@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { createMessagesApi } from "../src/lib/messages-api";
 import {
-  calculateQuickPercentage,
   createReferralsApi,
   referralCommissionBasisPoints,
 } from "../src/lib/referrals-api";
@@ -136,12 +135,9 @@ test("Referrals API requests real data and supports SELLER referral generation",
       return {
         program: { commissionRateBasisPoints: 200 },
         summary: {
-          availableBalance: 15000000,
-          totalEarnings: 20000000,
-          paid: 5000000,
-          pendingWithdrawals: 0,
-          grossOutstanding: 0,
-          bankComplete: true,
+          totalEarned: 20000000,
+          totalPaid: 5000000,
+          unpaidBalance: 15000000,
           referrals: 3,
           propertiesSold: 2,
         },
@@ -170,7 +166,7 @@ test("Referrals API requests real data and supports SELLER referral generation",
   const api = createReferralsApi(client as never);
   const page = await api.list(1);
   assert.equal(page.program.commissionRateBasisPoints, 200);
-  assert.equal(page.summary.availableBalance, 15000000);
+  assert.equal(page.summary.unpaidBalance, 15000000);
   assert.equal(page.items[0]!.earnings, 100000000);
 
   const created = await api.create({ type: "SELLER" });
@@ -178,48 +174,18 @@ test("Referrals API requests real data and supports SELLER referral generation",
   assert.match(created.referralUrl, /^https:\/\//);
 });
 
-// ============================================================================
-// 3. REFERRAL WITHDRAWALS
-// ============================================================================
-
-test("calculateQuickPercentage calculates exact integer minor units for 25, 50, 75, 100%", () => {
-  const available = 1000050; // ₦10,000.50
-
-  assert.equal(calculateQuickPercentage(available, 100), 1000050);
-  assert.equal(calculateQuickPercentage(available, 50), 500025);
-  assert.equal(calculateQuickPercentage(available, 25), 250012);
-  assert.equal(calculateQuickPercentage(available, 75), 750037);
-});
-
-test("Withdrawal UI requires bank details and only allows cancellation for PENDING status", () => {
-  const withdrawContent = read("app/dashboard/referrals/withdraw.tsx");
-  assert.match(withdrawContent, /Submitting this request does not transfer money automatically/);
-  assert.match(withdrawContent, /isPending/);
-  assert.match(withdrawContent, /Cancel Request/);
-  assert.match(withdrawContent, /Beryl is processing the external payment/);
-  // Verify that cancel is strictly conditionally guarded for isPending
-  assert.match(withdrawContent, /\{isPending && \(/);
-});
-
-test("Withdrawals API requests and cancels pending withdrawal", async () => {
-  const calls: { path: string; options: unknown }[] = [];
-  const client = {
-    request: async <T>(path: string, options?: unknown) => {
-      calls.push({ path, options });
-      if (path === "/api/v1/dashboard/referrals/withdrawals") {
-        return { id: "wth-123" } as T;
-      }
-      return undefined as T;
-    },
-  };
-
-  const api = createReferralsApi(client as never);
-  const reqRes = await api.requestWithdrawal("req-1", 500000);
-  assert.equal(reqRes.id, "wth-123");
-  assert.equal(calls[0]!.path, "/api/v1/dashboard/referrals/withdrawals");
-
-  await api.cancelWithdrawal("wth-123");
-  assert.equal(calls[1]!.path, "/api/v1/dashboard/referrals/withdrawals/wth-123/cancel");
+test("Mobile retires referral withdrawal routes, navigation, and API methods", () => {
+  assert.equal(existsSync(join(root, "app/dashboard/referrals/withdraw.tsx")), false);
+  const source = [
+    read("src/lib/referrals-api.ts"),
+    read("app/dashboard/referrals/index.tsx"),
+    read("src/components/dashboard/dashboard-drawer.tsx"),
+    read("app/(tabs)/account.tsx"),
+  ].join("\n");
+  assert.doesNotMatch(source, /requestWithdrawal|cancelWithdrawal|Withdraw Earnings|\/referrals\/withdraw/);
+  assert.match(source, /Total Earned/);
+  assert.match(source, /Total Paid/);
+  assert.match(source, /Unpaid Balance/);
 });
 
 // ============================================================================

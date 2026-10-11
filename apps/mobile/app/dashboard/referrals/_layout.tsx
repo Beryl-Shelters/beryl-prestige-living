@@ -21,7 +21,6 @@ export default function ReferralsLayout() {
           headerLeft: () => <DashboardHeaderLeft />,
         }}
       />
-      <Stack.Screen name="withdraw" options={{ title: "Withdraw Earnings" }} />
     </Stack>
   );
 }

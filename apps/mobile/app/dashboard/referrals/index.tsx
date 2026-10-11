@@ -236,40 +236,19 @@ export default function ReferralsScreen() {
         {/* Summary KPIs */}
         {summary ? (
           <View style={styles.kpiGrid}>
-            <View style={[styles.kpiCard, styles.kpiCardHighlight]}>
-              <Text style={styles.kpiLabel}>Available Balance</Text>
-              <Text style={styles.kpiValueLarge}>
-                {formatMoney(summary.availableBalance)}
-              </Text>
-              {summary.availableBalance > 0 && (
-                summary.bankComplete ? (
-                  <Button
-                    label="Withdraw Earnings"
-                    onPress={() => router.push("/dashboard/referrals/withdraw" as never)}
-                  />
-                ) : (
-                  <Button
-                    label="Add bank details in Settings"
-                    variant="secondary"
-                    onPress={() => router.push("/dashboard/settings/profile" as never)}
-                  />
-                )
-              )}
+            <View style={styles.kpiCard}>
+              <Text style={styles.kpiLabel}>Total Earned</Text>
+              <Text style={styles.kpiValue}>{formatMoney(summary.totalEarned)}</Text>
             </View>
 
             <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>Total Earnings</Text>
-              <Text style={styles.kpiValue}>{formatMoney(summary.totalEarnings)}</Text>
+              <Text style={styles.kpiLabel}>Total Paid</Text>
+              <Text style={styles.kpiValue}>{formatMoney(summary.totalPaid)}</Text>
             </View>
 
             <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>Pending Withdrawals</Text>
-              <Text style={styles.kpiValue}>{formatMoney(summary.pendingWithdrawals)}</Text>
-            </View>
-
-            <View style={styles.kpiCard}>
-              <Text style={styles.kpiLabel}>Paid</Text>
-              <Text style={styles.kpiValue}>{formatMoney(summary.paid)}</Text>
+              <Text style={styles.kpiLabel}>Unpaid Balance</Text>
+              <Text style={styles.kpiValue}>{formatMoney(summary.unpaidBalance)}</Text>
             </View>
 
             <View style={styles.kpiCard}>

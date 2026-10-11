@@ -7,8 +7,8 @@
     "build": "next build",
     "start": "next start",
     "type-check": "tsc --noEmit",
-    "lint": "eslint ."
-    ,"test:withdrawals": "node tests/referral-withdrawal-ui.checks.mjs"
+    "lint": "eslint .",
+    "test:withdrawal-retirement": "node tests/referral-withdrawal-ui.checks.mjs"
   },
   "dependencies": {
     "next": "^16.3.0",

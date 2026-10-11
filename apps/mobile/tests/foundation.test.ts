@@ -19,7 +19,7 @@ test("Expo Router exposes the five approved tabs and no Admin route",()=>{
   const routes=read("app/_layout.tsx")+layout;assert.doesNotMatch(routes,/admin/i);
 });
 
-test("Account shell contains signed-out and signed-in customer navigation",()=>{const account=read("app/(tabs)/account.tsx");for(const label of ["Log in","Create account","Dashboard","Saved Properties","Referrals","Withdraw Earnings","Settings","Support","Log out"])assert.match(account,new RegExp(label));});
+test("Account shell contains signed-out and signed-in customer navigation",()=>{const account=read("app/(tabs)/account.tsx");for(const label of ["Log in","Create account","Dashboard","Saved Properties","Referrals","Settings","Support","Log out"])assert.match(account,new RegExp(label));assert.doesNotMatch(account,/Withdraw Earnings|\/dashboard\/referrals\/withdraw/);});
 
 test("API origin normalization is centralized and rejects credentials or query fragments",()=>{
   assert.equal(normalizeBaseUrl(undefined),"https://dev-api.berylshelter.com");assert.equal(normalizeBaseUrl(" https://api.example.com/ "),"https://api.example.com");
@@ -51,4 +51,4 @@ test("Mobile source stores sessions only in SecureStore and excludes legacy fina
   assert.doesNotMatch(source,/\b4%\b|\b0\.04\b|400\s*bps/i);assert.doesNotMatch(source,/paystack|flutterwave|service[_-]?role|SUPABASE_SERVICE/i);assert.doesNotMatch(source,/\/api\/v1\/admin/);
 });
 
-test("parity document maps canonical withdrawals, 2 percent commission and offline purchases",()=>{const parity=read("V2_MOBILE_PARITY.md");assert.match(parity,/GET \/api\/v1\/dashboard\/referrals\/withdrawals/);assert.match(parity,/2% \/ 200 basis points/);assert.match(parity,/no online property checkout/i);assert.match(parity,/Admin functionality is Web-only/);});
+test("parity document records retired withdrawals, 2 percent commission and offline purchases",()=>{const parity=read("V2_MOBILE_PARITY.md");assert.match(parity,/withdrawal requests are retired/i);assert.match(parity,/2% \/ 200 basis points/);assert.match(parity,/no online property checkout/i);assert.match(parity,/Admin functionality is Web-only/);});

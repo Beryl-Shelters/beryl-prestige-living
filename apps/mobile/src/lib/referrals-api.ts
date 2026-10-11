@@ -16,12 +16,9 @@ export type ReferralItem = {
 };
 
 export type ReferralSummary = {
-  availableBalance: number;
-  totalEarnings: number;
-  paid: number;
-  pendingWithdrawals: number;
-  grossOutstanding: number;
-  bankComplete: boolean;
+  totalEarned: number;
+  totalPaid: number;
+  unpaidBalance: number;
   referrals: number;
   propertiesSold: number;
 };
@@ -44,52 +41,6 @@ export type CreatedReferral = {
   propertyCode: string | null;
   referralUrl: string;
 };
-
-export type WithdrawalStatus = "PENDING" | "PROCESSING" | "PAID" | "REJECTED" | "CANCELLED";
-
-export type WithdrawalItem = {
-  id: string;
-  amountMinor: number;
-  status: WithdrawalStatus;
-  requestedAt: string;
-  processingStartedAt: string | null;
-  paidAt: string | null;
-  rejectedAt: string | null;
-  rejectionReason: string | null;
-  cancelledAt: string | null;
-  paymentId: string | null;
-};
-
-export type WithdrawalBalance = {
-  totalEarnedMinor: number;
-  totalPaidMinor: number;
-  grossOutstandingMinor: number;
-  pendingMinor: number;
-  availableMinor: number;
-  minimumMinor: number;
-};
-
-export type WithdrawalBank = {
-  complete: boolean;
-  accountName: string | null;
-  bankName: string | null;
-  maskedAccountNumber: string | null;
-};
-
-export type WithdrawalPage = {
-  balance: WithdrawalBalance;
-  bank: WithdrawalBank;
-  items: WithdrawalItem[];
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
-};
-
-export function calculateQuickPercentage(availableMinor: number, percent: number): number {
-  if (percent === 100) return availableMinor;
-  return Math.floor(availableMinor / 100) * percent + Math.floor(((availableMinor % 100) * percent) / 100);
-}
 
 export function createReferralsApi(client?: ApiTransport) {
   const getClient = (): ApiTransport => {
@@ -119,28 +70,6 @@ export function createReferralsApi(client?: ApiTransport) {
       });
     },
 
-    async withdrawals(page = 1): Promise<WithdrawalPage> {
-      return getClient().request<WithdrawalPage>(
-        `/api/v1/dashboard/referrals/withdrawals?${new URLSearchParams({ page: String(page) })}`
-      );
-    },
-
-    async requestWithdrawal(requestId: string, amountMinor: number): Promise<{ id: string }> {
-      return getClient().request<{ id: string }>("/api/v1/dashboard/referrals/withdrawals", {
-        method: "POST",
-        body: { requestId, amountMinor },
-      });
-    },
-
-    async cancelWithdrawal(id: string): Promise<void> {
-      return getClient().request<void>(
-        `/api/v1/dashboard/referrals/withdrawals/${encodeURIComponent(id)}/cancel`,
-        {
-          method: "POST",
-          body: {},
-        }
-      );
-    },
   };
 }
 

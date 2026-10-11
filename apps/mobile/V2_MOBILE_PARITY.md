@@ -49,21 +49,18 @@ Status meanings: **Complete** is implemented and validated, **Foundation** is ro
 | Messages/Tickets | `/dashboard/messages` | ticket list/read/create/reply/read/attachments under `/api/v1/messages` | Account | `/dashboard/messages` | 5 | Foundation route | `OPEN`/`RESOLVED`; resolved is read-only; no invented statuses. |
 | Referrals | `/dashboard/referrals` | `GET/POST /api/v1/dashboard/referrals`; `/public-property` | Account | `/dashboard/referrals` | 5 | Foundation route | Buyer/seller referral links and canonical share URLs. |
 | Referral deep link | Canonical shared URL | Referral attribution through current Web/API flow | Public | `/referrals/[referralCode]` | 5 | Foundation route | Public code only; attribution implementation remains canonical. |
-| Referral history/earnings | `/dashboard/referrals` | `GET /api/v1/dashboard/referrals` | Account | `/dashboard/referrals` | 5 | Planned | Total earned, paid, pending/reserved, available and partial payment state. |
-| Withdrawal summary/history | `/dashboard/referrals/withdraw` | `GET /api/v1/dashboard/referrals/withdrawals` | Account | `/dashboard/referrals/withdraw` | 5 | Foundation route | Includes minimum, bank readiness, balances and real request history. |
-| Submit withdrawal | Same | `POST /api/v1/dashboard/referrals/withdrawals` | Account | Withdraw Earnings | 5 | Planned | Custom and 25/50/75/100% of available balance using exact integers. |
-| Cancel withdrawal | Same | `POST /withdrawals/:withdrawalId/cancel` | Account | Withdraw Earnings | 5 | Planned | Only `PENDING`; never after processing starts. |
+| Referral history/earnings | `/dashboard/referrals` | `GET /api/v1/dashboard/referrals` | Account | `/dashboard/referrals` | 5 | Complete | Read-only Total Earned, Total Paid, Unpaid Balance and per-referral payment state. Customer withdrawal requests are retired. |
 | Profile/avatar | `/dashboard/settings` | `GET/PATCH /api/v1/dashboard/settings/profile` | Account | `/dashboard/settings` | 6 | Foundation route | Avatar uses image upload. Email remains canonical read-only behavior. |
 | Business profile | `/dashboard/settings` | `GET/PATCH /api/v1/dashboard/settings/business` | Account | Settings | 6 | Planned | Existing customer business contract. |
-| Bank details | `/dashboard/settings` | Profile settings fields | Account | Settings | 6 | Planned | Canonical source for withdrawals; no duplicate bank table. |
+| Bank details | `/dashboard/settings` | Profile settings fields | Account | Settings | 6 | Planned | Payment details for admin-recorded external referral payouts; no duplicate bank table. |
 | Change password | `/dashboard/settings` | `PATCH /api/v1/dashboard/settings/password` | Account | Settings | 6 | Planned | Revokes current sessions according to existing API behavior. |
 | KYC | `/dashboard/kyc` | `GET/POST /api/v1/dashboard/kyc`; private document download | Account | `/dashboard/kyc` | 6 | Foundation route | Passport front; Driver's License/National ID front+back. No BVN. |
 
 ## Mobile exclusions
 
-- All Admin functionality is Web-only: Admin auth, Users, Properties moderation, Leads, Referrers, withdrawal processing/payment, KYC review, tickets, invitations and SUPER_ADMIN functions.
+- All Admin functionality is Web-only: Admin auth, Users, Properties moderation, Leads, Referrers, direct referral payout recording, KYC review, tickets, invitations and SUPER_ADMIN functions.
 - There is no online property checkout, payment gateway, escrow, ownership transfer or closing flow. Completed purchases are verified offline snapshots recorded by Beryl operations.
-- Mobile does not initiate bank transfers. It submits customer withdrawal requests; Beryl transfers externally and Admin records a receipt-backed payout.
+- Mobile does not initiate bank transfers or customer withdrawal requests. Beryl transfers externally and Admin records a receipt-backed payout.
 - Desktop-only layout constructs are not copied literally. Mobile uses tabs, stacks and compact account navigation while preserving the same business operations.
 
 ## Auth/API compatibility audit
@@ -76,9 +73,9 @@ Web used HTTP-only cookies plus exact-origin CSRF checks. React Native cannot re
 - Supabase access/refresh tokens remain encrypted server-side. No provider token, service-role key or private secret enters Mobile.
 - Web cookie behavior and exact-origin protection remain unchanged. A browser request with an untrusted `Origin` is rejected even if it adds the Mobile marker.
 
-## Withdrawal contract
+## Referral payment contract
 
-`availableMinor = totalEarnedMinor - totalPaidMinor - reservedMinor`. `PENDING` and `PROCESSING` requests are reserved, not paid. The lifecycle is `PENDING → PROCESSING → PAID`, with `PENDING → REJECTED/CANCELLED`. Commission remains exactly 2% / 200 basis points. The configurable minimum and registered-bank readiness come from the existing API. Mobile creates no commission, payout, purchase, transfer, listing transition or Lead transition itself.
+Customer referral earnings are read-only in Mobile. Commission remains exactly 2% / 200 basis points. Beryl processes transfers externally, then Admin records the paid amount and receipt against the canonical commission ledger. Customer withdrawal requests are retired; historical database records remain preserved for financial compatibility. Mobile creates no commission, payout, purchase, transfer, listing transition or Lead transition itself.
 
 ## Device capability audit
 
@@ -102,6 +99,6 @@ Phase 1 requested no media permissions. Phase 3 adds `expo-image-picker`, `expo-
 2. **Discovery (complete):** Home, Buy, property details, Saved, Compare, Mortgage, property sharing and referral-aware property navigation.
 3. **Property actions (complete):** Sell/List editor, media/documents, Sales Mandate/signature/submission, Sell Assistance, Buy Assistance, viewings and inquiries.
 4. **Customer operations (complete):** Dashboard Overview, Listings management, Analytics and Purchased Properties.
-5. **Communication and earnings (complete):** Messages/Tickets, Support, Referrals and Withdrawal Requests.
+5. **Communication and earnings (complete):** Messages/Tickets, Support and read-only Referrals.
 6. **Account (complete):** Profile/avatar, Business, bank details, password change, KYC.
 7. **Closure (upcoming):** standalone dark-mode pass, final store submission, and EAS production deployment.

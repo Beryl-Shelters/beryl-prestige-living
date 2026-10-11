@@ -6,12 +6,9 @@ export const referralsState = { links: [], next: 2, history: [], summary: null }
 const page = (requestedPage = 1) => ({
   program: { commissionRateBasisPoints: 200 },
   summary: referralsState.summary ?? {
-    availableBalance: 0,
-    totalEarnings: 0,
-    paid: 0,
-    pendingWithdrawals: 0,
-    grossOutstanding: 0,
-    bankComplete: false,
+    totalEarned: 0,
+    totalPaid: 0,
+    unpaidBalance: 0,
     referrals: 0,
     propertiesSold: 0,
   },
@@ -90,10 +87,10 @@ export async function checkReferrals({
     await browserPage.setViewportSize({ width, height: 900 });
     referralsState.links = [];
     await open();
-    assert.equal(await browserPage.locator(".referral-kpi").count(), 6);
+    assert.equal(await browserPage.locator(".referral-kpi").count(), 5);
     assert.deepEqual(
       await browserPage.locator(".referral-kpi p").allTextContents(),
-      ["₦0.00", "₦0.00", "₦0.00", "₦0.00", "0", "0"],
+      ["₦0.00", "₦0.00", "₦0.00", "0", "0"],
     );
     assert.deepEqual(
       await browserPage.locator(".referral-flow-step h3").allTextContents(),
@@ -118,7 +115,7 @@ export async function checkReferrals({
     await screenshot(`referrals-empty-${width}`);
   }
   passed.push(
-    "Reference referral flow, two actions, six honest financial/activity KPIs and responsive empty state match the supplied hierarchy at 1440/768/390/320px",
+    "Reference referral flow, two actions, five honest financial/activity KPIs and responsive empty state match the supplied hierarchy at 1440/768/390/320px",
   );
   await browserPage.setViewportSize({ width: 1440, height: 900 });
   await open();
@@ -142,7 +139,7 @@ export async function checkReferrals({
   );
   assert.deepEqual(
     await browserPage.locator(".referral-kpi p").allTextContents(),
-    ["₦0.00", "₦0.00", "₦0.00", "₦0.00", "0", "0"],
+    ["₦0.00", "₦0.00", "₦0.00", "0", "0"],
   );
   await browserPage
     .getByRole("button", { name: "Refer a Friend to Sell", exact: true })
@@ -157,7 +154,7 @@ export async function checkReferrals({
     "Seller link creation is server-shaped, copyable and idempotent; no purchase, balance or earnings are invented; View Properties uses public Buy",
   );
   referralsState.history=Array.from({length:12},(_,index)=>({id:`COM-REAL${String(index+1).padStart(2,"0")}`,referralType:index%2?"SELLER":"PROPERTY",saleAmount:50000000+index*1000000,propertyCode:`RES-TEST${index}`,earnings:1000000+index*20000,status:"COMPLETED",completedAt:`2026-09-${String(index+1).padStart(2,"0")}T12:00:00.000Z`,paymentState:index===0?"PAID":"OUTSTANDING",paidMinor:index===0?1000000:0,paidAt:index===0?"2026-09-20T12:00:00.000Z":null}));
-  referralsState.summary={availableBalance:1000000,totalEarnings:1200000,paid:100000,pendingWithdrawals:100000,grossOutstanding:1100000,bankComplete:true,referrals:12,propertiesSold:1};
+  referralsState.summary={totalEarned:1200000,totalPaid:100000,unpaidBalance:1100000,referrals:12,propertiesSold:1};
   await open(); assert.deepEqual(await browserPage.locator(".referrals-table th").allTextContents(),["Reference","Referral Type","Completed Sale","Property Code","Earnings","Status","Payment","Completed"]); assert.equal(await browserPage.locator(".referrals-table tbody tr").count(),10); await browserPage.getByText(/Paid/).first().waitFor(); await browserPage.getByText("Outstanding",{exact:true}).first().waitFor(); await browserPage.getByText("Showing 1-10 of 12").waitFor();
   await browserPage.getByRole("button",{name:"Next",exact:true}).click(); await browserPage.getByText("COM-REAL11").waitFor(); await browserPage.getByText("Showing 11-12 of 12").waitFor();
   for(const width of [390,320]){await browserPage.setViewportSize({width,height:900});await browserPage.goto(origin+"/dashboard/referrals");await browserPage.getByText("COM-REAL01").waitFor();assert.equal(await browserPage.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.equal(await browserPage.locator(".referrals-table-scroll").evaluate(element=>element.scrollWidth>element.clientWidth),true);if(width===390)await screenshot("referrals-populated-390");}

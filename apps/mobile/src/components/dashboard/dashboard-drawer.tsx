@@ -51,7 +51,6 @@ const dashboardNavItems: NavEntry[] = [
   { id: "messages", label: "Messages", icon: "chatbubble-ellipses-outline", route: "/dashboard/messages" },
   { id: "purchased", label: "Purchased Properties", icon: "home-outline", route: "/dashboard/purchased-properties" },
   { id: "referrals", label: "Referrals", icon: "people-outline", route: "/dashboard/referrals" },
-  { id: "withdraw", label: "Withdraw Earnings", icon: "wallet-outline", route: "/dashboard/referrals/withdraw" },
   { id: "settings", label: "Settings", icon: "settings-outline", route: "/dashboard/settings" },
   { id: "kyc", label: "KYC Verification", icon: "shield-checkmark-outline", route: "/dashboard/kyc" },
   { id: "support", label: "Support", icon: "help-circle-outline", route: "/support" },

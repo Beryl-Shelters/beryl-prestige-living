@@ -126,12 +126,6 @@ const hubItems: HubItem[] = [
     description: "Referral links and 2% commission tracking",
   },
   {
-    label: "Withdraw Earnings",
-    icon: "wallet-outline",
-    route: "/dashboard/referrals/withdraw",
-    description: "Payout requests for cleared referral funds",
-  },
-  {
     label: "Settings",
     icon: "settings-outline",
     route: "/dashboard/settings",

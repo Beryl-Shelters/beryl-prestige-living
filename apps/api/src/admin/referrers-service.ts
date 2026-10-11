@@ -3,7 +3,7 @@ import type { MediaStorage } from "../listings/media.js";
 import type { MediaAsset } from "../listings/model.js";
 import type { CleanupAsset } from "../listings/repository.js";
 import type { UploadFile } from "../listings/uploads.js";
-import type { AdminReferrerQuery, AdminWithdrawalQuery } from "./referrers-model.js";
+import type { AdminReferrerQuery } from "./referrers-model.js";
 import type { AdminReferrersRepository } from "./referrers-repository.js";
 
 export class AdminReferrersService {
@@ -11,30 +11,30 @@ export class AdminReferrersService {
     private readonly repository: AdminReferrersRepository,
     private readonly storage: MediaStorage,
   ) {}
-  directory(query: AdminReferrerQuery) {
-    return this.repository.directory(query);
+  async directory(query: AdminReferrerQuery) {
+    const page=await this.repository.directory(query);
+    return {
+      summary:{referrers:page.summary.referrers,referrals:page.summary.referrals,completed:page.summary.completed,outstandingMinor:page.summary.outstandingMinor},
+      counts:page.counts,
+      items:page.items.map(item=>({id:item.id,fullName:item.fullName,phone:item.phone,referrals:item.referrals,completed:item.completed,earnedMinor:item.earnedMinor,paidMinor:item.paidMinor,outstandingMinor:item.outstandingMinor,bankStatus:item.bankStatus})),
+      page:page.page,pageSize:page.pageSize,total:page.total,totalPages:page.totalPages,
+    };
   }
-  detail(id: string, page: number, pageSize: number) {
-    return this.repository.detail(id, page, pageSize);
+  async detail(id: string, page: number, pageSize: number) {
+    const detail=await this.repository.detail(id,page,pageSize);
+    return {
+      referrer:detail.referrer,
+      summary:{referrals:detail.summary.referrals,completed:detail.summary.completed,earnedMinor:detail.summary.earnedMinor,paidMinor:detail.summary.paidMinor,outstandingMinor:detail.summary.outstandingMinor},
+      bank:detail.bank,
+      items:detail.items.map(item=>({commissionId:item.commissionId,referralCode:item.referralCode,referredName:item.referredName,referralType:item.referralType,propertyCode:item.propertyCode,earnedAt:item.earnedAt,status:item.status,rewardMinor:item.rewardMinor,paymentState:item.paymentState,paidMinor:item.paidMinor,paymentId:item.paymentId,paidAt:item.paidAt})),
+      page:detail.page,pageSize:detail.pageSize,total:detail.total,totalPages:detail.totalPages,
+    };
   }
-  withdrawals(query:AdminWithdrawalQuery){return this.repository.withdrawals(query);}
   preview(admin: string, commission: string) {
     return this.repository.preview(admin, commission);
   }
   receipt(admin: string, payment: string) {
     return this.repository.receipt(admin, payment);
-  }
-  beginWithdrawal(admin:string,withdrawal:string){return this.repository.beginWithdrawal(admin,withdrawal);}
-  rejectWithdrawal(admin:string,withdrawal:string,reason:string){return this.repository.rejectWithdrawal(admin,withdrawal,reason);}
-  withdrawalPreview(admin:string,withdrawal:string){return this.repository.withdrawalPreview(admin,withdrawal);}
-  async payWithdrawal(requestId:string,admin:string,withdrawal:string,file:UploadFile){
-    const prior=await this.repository.withdrawalByRequest(admin,requestId);
-    if(prior){if(prior.withdrawalId===withdrawal)return prior;throw new AuthError(409,"PAYMENT_REQUEST_CONFLICT","This payment request was already used.");}
-    await this.repository.withdrawalPreview(admin,withdrawal);
-    const extension=file.mime==="application/pdf"?"pdf":file.mime==="image/png"?"png":"jpg",target:CleanupAsset={public_id:`beryl-v2/referral-payouts/withdrawals/${withdrawal}/${requestId}.${extension}`,resource_type:"raw",delivery_type:"authenticated"};
-    let uploaded:MediaAsset;
-    try{uploaded=await this.storage.upload(file,target);}catch(error){try{const candidate:MediaAsset={...target,url:"",mime_type:file.mime,size_bytes:file.bytes.length},stored=Buffer.from(await this.storage.download(candidate));if(!stored.equals(file.bytes))throw error;uploaded=candidate;}catch{throw error;}}
-    try{return await this.repository.recordWithdrawal(requestId,admin,withdrawal,uploaded);}catch(error){const committed=await this.repository.withdrawalByRequest(admin,requestId).catch(()=>null);if(committed)return committed;await this.storage.remove(target).catch(()=>{});throw error;}
   }
   async pay(
     requestId: string,
