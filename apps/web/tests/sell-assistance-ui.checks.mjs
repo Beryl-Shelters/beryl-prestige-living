@@ -40,6 +40,7 @@ export async function checkSellAssistance({ page, origin, calls, failures, scree
   for (const width of [1440,1280,1024,768,430,390,360,320]) {
     await page.setViewportSize({ width, height: 900 }); await page.goto(origin + "/sell/assistance"); await page.getByRole("heading", { name: "Tell us about your property" }).waitFor(); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `assistance overflow ${width}`);
     await assertAdjacentHelp("Explain Lien"); await assertAdjacentHelp("Explain Registered Title Document");
+    assert.equal(await page.getByRole("button", { name: "Explain Transferable Gifts" }).locator("xpath=ancestor::*[contains(@class,'assistance-field-with-help')][1]").evaluate(element => getComputedStyle(element).marginBottom), width <= 800 ? "22px" : "24px");
     const columns = page.locator(".sell-assistance-columns"); assert.equal(await columns.evaluate(element => getComputedStyle(element).display), width <= 800 ? "block" : "grid");
     if (width <= 700) { await page.getByRole("button", { name: "Toggle navigation" }).click(); await navSell().click(); await prompt.waitFor(); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `prompt overflow ${width}`); if (width === 390) await screenshot("sell-decision-390"); await prompt.getByRole("button", { name: "Close sell assistance prompt" }).click(); }
     if (width === 1440 || width === 390) await screenshot(`sell-assistance-${width}`);

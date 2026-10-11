@@ -323,6 +323,7 @@ button:disabled { cursor: wait; opacity: .65; }
   column-gap: 6px;
   row-gap: 6px;
   align-items: center;
+  margin: 0 0 24px;
 }
 
 .assistance-field-with-help > .buy-assistance-field,
@@ -389,6 +390,10 @@ button:disabled { cursor: wait; opacity: .65; }
 }
 
 @media (max-width: 800px) {
+  .assistance-field-with-help {
+    margin-bottom: 22px;
+  }
+
   .buy-assistance-field > .field-label-with-help > strong,
   .sell-assistance-field > .field-label-with-help > strong {
     font-size: 13px;
