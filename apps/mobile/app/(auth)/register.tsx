@@ -90,7 +90,7 @@ export default function RegisterScreen() {
         />
         <TextField
           label="Phone number"
-          placeholder="e.g. 08012345678"
+          placeholder="e.g. 8012345678"
           keyboardType="phone-pad"
           value={form.phoneNumber}
           onChangeText={(value) => field("phoneNumber", value)}

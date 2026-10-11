@@ -437,7 +437,7 @@ export default function SettingsProfileScreen() {
               style={styles.input}
               value={draft.phoneNumber}
               onChangeText={(text) => setDraft((d) => ({ ...d, phoneNumber: text }))}
-              placeholder="e.g. 08012345678"
+              placeholder="e.g. 8012345678"
               placeholderTextColor={colors.textMuted}
               keyboardType="phone-pad"
             />
