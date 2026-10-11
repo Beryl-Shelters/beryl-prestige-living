@@ -3,6 +3,13 @@ import { runIfMain } from "./run-ui-suite.mjs";
 
 runIfMain(import.meta.url, "sell-assistance");
 export async function checkSellAssistance({ page, origin, calls, failures, screenshot, passed, pauseRequest, resume }) {
+  const assertAdjacentHelp = async (buttonName) => {
+    const button = page.getByRole("button", { name: buttonName });
+    const root = button.locator("xpath=ancestor::*[contains(@class,'assistance-field-with-help')][1]");
+    const [labelBox, buttonBox] = await Promise.all([root.locator(":scope > label > strong").boundingBox(), button.boundingBox()]);
+    assert(labelBox && buttonBox); const gap = buttonBox.x - (labelBox.x + labelBox.width);
+    assert(gap >= 4 && gap <= 7, `${buttonName} gap was ${gap}px`);
+  };
   const navSell = () => page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell — List a Property" });
   const prompt = page.getByRole("dialog", { name: "Do you need assistance" });
   await page.goto(origin + "/buy"); await navSell().click(); await prompt.waitFor(); await screenshot("sell-decision-1440");
@@ -32,6 +39,7 @@ export async function checkSellAssistance({ page, origin, calls, failures, scree
   await page.goto(origin + "/sell/assistance"); await page.getByLabel(/2\. Preferred Contact Method/).selectOption("Email"); await page.getByLabel(/4\. What Location/).fill("Keep this location"); await page.getByLabel(/5\. What type of property/).selectOption("Commercial"); await page.getByLabel(/13\. How much/).fill("75000000"); await page.getByRole("button", { name: "Submit", exact: true }).click(); await page.getByText("Your assistance request could not be submitted").waitFor(); assert.equal(await page.getByLabel(/4\. What Location/).inputValue(), "Keep this location"); failures.delete("/public/sell-assistance");
   for (const width of [1440,1280,1024,768,430,390,360,320]) {
     await page.setViewportSize({ width, height: 900 }); await page.goto(origin + "/sell/assistance"); await page.getByRole("heading", { name: "Tell us about your property" }).waitFor(); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `assistance overflow ${width}`);
+    await assertAdjacentHelp("Explain Lien"); await assertAdjacentHelp("Explain Registered Title Document");
     const columns = page.locator(".sell-assistance-columns"); assert.equal(await columns.evaluate(element => getComputedStyle(element).display), width <= 800 ? "block" : "grid");
     if (width <= 700) { await page.getByRole("button", { name: "Toggle navigation" }).click(); await navSell().click(); await prompt.waitFor(); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `prompt overflow ${width}`); if (width === 390) await screenshot("sell-decision-390"); await prompt.getByRole("button", { name: "Close sell assistance prompt" }).click(); }
     if (width === 1440 || width === 390) await screenshot(`sell-assistance-${width}`);
@@ -39,6 +47,6 @@ export async function checkSellAssistance({ page, origin, calls, failures, scree
   await page.setViewportSize({ width: 1440, height: 900 }); await page.goto(origin + "/buy"); await page.locator(".public-account-trigger").click(); await page.locator(".public-account-dropdown").getByRole("link", { name: "Sell a Property" }).click(); await page.waitForURL("**/dashboard/listings/new"); assert.equal(await prompt.count(), 0);
   assert.equal(calls.some(call => call.method !== "GET" && /purchase|payment|checkout|referral|saved-properties|inquiries/.test(call.endpoint)), false);
   passed.push("Every public desktop/mobile Sell navigation click opens a non-persisted accessible decision prompt; No preserves the existing Sell route, Yes opens assistance, and dashboard Sell a Property remains direct");
-  passed.push("Sell Assistance technical terms expose accessible click/Escape/outside-dismissed explanations without changing submission behavior");
+  passed.push("Sell Assistance help icons stay 6px beside long labels and expose accessible click/Escape/outside-dismissed explanations without changing submission behavior");
   passed.push("Sell Assistance validates conditional contact/document fields, private files, pending/success/failure states and responsive layouts at eight widths without listing or transaction side effects");
 }

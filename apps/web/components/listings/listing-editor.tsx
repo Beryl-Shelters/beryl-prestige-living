@@ -350,7 +350,7 @@ function ListingWizard({
     const signed = ["latitude", "longitude"].includes(key);
     const field = (
       <label>
-        {label}{required && <> <b>*</b></>}
+        <span className="field-label-text">{label}{required && <> <b>*</b></>}</span>
         <div className="listing-input-wrap">
           <input
             name={key}
@@ -397,7 +397,7 @@ function ListingWizard({
   ) {
     const field = (
       <label>
-        {label} <b>*</b>
+        <span className="field-label-text">{label} <b>*</b></span>
         {contextNote && <small className="field-context-note">{contextNote}</small>}
         <select
           name={key}
@@ -536,7 +536,7 @@ function ListingWizard({
                   )}
                   <div className="listing-field-with-help">
                     <label>
-                      Does this property have a lien on it? <b>*</b>
+                      <span className="field-label-text">Does this property have a lien on it? <b>*</b></span>
                       <small className="field-context-note">
                         Has it been used to borrow money from the bank?
                       </small>

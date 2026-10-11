@@ -345,6 +345,12 @@ export async function checkListings({
     );
     assert.equal(await page.locator('[name="toilet_count"]').count(), 0);
     assert.equal(await page.getByRole("button", { name: /^Explain / }).count(), 5);
+    const subtypeHelp = page.getByRole("button", { name: "Explain Property Subtype" });
+    const subtypeRoot = subtypeHelp.locator("xpath=ancestor::*[contains(@class,'listing-field-with-help')][1]");
+    const [subtypeLabelBox, subtypeButtonBox] = await Promise.all([subtypeRoot.locator(".field-label-text").boundingBox(), subtypeHelp.boundingBox()]);
+    assert(subtypeLabelBox && subtypeButtonBox); const subtypeGap = subtypeButtonBox.x - (subtypeLabelBox.x + subtypeLabelBox.width);
+    assert(subtypeGap >= 4 && subtypeGap <= 7, `Listing Property Subtype help gap was ${subtypeGap}px at ${width}px`);
+    assert.match(await subtypeRoot.locator(".field-label-text").innerText(), /\*$/);
     if (width === 1440) {
       await page.getByRole("button", { name: "Explain Registered Title Document" }).click();
       await page.getByRole("tooltip").getByText("A legal document used to establish or support ownership", { exact: false }).waitFor();
@@ -795,8 +801,19 @@ export async function checkListings({
   assert.equal(listingState.items[0].rejection_reason,null);
   assert.equal(listingState.items[0].rejected_at,null);
 
+  // The standard dashboard suite covers four widths; explicitly verify the requested 1024px label/help layout.
+  await page.setViewportSize({width:1024,height:900});
+  await open("/dashboard/listings/new");
+  const helpAt1024 = page.getByRole("button", { name: "Explain Property Subtype" });
+  const rootAt1024 = helpAt1024.locator("xpath=ancestor::*[contains(@class,'listing-field-with-help')][1]");
+  const [labelAt1024, buttonAt1024] = await Promise.all([rootAt1024.locator(".field-label-text").boundingBox(), helpAt1024.boundingBox()]);
+  assert(labelAt1024 && buttonAt1024);
+  const gapAt1024 = buttonAt1024.x - (labelAt1024.x + labelAt1024.width);
+  assert(gapAt1024 >= 4 && gapAt1024 <= 7, `Listing Property Subtype help gap was ${gapAt1024}px at 1024px`);
+  await noOverflow(1024);
+
   passed.push(
-    "Listings: four responsive widths; empty/populated/Create/View/Edit layouts; real status counts and location search; status-safe accessible menus; private document drawer; real rejection feedback and confirmed resubmission; distinct delete and LISTED-only unlist confirmations; LISTED referral reuse; server-bounded pagination; Sales Mandate draft/resume/submission regressions; no agent fabrication or financial side effects",
+    "Listings: four full responsive workflow widths plus focused 1024px label/help verification; empty/populated/Create/View/Edit layouts; real status counts and location search; status-safe accessible menus; private document drawer; real rejection feedback and confirmed resubmission; distinct delete and LISTED-only unlist confirmations; LISTED referral reuse; server-bounded pagination; Sales Mandate draft/resume/submission regressions; no agent fabrication or financial side effects",
   );
   listingState.items = [];
 }

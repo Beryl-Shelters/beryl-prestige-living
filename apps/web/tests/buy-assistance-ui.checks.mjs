@@ -4,6 +4,13 @@ import { runIfMain } from "./run-ui-suite.mjs";
 runIfMain(import.meta.url, "buy-assistance");
 
 export async function checkBuyAssistance({ page, origin, calls, failures, screenshot, passed, pauseRequest, resume }) {
+  const assertAdjacentHelp = async (buttonName) => {
+    const button = page.getByRole("button", { name: buttonName });
+    const root = button.locator("xpath=ancestor::*[contains(@class,'assistance-field-with-help')][1]");
+    const [labelBox, buttonBox] = await Promise.all([root.locator(":scope > label > strong").boundingBox(), button.boundingBox()]);
+    assert(labelBox && buttonBox); const gap = buttonBox.x - (labelBox.x + labelBox.width);
+    assert(gap >= 4 && gap <= 7, `${buttonName} gap was ${gap}px`);
+  };
   const navBuy = () => page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Buy", exact: true });
   const prompt = page.getByRole("dialog", { name: "Do you need Assistance?" });
   await page.goto(origin + "/about"); await navBuy().click(); await prompt.waitFor();
@@ -45,6 +52,7 @@ export async function checkBuyAssistance({ page, origin, calls, failures, screen
   await page.getByLabel(/8\. What State/).selectOption("Lagos"); await page.getByLabel(/11\. What is your budget/).fill("50000000"); await page.getByRole("button", { name: "Submit", exact: true }).click(); await page.getByText("Your buying assistance request could not be submitted").waitFor(); assert.equal(await page.getByLabel(/11\. What is your budget/).inputValue(), "50,000,000"); failures.delete("/public/buy-assistance");
   for (const width of [1440,1280,1024,768,430,390,360,320]) {
     await page.setViewportSize({ width, height: 900 }); await page.goto(origin + "/buy/assistance"); await page.getByRole("heading", { name: "What are your buying requirements" }).waitFor();
+    await assertAdjacentHelp("Explain Property Subtype"); await assertAdjacentHelp("Explain Buy Mandate");
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Buy Assistance overflow ${width}`);
     assert.equal(await page.locator(".buy-assistance-columns").evaluate(element => getComputedStyle(element).display), width <= 800 ? "block" : "grid");
     if (width <= 700) { await page.getByRole("button", { name: "Toggle navigation" }).click(); await navBuy().click(); await prompt.waitFor(); const mobileSize = await prompt.boundingBox(); assert(mobileSize && mobileSize.width <= width - 32 + 1); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); if (width === 390) await screenshot("buy-decision-390"); await prompt.getByRole("button", { name: "Close buy assistance prompt" }).click(); }
@@ -53,6 +61,6 @@ export async function checkBuyAssistance({ page, origin, calls, failures, screen
   await page.setViewportSize({ width: 1440, height: 900 }); await page.goto(origin + "/"); await page.getByRole("link", { name: /Click here to refer someone to buy/i }).click(); await page.waitForURL("**/buy"); assert.equal(await prompt.count(), 0);
   assert.equal(calls.some(call => call.method !== "GET" && /purchase|payment|checkout|mortgage|referral|listings|saved-properties|inquiries|sell-assistance/.test(call.endpoint)), false);
   passed.push("Public Buy navigation always opens the shared compact non-persisted decision; No opens /buy, Yes opens /buy/assistance, and non-navbar Buy links remain direct");
-  passed.push("Buy Assistance terminology help supports keyboard/click activation, Escape/outside dismissal, responsive rendering, and never submits the form");
+  passed.push("Buy Assistance terminology help stays 6px beside its label at every tested width, supports keyboard/click activation and Escape/outside dismissal, and never submits the form");
   passed.push("Buy Assistance validates conditional and taxonomy fields, private PDF, pending/success/failure states, shared footer, and eight widths without transaction side effects");
 }

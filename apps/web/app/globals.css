@@ -318,43 +318,59 @@ button:disabled { cursor: wait; opacity: .65; }
 }
 
 .assistance-field-with-help {
-  position: relative;
+  display: grid;
+  grid-template-columns: fit-content(calc(100% - 30px)) auto minmax(0, 1fr);
+  column-gap: 6px;
+  row-gap: 6px;
+  align-items: center;
 }
 
 .assistance-field-with-help > .buy-assistance-field,
 .assistance-field-with-help > .sell-assistance-field {
-  padding-right: 1.8rem;
+  display: contents;
 }
 
 .assistance-field-with-help > .terminology-help {
-  position: absolute;
-  top: 0;
-  right: 0;
+  grid-column: 2;
+  grid-row: 1;
 }
 
-.assistance-field-with-help > .terminology-help > .terminology-help-popover {
-  right: 0;
-  left: auto;
-}
-
-.listing-field-with-help {
-  position: relative;
+.assistance-field-with-help > :is(.buy-assistance-field, .sell-assistance-field) > strong {
+  grid-column: 1;
+  grid-row: 1;
   min-width: 0;
 }
 
-.listing-field-with-help > label {
-  padding-right: 1.8rem;
+.assistance-field-with-help > :is(.buy-assistance-field, .sell-assistance-field) > :not(strong) {
+  grid-column: 1 / -1;
+}
+
+.listing-field-with-help {
+  display: grid;
+  grid-template-columns: fit-content(calc(100% - 30px)) auto minmax(0, 1fr);
+  column-gap: 6px;
+  row-gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.listing-form .listing-field-with-help > label {
+  display: contents;
+}
+
+.listing-field-with-help .field-label-text {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
 }
 
 .listing-field-with-help > .terminology-help {
-  position: absolute;
-  top: 0;
-  right: 0;
+  grid-column: 2;
+  grid-row: 1;
 }
 
-.listing-field-with-help > .terminology-help > .terminology-help-popover {
-  right: 0;
-  left: auto;
+.listing-field-with-help > label > :not(.field-label-text) {
+  grid-column: 1 / -1;
 }
 
 .buy-assistance-field > .field-label-with-help > strong,
