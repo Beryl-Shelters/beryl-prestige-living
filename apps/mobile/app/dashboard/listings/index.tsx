@@ -411,7 +411,7 @@ export default function MyListingsScreen() {
               No properties for sale yet
             </Text>
             <Text style={styles.emptyText}>
-              Properties you list for sale will appear here with review status and management
+              Properties you add for sale will appear here with review status and management
               tools.
             </Text>
             <Button

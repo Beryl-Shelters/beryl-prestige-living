@@ -42,6 +42,7 @@ export default function LoginScreen() {
       <Card>
         <TextField
           label="Email or phone"
+          placeholder="e.g. ada@example.com or 08012345678"
           autoCapitalize="none"
           autoComplete="username"
           value={identifier}
@@ -49,6 +50,7 @@ export default function LoginScreen() {
         />
         <TextField
           label="Password"
+          placeholder="Enter your password"
           autoCapitalize="none"
           autoComplete="current-password"
           secureTextEntry

@@ -41,7 +41,7 @@ export async function checkAnalytics({ page, origin, calls, failures, screenshot
   for (const width of [1440, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 900 }); analyticsState.items = []; await open();
     assert.equal(await total(), "0");
-    assert.equal(await search.getAttribute("placeholder"), "Search your listings by title or code");
+    assert.equal(await search.getAttribute("placeholder"), "Search your properties by title or code");
     assert.deepEqual(await page.locator(".analytics-status progress").evaluateAll(elements => elements.map(el => el.value)), [0, 0, 0]);
     assert.deepEqual(await page.locator(".analytics-bedrooms dt").allTextContents(), ["1 bedroom", "2 bedrooms", "3 bedrooms", "4 bedrooms", "5 bedrooms", "6+ bedrooms"]);
     assert.deepEqual(await page.locator(".analytics-property-types dt").allTextContents(), ["Commercial", "Residential"]);

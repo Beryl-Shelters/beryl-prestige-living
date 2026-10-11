@@ -180,7 +180,7 @@ export default function HomeScreen() {
                 searchMode === "buy"
                   ? "Title, code, state or city"
                   : searchMode === "sell"
-                  ? "Describe property to list"
+                  ? "Describe the property you want to sell"
                   : "Search referrals program"
               }
               placeholderTextColor={colors.textMuted}

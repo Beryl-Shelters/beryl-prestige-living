@@ -184,10 +184,10 @@ export default function SellAssistanceRoute() {
                 your preferred method to help source prospective buyers.
               </Text>
               <Text style={styles.disclaimerText}>
-                Sell Assistance does not create a live public listing or a purchase transaction.
+                Sell Assistance does not automatically add a property for sale or create a purchase transaction.
                 All sales agency arrangements are concluded offline.
               </Text>
-              <Button label="Return to List Tab" onPress={() => router.replace("/(tabs)/list")} />
+              <Button label="Return to Sell Tab" onPress={() => router.replace("/(tabs)/list")} />
             </View>
           </Card>
         ) : (

@@ -54,6 +54,7 @@ export default function VerifyEmailScreen() {
       <Card>
         <TextField
           label="Verification code"
+          placeholder="Enter the 6-digit code"
           keyboardType="number-pad"
           autoComplete="one-time-code"
           maxLength={6}

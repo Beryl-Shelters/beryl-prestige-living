@@ -90,7 +90,7 @@ export function PropertyFilterSheet({
           <View style={styles.header}>
             <View>
               <Text accessibilityRole="header" style={styles.title}>Filter properties</Text>
-              <Text style={styles.help}>Filters are applied to all public listings.</Text>
+              <Text style={styles.help}>Filters are applied to all properties for sale.</Text>
             </View>
             <Pressable
               accessibilityRole="button"

@@ -335,6 +335,12 @@ export async function checkListings({
     await screenshot(`listings-populated-${width}`);
     await open("/dashboard/listings/new");
     await page.locator('[name="title"]').waitFor();
+    const description = page.locator('textarea[name="description"]');
+    assert.equal(await description.getAttribute("placeholder"), "e.g. Spacious 3-bedroom duplex in Lekki Phase 1, Lagos, with 4 bathrooms, fitted kitchen, parking for 2 cars, reliable water supply and easy access to major roads.");
+    assert.equal(await description.inputValue(), "", "Description example must remain a placeholder, not a submitted value");
+    assert.equal(await description.locator("xpath=preceding-sibling::*[contains(@class,'field-helper-text')][1]").innerText(), "Describe the property's location, condition, key features, nearby amenities and what makes it attractive to buyers.");
+    assert.equal(await page.locator('[name="title"]').getAttribute("placeholder"), "e.g. Spacious 3-Bedroom Duplex in Lekki");
+    assert.equal(await page.locator('[name="location"]').getAttribute("placeholder"), "e.g. Admiralty Way, Lekki Phase 1, Lagos");
     assert.equal(
       await page.locator(".listing-editor-fields>section").count(),
       4,

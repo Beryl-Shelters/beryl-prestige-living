@@ -402,7 +402,7 @@ export default function SettingsProfileScreen() {
               style={styles.input}
               value={draft.firstName}
               onChangeText={(text) => setDraft((d) => ({ ...d, firstName: text }))}
-              placeholder="First Name"
+              placeholder="e.g. Ada"
               placeholderTextColor={colors.textMuted}
             />
           </View>
@@ -413,7 +413,7 @@ export default function SettingsProfileScreen() {
               style={styles.input}
               value={draft.lastName}
               onChangeText={(text) => setDraft((d) => ({ ...d, lastName: text }))}
-              placeholder="Last Name"
+              placeholder="e.g. Okafor"
               placeholderTextColor={colors.textMuted}
             />
           </View>
@@ -437,7 +437,7 @@ export default function SettingsProfileScreen() {
               style={styles.input}
               value={draft.phoneNumber}
               onChangeText={(text) => setDraft((d) => ({ ...d, phoneNumber: text }))}
-              placeholder="08012345678"
+              placeholder="e.g. 08012345678"
               placeholderTextColor={colors.textMuted}
               keyboardType="phone-pad"
             />
@@ -449,7 +449,7 @@ export default function SettingsProfileScreen() {
               style={[styles.input, styles.textarea]}
               value={draft.briefBio}
               onChangeText={(text) => setDraft((d) => ({ ...d, briefBio: text }))}
-              placeholder="Tell us a little about yourself"
+              placeholder="e.g. Property investor interested in Lagos homes"
               placeholderTextColor={colors.textMuted}
               multiline
               maxLength={1000}
@@ -470,7 +470,7 @@ export default function SettingsProfileScreen() {
               style={styles.input}
               value={draft.accountName}
               onChangeText={(text) => setDraft((d) => ({ ...d, accountName: text }))}
-              placeholder="Account holder name"
+              placeholder="e.g. Ada Okafor"
               placeholderTextColor={colors.textMuted}
             />
           </View>
@@ -492,7 +492,7 @@ export default function SettingsProfileScreen() {
               style={styles.input}
               value={draft.accountNumber}
               onChangeText={(text) => setDraft((d) => ({ ...d, accountNumber: text }))}
-              placeholder="0123456789"
+              placeholder="e.g. 0123456789"
               placeholderTextColor={colors.textMuted}
               keyboardType="number-pad"
               maxLength={20}
@@ -510,7 +510,7 @@ export default function SettingsProfileScreen() {
               style={styles.input}
               value={draft.streetAddress}
               onChangeText={(text) => setDraft((d) => ({ ...d, streetAddress: text }))}
-              placeholder="Street address"
+              placeholder="e.g. 12 Admiralty Way, Lekki Phase 1"
               placeholderTextColor={colors.textMuted}
             />
           </View>
@@ -521,7 +521,7 @@ export default function SettingsProfileScreen() {
               style={styles.input}
               value={draft.zipCode}
               onChangeText={(text) => setDraft((d) => ({ ...d, zipCode: text }))}
-              placeholder="Zip Code"
+              placeholder="e.g. 100001"
               placeholderTextColor={colors.textMuted}
             />
           </View>
@@ -532,7 +532,7 @@ export default function SettingsProfileScreen() {
               style={styles.input}
               value={draft.city}
               onChangeText={(text) => setDraft((d) => ({ ...d, city: text }))}
-              placeholder="City"
+              placeholder="e.g. Ikeja"
               placeholderTextColor={colors.textMuted}
             />
           </View>
@@ -543,7 +543,7 @@ export default function SettingsProfileScreen() {
               style={styles.input}
               value={draft.state}
               onChangeText={(text) => setDraft((d) => ({ ...d, state: text }))}
-              placeholder="State"
+              placeholder="e.g. Lagos"
               placeholderTextColor={colors.textMuted}
             />
           </View>
@@ -554,7 +554,7 @@ export default function SettingsProfileScreen() {
               style={styles.input}
               value={draft.country}
               onChangeText={(text) => setDraft((d) => ({ ...d, country: text }))}
-              placeholder="Country"
+              placeholder="e.g. Nigeria"
               placeholderTextColor={colors.textMuted}
             />
           </View>

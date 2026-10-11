@@ -96,7 +96,7 @@ export default function ReferralsScreen() {
       const created = await referralsApi.create({ type: "SELLER" });
       await shareCanonicalUrl(
         "Beryl Shelter Seller Referral",
-        "List or sell your property with Beryl Shelter Nigeria Limited:",
+        "Sell your property with Beryl Shelter Nigeria Limited:",
         created.referralUrl
       );
       setShareSuccess("Seller referral link generated!");
@@ -204,7 +204,7 @@ export default function ReferralsScreen() {
           <Text style={styles.cardTitle}>Invite your friends</Text>
           <Text style={styles.cardBody}>
             Invite friends by referring properties they might want to purchase or encouraging
-            them to list their properties for sale with us.
+            them to sell their properties with us.
           </Text>
 
           {shareSuccess ? (

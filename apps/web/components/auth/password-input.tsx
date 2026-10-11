@@ -16,7 +16,7 @@ export function PasswordInput({ id, label, autoComplete }: PasswordInputProps) {
       <label htmlFor={id}>{label.replace(/\s*\*$/, "")} <span aria-hidden="true">*</span></label>
       <div className="password-control">
         {/* Form submission validates new passwords together, using the existing error/toast UI. */}
-        <input id={id} name={id} type={visible ? "text" : "password"} autoComplete={autoComplete} placeholder="********" required maxLength={128} />
+        <input id={id} name={id} type={visible ? "text" : "password"} autoComplete={autoComplete} placeholder="Enter your password" required maxLength={128} />
         <button
           aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
           className="password-toggle"

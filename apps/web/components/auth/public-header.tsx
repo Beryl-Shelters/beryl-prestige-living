@@ -82,7 +82,7 @@ export function PublicHeader({ sessionAware = false, mobileMenu = false, onSessi
             return <Link ref={isSell ? sellTrigger : isBuy ? buyTrigger : undefined} className={pathname === href || isSell && pathname.startsWith("/sell") || isBuy && pathname.startsWith("/buy") ? "active" : undefined} href={href} key={label} onClick={event => {
               if (isSell || isBuy) { event.preventDefault(); setOpen(false); setAccountOpen(false); setAssistancePrompt(isSell ? "sell" : "buy"); return; }
               setOpen(false);
-            }} aria-label={isSell ? "Sell — List a Property" : undefined}>{isSell ? <span className="public-nav-sell"><span className="public-nav-sell-primary">Sell</span><span className="public-nav-sell-secondary">List a Property</span></span> : label}</Link>;
+            }} aria-label={isSell ? "Sell — Sell a Property" : undefined}>{isSell ? <span className="public-nav-sell"><span className="public-nav-sell-primary">Sell</span><span className="public-nav-sell-secondary">Sell a Property</span></span> : label}</Link>;
           })}
         </nav>
         <div className="header-actions">

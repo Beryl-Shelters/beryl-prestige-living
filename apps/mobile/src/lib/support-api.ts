@@ -9,7 +9,7 @@ export const supportQuestions: SupportQuestion[] = [
   {
     question: "How do I search for properties on Beryl Shelter Nigeria Limited?",
     answer:
-      "Use the search bar on the Home page to search by title/keyword, then refine results using filters like Location, Property Type, Budget, and Bedrooms. You can also browse all listings from the “Buy” tab.",
+      "Use the search bar on the Home page to search by title or keyword, then refine results using filters like Location, Property Type, Budget, and Bedrooms. You can also browse all available properties from the “Buy” tab.",
   },
   {
     question: "How do I sell a property?",

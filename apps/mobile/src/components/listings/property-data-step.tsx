@@ -201,7 +201,7 @@ export function PropertyDataStep({
 
         <TextField
           label="Public Property Title *"
-          placeholder="e.g. 4 Bedroom Detached Duplex in Lekki"
+          placeholder="e.g. Spacious 3-Bedroom Duplex in Lekki"
           value={title}
           onChangeText={setTitle}
           error={errors.title}
@@ -211,7 +211,7 @@ export function PropertyDataStep({
         <TextField
           label="Registered Title Document Name"
           helpTerm="registeredTitleDocument"
-          placeholder="e.g. Certificate of Occupancy, Deed of Conveyance"
+          placeholder="e.g. Certificate of Occupancy (C of O)"
           value={registeredTitle}
           onChangeText={setRegisteredTitle}
           maxLength={200}
@@ -219,7 +219,8 @@ export function PropertyDataStep({
 
         <TextField
           label="Property Description *"
-          placeholder="Detailed description of features, finishes, and neighbourhood..."
+          helper="Describe the property's location, condition, key features, nearby amenities and what makes it attractive to buyers."
+          placeholder="e.g. Spacious 3-bedroom duplex in Lekki Phase 1, Lagos, with 4 bathrooms, fitted kitchen, parking for 2 cars, reliable water supply and easy access to major roads."
           value={description}
           onChangeText={setDescription}
           error={errors.description}
@@ -346,7 +347,7 @@ export function PropertyDataStep({
 
         <TextField
           label="Property Address / Location *"
-          placeholder="e.g. Plot 14, Admiralty Way, Lekki Phase 1"
+          placeholder="e.g. Admiralty Way, Lekki Phase 1, Lagos"
           value={location}
           onChangeText={setLocation}
           error={errors.location}
@@ -357,7 +358,7 @@ export function PropertyDataStep({
 
         <TextField
           label="City / Locality *"
-          placeholder="e.g. Lekki, Ikeja, Abuja"
+          placeholder="e.g. Ikeja"
           value={city}
           onChangeText={setCity}
           error={errors.city}
@@ -372,7 +373,7 @@ export function PropertyDataStep({
           <View style={styles.flexHalf}>
             <TextField
               label="Bedrooms"
-              placeholder="3"
+              placeholder="e.g. 3"
               value={bedrooms}
               onChangeText={setBedrooms}
               keyboardType="numeric"
@@ -381,7 +382,7 @@ export function PropertyDataStep({
           <View style={styles.flexHalf}>
             <TextField
               label="Bathrooms"
-              placeholder="3"
+              placeholder="e.g. 3"
               value={bathrooms}
               onChangeText={setBathrooms}
               keyboardType="numeric"
@@ -393,7 +394,7 @@ export function PropertyDataStep({
           <View style={styles.flexHalf}>
             <TextField
               label="Parking Spaces"
-              placeholder="2"
+              placeholder="e.g. 2"
               value={parkingSpaces}
               onChangeText={setParkingSpaces}
               keyboardType="numeric"
@@ -402,7 +403,7 @@ export function PropertyDataStep({
           <View style={styles.flexHalf}>
             <TextField
               label="Number of Units"
-              placeholder="1"
+              placeholder="e.g. 1"
               value={units}
               onChangeText={setUnits}
               keyboardType="numeric"
@@ -415,7 +416,7 @@ export function PropertyDataStep({
             <TextField
               label="Land Area (Sq.Ft)"
               helpTerm="landArea"
-              placeholder="5000"
+              placeholder="e.g. 650"
               value={landArea}
               onChangeText={setLandArea}
               keyboardType="numeric"
@@ -424,7 +425,7 @@ export function PropertyDataStep({
           <View style={styles.flexHalf}>
             <TextField
               label="Year Built"
-              placeholder="2024"
+              placeholder="e.g. 2024"
               value={yearBuilt}
               onChangeText={setYearBuilt}
               keyboardType="numeric"
@@ -434,7 +435,7 @@ export function PropertyDataStep({
 
         <TextField
           label="Selling Price (NGN) *"
-          placeholder="e.g. 150,000,000"
+          placeholder="e.g. 85000000"
           value={propertyCost}
           onChangeText={(val) => {
             const formatted = formatNairaInput(val);
@@ -447,7 +448,7 @@ export function PropertyDataStep({
         <TextField
           label="Minimum Down Payment (NGN)"
           helpTerm="minimumDownPayment"
-          placeholder="e.g. 45,000,000 (0 for full payment)"
+          placeholder="e.g. 25000000 (or 0 for full payment)"
           value={downPayment}
           onChangeText={(val) => {
             const formatted = formatNairaInput(val);
@@ -459,7 +460,7 @@ export function PropertyDataStep({
 
         <TextField
           label="Additional Information"
-          placeholder="Any other terms or details about this property..."
+          placeholder="e.g. Recently renovated, with a fitted kitchen and backup power"
           value={additionalInfo}
           onChangeText={setAdditionalInfo}
           multiline

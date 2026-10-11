@@ -161,6 +161,7 @@ export function Button({
 export function TextField({
   label,
   error,
+  helper,
   keyboardType,
   secureTextEntry,
   helpTerm,
@@ -169,6 +170,7 @@ export function TextField({
 }: TextInputProps & {
   label: string;
   error?: string;
+  helper?: string;
   keyboardType?: KeyboardTypeOptions;
   helpTerm?: TerminologyKey;
 }) {
@@ -183,6 +185,7 @@ export function TextField({
         <Text style={[styles.label, styles.flexLabel, { color: themeColors.text }]}>{label}</Text>
         {helpTerm ? <TerminologyHelp term={helpTerm} /> : null}
       </View>
+      {helper ? <Text style={[styles.fieldHelper, { color: themeColors.textMuted }]}>{helper}</Text> : null}
       <View
         style={[
           styles.inputContainer,
@@ -334,6 +337,7 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.82 },
   field: { gap: spacing.sm },
   label: { ...typography.label },
+  fieldHelper: { ...typography.caption },
   labelRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   flexLabel: { flexShrink: 1 },
   inputContainer: {

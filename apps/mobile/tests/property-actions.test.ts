@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { createListingsApi } from "../src/lib/listings-api";
 import { createAssistanceApi } from "../src/lib/assistance-api";
-import { createPublicServicesApi } from "../src/lib/public-services-api";
+import { createPublicServicesApi, inquiryTypeLabel } from "../src/lib/public-services-api";
 import { appendPickedFile } from "../src/lib/file-upload-helper";
 import { renderStrokesToPng, type Stroke } from "../src/lib/png-encoder";
 
@@ -23,6 +23,12 @@ test("signed-out List auth boundary enforces customer login and offers assistanc
   assert.match(listScreen, /params:\s*\{ next: nextPath \}/);
   assert.match(listScreen, /Request Sell Assistance/);
   assert.match(listScreen, /\/sell-assistance/);
+});
+
+test("selling inquiry copy is customer-friendly without changing the API contract", () => {
+  assert.equal(inquiryTypeLabel("Selling/Listing a Property"), "Selling a Property");
+  const modal = read("src/components/inquiry-modal.tsx");
+  assert.match(modal, /inquiryTypeLabel\(type\)/);
 });
 
 test("canonical property fields and required validation are preserved in PropertyDataStep", () => {
@@ -45,6 +51,10 @@ test("canonical property fields and required validation are preserved in Propert
   // Validation checks
   assert.match(step, /At least 1 property photograph is required/);
   assert.match(step, /Minimum down payment cannot exceed total property cost/);
+  assert.match(step, /Describe the property's location, condition, key features, nearby amenities and what makes it attractive to buyers\./);
+  assert.match(step, /e\.g\. Spacious 3-bedroom duplex in Lekki Phase 1, Lagos, with 4 bathrooms, fitted kitchen, parking for 2 cars, reliable water supply and easy access to major roads\./);
+  assert.match(step, /e\.g\. Spacious 3-Bedroom Duplex in Lekki/);
+  assert.match(step, /e\.g\. Admiralty Way, Lekki Phase 1, Lagos/);
   assert.match(step, /OptionSelect label="State \*"/);
   assert.doesNotMatch(step, /State \*<\/Text>[\s\S]{0,200}<ScrollView horizontal/);
   // Both actions persist the same resumable photo draft. Only Next advances.
@@ -256,7 +266,7 @@ test("Sell Assistance uses canonical API and creates no automatic listing or pur
   assert.equal((calls[0]!.options as { authenticated: boolean }).authenticated, false);
 
   const screen = read("app/sell-assistance.tsx");
-  assert.match(screen, /Sell Assistance does not create a live public listing or a purchase transaction/i);
+  assert.match(screen, /Sell Assistance does not automatically add a property for sale or create a purchase transaction/i);
   assert.doesNotMatch(screen, /checkout|paystack|flutterwave|stripe|cart/i);
 });
 

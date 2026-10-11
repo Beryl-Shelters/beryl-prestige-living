@@ -216,7 +216,7 @@ export function PropertyListScreen() {
               {page < totalPages ? (
                 <Button label="Load more properties" loading={loadingMore} onPress={() => { setLoadingMore(true); setPage((value) => value + 1); }} />
               ) : (
-                <Text style={styles.end}>You’ve reached the end of the available listings.</Text>
+                <Text style={styles.end}>You’ve reached the end of the available properties.</Text>
               )}
             </View>
           ) : null

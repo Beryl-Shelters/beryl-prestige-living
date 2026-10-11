@@ -364,6 +364,7 @@ export function SalesMandateStep({
 
         <TextField
           label="Property / Development Name"
+          placeholder="e.g. Lekki Gardens Phase 2"
           value={developmentName}
           onChangeText={setDevelopmentName}
         />
@@ -457,12 +458,14 @@ export function SalesMandateStep({
 
         <TextField
           label="Signer Full Legal Name"
+          placeholder="e.g. Ada Okafor"
           value={signerName}
           onChangeText={setSignerName}
         />
 
         <TextField
           label="Signer Address"
+          placeholder="e.g. 12 Admiralty Way, Lekki Phase 1, Lagos"
           value={signerAddress}
           onChangeText={setSignerAddress}
         />

@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon } from "./app-icon";
 import { Button, TextField } from "./ui";
 import { friendlyError } from "@/lib/api-error";
-import { inquiryTypes, publicServicesApi } from "@/lib/public-services-api";
+import { inquiryTypeLabel, inquiryTypes, publicServicesApi } from "@/lib/public-services-api";
 import { useTheme } from "@/providers/theme-provider";
 import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
@@ -148,13 +148,13 @@ export function InquiryModal({
                       <Pressable
                         key={type}
                         accessibilityRole="radio"
-                        accessibilityLabel={type}
+                        accessibilityLabel={inquiryTypeLabel(type)}
                         accessibilityState={{ selected: isSelected }}
                         onPress={() => setInquiryType(type)}
                         style={[styles.typeChip, isSelected && styles.typeChipSelected]}
                       >
                         <Text style={[styles.typeChipText, isSelected && styles.typeChipTextSelected]}>
-                          {type}
+                          {inquiryTypeLabel(type)}
                         </Text>
                       </Pressable>
                     );

@@ -400,7 +400,7 @@ export default function SettingsBusinessScreen() {
               style={styles.input}
               value={draft.companyName}
               onChangeText={(text) => setDraft((d) => ({ ...d, companyName: text }))}
-              placeholder="Corporate name"
+              placeholder="e.g. Beryl Homes Limited"
               placeholderTextColor={colors.textMuted}
             />
           </View>
@@ -411,7 +411,7 @@ export default function SettingsBusinessScreen() {
               style={styles.input}
               value={draft.companyEmail}
               onChangeText={(text) => setDraft((d) => ({ ...d, companyEmail: text }))}
-              placeholder="company@example.com"
+              placeholder="e.g. contact@example.com"
               placeholderTextColor={colors.textMuted}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -424,7 +424,7 @@ export default function SettingsBusinessScreen() {
               style={styles.input}
               value={draft.companyPhoneNumber}
               onChangeText={(text) => setDraft((d) => ({ ...d, companyPhoneNumber: text }))}
-              placeholder="+234..."
+              placeholder="e.g. +2348012345678"
               placeholderTextColor={colors.textMuted}
               keyboardType="phone-pad"
             />
@@ -436,7 +436,7 @@ export default function SettingsBusinessScreen() {
               style={[styles.input, styles.textarea]}
               value={draft.aboutCompany}
               onChangeText={(text) => setDraft((d) => ({ ...d, aboutCompany: text }))}
-              placeholder="Brief description of your business"
+              placeholder="e.g. Residential property development and sales in Lagos"
               placeholderTextColor={colors.textMuted}
               multiline
               maxLength={1000}
@@ -454,7 +454,7 @@ export default function SettingsBusinessScreen() {
               style={styles.input}
               value={draft.streetAddress}
               onChangeText={(text) => setDraft((d) => ({ ...d, streetAddress: text }))}
-              placeholder="Street address"
+              placeholder="e.g. 12 Admiralty Way, Lekki Phase 1"
               placeholderTextColor={colors.textMuted}
             />
           </View>
@@ -465,7 +465,7 @@ export default function SettingsBusinessScreen() {
               style={styles.input}
               value={draft.zipCode}
               onChangeText={(text) => setDraft((d) => ({ ...d, zipCode: text }))}
-              placeholder="Zip Code"
+              placeholder="e.g. 100001"
               placeholderTextColor={colors.textMuted}
             />
           </View>
@@ -476,7 +476,7 @@ export default function SettingsBusinessScreen() {
               style={styles.input}
               value={draft.city}
               onChangeText={(text) => setDraft((d) => ({ ...d, city: text }))}
-              placeholder="City"
+              placeholder="e.g. Ikeja"
               placeholderTextColor={colors.textMuted}
             />
           </View>
@@ -487,7 +487,7 @@ export default function SettingsBusinessScreen() {
               style={styles.input}
               value={draft.state}
               onChangeText={(text) => setDraft((d) => ({ ...d, state: text }))}
-              placeholder="State"
+              placeholder="e.g. Lagos"
               placeholderTextColor={colors.textMuted}
             />
           </View>
@@ -498,7 +498,7 @@ export default function SettingsBusinessScreen() {
               style={styles.input}
               value={draft.country}
               onChangeText={(text) => setDraft((d) => ({ ...d, country: text }))}
-              placeholder="Country"
+              placeholder="e.g. Nigeria"
               placeholderTextColor={colors.textMuted}
             />
           </View>

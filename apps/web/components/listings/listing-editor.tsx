@@ -455,7 +455,7 @@ function ListingWizard({
                   "e.g. Certificate of Occupancy, Deed of Assignment",
                   "registeredTitleDocument"
                 )}
-                {input("title", "Property Title (Public Marketing Title)", true)}
+                {input("title", "Property Title (Public Marketing Title)", true, false, "e.g. Spacious 3-Bedroom Duplex in Lekki")}
                 <label>
                   Property Image <b>*</b>
                 </label>
@@ -506,11 +506,15 @@ function ListingWizard({
                   />
                 </div>
                 <label>
-                  Property Description <b>*</b>
+                  <span className="field-label-text">Property Description <b>*</b></span>
+                  <small className="field-helper-text">
+                    Describe the property&apos;s location, condition, key features, nearby amenities and what makes it attractive to buyers.
+                  </small>
                   <textarea
                     name="description"
                     required
                     maxLength={10000}
+                    placeholder="e.g. Spacious 3-bedroom duplex in Lekki Phase 1, Lagos, with 4 bathrooms, fitted kitchen, parking for 2 cars, reliable water supply and easy access to major roads."
                     value={values.description}
                     onChange={(event) => set("description", event.target.value)}
                   />
@@ -591,10 +595,10 @@ function ListingWizard({
                       </select>
                     </label>
                   ))}
-                  {input("parking_spaces", "Parking Space", true, true)}
-                  {input("units", "No. of units", false, true)}
-                  {input("land_area", "Land area (Sq.Ft.)", false, true, "", "landArea")}
-                  {input("year_built", "Year Built", false, true)}
+                  {input("parking_spaces", "Parking Space", true, true, "e.g. 2")}
+                  {input("units", "No. of units", false, true, "e.g. 1")}
+                  {input("land_area", "Land area (Sq.Ft.)", false, true, "e.g. 650", "landArea")}
+                  {input("year_built", "Year Built", false, true, "e.g. 2024")}
                 </div>
                 <h3>Additional facilities</h3>
                 <div className="listing-facilities">
@@ -620,13 +624,13 @@ function ListingWizard({
               <section>
                 <h2>Price</h2>
                 <div className="listing-two-fields">
-                  {input("property_cost", "Selling Price", true, true)}
+                  {input("property_cost", "Selling Price", true, true, "e.g. 85000000")}
                   {input(
                     "minimum_down_payment",
                     "Minimum Down Payment",
                     true,
                     true,
-                    "",
+                    "e.g. 25000000",
                     "minimumDownPayment"
                   )}
                 </div>
@@ -634,7 +638,7 @@ function ListingWizard({
 
               <section>
                 <h2>Location & Other Information</h2>
-                {input("location", "Location", true)}
+                {input("location", "Location", true, false, "e.g. Admiralty Way, Lekki Phase 1, Lagos")}
                 <div className="listing-two-fields">
                   <label>
                     State <b>*</b>
@@ -643,6 +647,7 @@ function ListingWizard({
                       required
                       maxLength={80}
                       list="listing-state-options"
+                      placeholder="e.g. Lagos"
                       value={values.state}
                       onChange={(event) => set("state", event.target.value)}
                     />
@@ -652,12 +657,12 @@ function ListingWizard({
                       ))}
                     </datalist>
                   </label>
-                  {input("city", "City", true)}
+                  {input("city", "City", true, false, "e.g. Ikeja")}
                 </div>
                 <h3>Map Location</h3>
                 <div className="listing-two-fields">
-                  {input("longitude", "Longitude", false, true)}
-                  {input("latitude", "Latitude", false, true)}
+                  {input("longitude", "Longitude", false, true, "e.g. 3.421")}
+                  {input("latitude", "Latitude", false, true, "e.g. 6.447")}
                 </div>
                 <h3>Other Information</h3>
                 <label>
@@ -667,7 +672,7 @@ function ListingWizard({
                   <textarea
                     name="additional_information"
                     maxLength={5000}
-                    placeholder="Enter any other relevant property information..."
+                    placeholder="e.g. Recently renovated, with a fitted kitchen and backup power"
                     value={values.additional_information}
                     onChange={(event) =>
                       set("additional_information", event.target.value)

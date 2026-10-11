@@ -60,18 +60,21 @@ export default function RegisterScreen() {
       <Card>
         <TextField
           label="First name"
+          placeholder="e.g. Ada"
           autoComplete="given-name"
           value={form.firstName}
           onChangeText={(value) => field("firstName", value)}
         />
         <TextField
           label="Last name"
+          placeholder="e.g. Okafor"
           autoComplete="family-name"
           value={form.lastName}
           onChangeText={(value) => field("lastName", value)}
         />
         <TextField
           label="Email"
+          placeholder="e.g. ada@example.com"
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
@@ -80,12 +83,14 @@ export default function RegisterScreen() {
         />
         <TextField
           label="Country code"
+          placeholder="e.g. +234"
           keyboardType="phone-pad"
           value={form.countryCode}
           onChangeText={(value) => field("countryCode", value)}
         />
         <TextField
           label="Phone number"
+          placeholder="e.g. 08012345678"
           keyboardType="phone-pad"
           value={form.phoneNumber}
           onChangeText={(value) => field("phoneNumber", value)}
@@ -119,6 +124,7 @@ export default function RegisterScreen() {
         </View>
         <TextField
           label="Password"
+          placeholder="Enter your password"
           secureTextEntry
           autoComplete="new-password"
           value={form.password}
@@ -126,6 +132,7 @@ export default function RegisterScreen() {
         />
         <TextField
           label="Confirm password"
+          placeholder="Re-enter your password"
           secureTextEntry
           autoComplete="new-password"
           value={form.confirmPassword}

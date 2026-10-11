@@ -27,6 +27,10 @@ export const inquiryTypes = [
   "Other",
 ] as const;
 
+export function inquiryTypeLabel(type: typeof inquiryTypes[number]): string {
+  return type === "Selling/Listing a Property" ? "Selling a Property" : type;
+}
+
 export type ApiTransport = {
   request<T>(path: string, options?: { method?: string; body?: unknown; authenticated?: boolean }): Promise<T>;
 };
