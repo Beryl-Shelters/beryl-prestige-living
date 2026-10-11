@@ -8,7 +8,9 @@ import { formatNairaInput, nairaToKobo } from "../../lib/buy-query";
 import { propertyFacilities } from "../../lib/property-taxonomy";
 import { submitSellAssistance } from "../../lib/sell-assistance-api";
 import { PublicHeader } from "../auth/public-header";
+import { TerminologyHelp } from "../terminology-help";
 import { PublicSiteFooter } from "./public-site-footer";
+import type { TerminologyKey } from "../../lib/terminology";
 
 const imageTypes = ["image/png", "image/jpeg", "image/webp"];
 const documentTypes = ["application/pdf", "image/png", "image/jpeg"];
@@ -68,24 +70,25 @@ export function SellAssistancePage() {
       <Field label="3. Is this property a personal or family property or are you a developer?" helper="What type of property is this?"><select value={values.sellerType} onChange={event => field("sellerType", event.target.value)}><option value="">Select an option</option><option>Personal Property</option><option>Family Property</option><option>Developer</option></select></Field>
       <Field label="4. What Location?" helper="Enter the location of your property" required error={errors.location}><input value={values.location} maxLength={300} onChange={event => field("location", event.target.value)}/></Field>
       <Field label="5. What type of property is it?" helper="Is it a residential or commercial property?" required error={errors.propertyType}><select value={values.propertyType} onChange={event => field("propertyType", event.target.value)}><option value="">Select an option</option><option>Residential</option><option>Commercial</option></select></Field>
-      <Field label="6. What is the land area of the property?" error={errors.landArea}><input type="number" inputMode="decimal" min="0" max="1000000000" value={values.landArea} onChange={event => field("landArea", event.target.value)}/></Field>
+      <Field label="6. What is the land area of the property?" helpTerm="landArea" error={errors.landArea}><input type="number" inputMode="decimal" min="0" max="1000000000" value={values.landArea} onChange={event => field("landArea", event.target.value)}/></Field>
       <Field label="7. Parking Space?" error={errors.parkingSpaces}><input type="number" inputMode="numeric" min="0" max="100" value={values.parkingSpaces} onChange={event => field("parkingSpaces", event.target.value)}/></Field>
       <Field label="8. Upload picture(s) of the property" error={errors.images}><span className="sell-file-control">＋ <strong>{images.length ? `${images.length} file${images.length === 1 ? "" : "s"} selected` : "Add Photos"}</strong><input type="file" accept="image/png,image/jpeg,image/webp" multiple onChange={event => setImages([...event.target.files ?? []])}/></span></Field>
       <fieldset className="sell-facilities"><legend>9. What facilities does your property have?</legend><div>{propertyFacilities.map(facility => <label key={facility}><input type="checkbox" checked={facilities.includes(facility)} onChange={event => setFacilities(current => event.target.checked ? [...current, facility] : current.filter(value => value !== facility))}/>{facility}</label>)}</div></fieldset>
     </div><div>
       <Field label="10. How many units?" error={errors.units}><input type="number" inputMode="numeric" min="1" max="100000" value={values.units} onChange={event => field("units", event.target.value)}/></Field>
-      <Field label="11. What title document does this property have?"><input value={values.titleDocument} maxLength={200} placeholder="e.g, C of O, Governor's Consent" onChange={event => field("titleDocument", event.target.value)}/></Field>
-      <Field label="12. Does this property have a lien on it?"><select value={values.lienStatus} onChange={event => field("lienStatus", event.target.value)}><option value="">Select an option</option><option>Yes</option><option>No</option><option>Not Sure</option></select></Field>
+      <Field label="11. What title document does this property have?" helpTerm="registeredTitleDocument"><input value={values.titleDocument} maxLength={200} placeholder="e.g, C of O, Governor's Consent" onChange={event => field("titleDocument", event.target.value)}/></Field>
+      <Field label="12. Does this property have a lien on it?" helpTerm="lien"><select value={values.lienStatus} onChange={event => field("lienStatus", event.target.value)}><option value="">Select an option</option><option>Yes</option><option>No</option><option>Not Sure</option></select></Field>
       <Field label="13. How much do you want for this property?" required error={errors.askingPrice}><div className="sell-money"><span>NGN</span><input inputMode="decimal" value={values.askingPrice} onChange={event => { const formatted = formatNairaInput(event.target.value); if (formatted !== null) field("askingPrice", formatted); }}/></div></Field>
-      <Field label="What is the minimum down payment" helper="Enter a percentage of the total price" error={errors.minimumDownPaymentPercent}><div className="sell-percent"><input type="number" inputMode="decimal" min="0" max="100" value={values.minimumDownPaymentPercent} placeholder="e.g 30" onChange={event => field("minimumDownPaymentPercent", event.target.value)}/><span>%</span></div></Field>
-      <Field label="14. Have you authorized this sale?"><select value={values.saleAuthorized} onChange={event => { field("saleAuthorized", event.target.value); if (event.target.value !== "Yes") setAuthorizationDocument(null); }}><option value="">Select an option</option><option>Yes</option><option>No</option></select></Field>
+      <Field label="What is the minimum down payment" helpTerm="minimumDownPayment" helper="Enter a percentage of the total price" error={errors.minimumDownPaymentPercent}><div className="sell-percent"><input type="number" inputMode="decimal" min="0" max="100" value={values.minimumDownPaymentPercent} placeholder="e.g 30" onChange={event => field("minimumDownPaymentPercent", event.target.value)}/><span>%</span></div></Field>
+      <Field label="14. Have you authorized this sale?" helpTerm="authorizedThisSale"><select value={values.saleAuthorized} onChange={event => { field("saleAuthorized", event.target.value); if (event.target.value !== "Yes") setAuthorizationDocument(null); }}><option value="">Select an option</option><option>Yes</option><option>No</option></select></Field>
       {values.saleAuthorized === "Yes" && <Field label="15. Upload Authorization Document" required error={errors.authorizationDocument}><span className="sell-file-control">＋ <strong>{authorizationDocument?.name || "Choose Document"}</strong><input type="file" accept="application/pdf,image/png,image/jpeg" onChange={event => setAuthorizationDocument(event.target.files?.[0] ?? null)}/></span></Field>}
-      <Field label="Your likely transferable giftings?"><textarea value={values.likelyTransferableGiftings} maxLength={1000} onChange={event => field("likelyTransferableGiftings", event.target.value)}/></Field>
+      <Field label="Your likely transferable giftings?" helpTerm="transferableGifts"><textarea value={values.likelyTransferableGiftings} maxLength={1000} onChange={event => field("likelyTransferableGiftings", event.target.value)}/></Field>
     </div></div>{failure && <p className="sell-assistance-error" role="alert">{failure}</p>}<button className="sell-assistance-submit" type="submit" disabled={status === "submitting"}>{status === "submitting" ? "Submitting…" : "Submit"}</button></form>
     <Link className="sell-assistance-promo" href="/referrals" aria-label="Learn about Beryl referrals"><Image src="/buy/refer-and-earn.png" alt="Refer and earn with Beryl Shelter" width={1300} height={350} unoptimized/></Link>
   </main><PublicSiteFooter/></div>;
 }
 
-function Field({ label, helper, required = false, error, children }: { label: string; helper?: string | undefined; required?: boolean; error?: string | undefined; children: ReactNode }) {
-  return <label className="sell-assistance-field"><strong>{label}{required && <span> *</span>}</strong>{helper && <small>{helper}</small>}{children}{error && <em role="alert">{error}</em>}</label>;
+function Field({ label, helpTerm, helper, required = false, error, children }: { label: string; helpTerm?: TerminologyKey; helper?: string | undefined; required?: boolean; error?: string | undefined; children: ReactNode }) {
+  const field = <label className="sell-assistance-field"><strong>{label}{required && <span> *</span>}</strong>{helper && <small>{helper}</small>}{children}{error && <em role="alert">{error}</em>}</label>;
+  return helpTerm ? <div className="assistance-field-with-help">{field}<TerminologyHelp term={helpTerm}/></div> : field;
 }

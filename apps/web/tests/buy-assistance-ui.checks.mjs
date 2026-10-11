@@ -12,7 +12,20 @@ export async function checkBuyAssistance({ page, origin, calls, failures, screen
   await navBuy().click(); await page.keyboard.press("Escape"); assert.equal(await prompt.count(), 0);
   await navBuy().click(); await prompt.getByRole("button", { name: "No", exact: true }).click(); await page.waitForURL("**/buy");
   await navBuy().click(); await prompt.getByRole("button", { name: "Yes", exact: true }).click(); await page.waitForURL("**/buy/assistance");
-  await page.getByRole("heading", { name: "What are your buy requirements" }).waitFor();
+  await page.getByRole("heading", { name: "What are your buying requirements" }).waitFor();
+  const submissionCountBeforeHelp = calls.filter(call => call.endpoint === "/public/buy-assistance").length;
+  const subtypeHelp = page.getByRole("button", { name: "Explain Property Subtype" });
+  await subtypeHelp.focus(); await page.keyboard.press("Enter");
+  await page.getByRole("tooltip").getByText("A more specific kind of property within the selected category", { exact: false }).waitFor();
+  assert.equal(calls.filter(call => call.endpoint === "/public/buy-assistance").length, submissionCountBeforeHelp);
+  await page.keyboard.press("Escape"); assert.equal(await page.getByRole("tooltip").count(), 0);
+  await page.getByRole("button", { name: "Explain Buy Mandate" }).click(); await page.getByText("A document authorizing Beryl Shelter to assist you in searching", { exact: false }).waitFor();
+  await page.evaluate(() => { document.documentElement.dataset.theme = "dark"; });
+  const darkTooltipColors = await page.getByRole("tooltip").evaluate(element => { const style = getComputedStyle(element); return [style.backgroundColor, style.color]; });
+  assert.notEqual(darkTooltipColors[0], "rgb(255, 255, 255)"); assert.notEqual(darkTooltipColors[0], darkTooltipColors[1]);
+  await page.evaluate(() => { document.documentElement.dataset.theme = "light"; });
+  await page.getByRole("heading", { name: "What are your buying requirements" }).click(); assert.equal(await page.getByRole("tooltip").count(), 0);
+  assert.equal(await page.getByRole("button", { name: /^Explain / }).count(), 4);
   await page.waitForFunction(() => [...document.querySelectorAll("input")].some(input => input.value === "Ada Okafor"));
   assert.equal(await page.getByLabel(/1\. Contact Name/).inputValue(), "Ada Okafor"); assert.equal(await page.locator(".site-footer").count(), 1);
   await page.getByRole("button", { name: "Submit", exact: true }).click(); assert.equal(await page.getByRole("alert").count() >= 4, true);
@@ -31,7 +44,7 @@ export async function checkBuyAssistance({ page, origin, calls, failures, screen
   await page.goto(origin + "/buy/assistance"); await page.getByLabel(/2\. Preferred Contact Method/).selectOption("Email"); await page.getByLabel(/3\. What type of property/).selectOption("Commercial"); assert.equal(await page.getByLabel(/4\. Property Subtype/).isDisabled(), true); assert.equal(await page.getByLabel(/5\. How many bedrooms/).isDisabled(), true);
   await page.getByLabel(/8\. What State/).selectOption("Lagos"); await page.getByLabel(/11\. What is your budget/).fill("50000000"); await page.getByRole("button", { name: "Submit", exact: true }).click(); await page.getByText("Your buying assistance request could not be submitted").waitFor(); assert.equal(await page.getByLabel(/11\. What is your budget/).inputValue(), "50,000,000"); failures.delete("/public/buy-assistance");
   for (const width of [1440,1280,1024,768,430,390,360,320]) {
-    await page.setViewportSize({ width, height: 900 }); await page.goto(origin + "/buy/assistance"); await page.getByRole("heading", { name: "What are your buy requirements" }).waitFor();
+    await page.setViewportSize({ width, height: 900 }); await page.goto(origin + "/buy/assistance"); await page.getByRole("heading", { name: "What are your buying requirements" }).waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Buy Assistance overflow ${width}`);
     assert.equal(await page.locator(".buy-assistance-columns").evaluate(element => getComputedStyle(element).display), width <= 800 ? "block" : "grid");
     if (width <= 700) { await page.getByRole("button", { name: "Toggle navigation" }).click(); await navBuy().click(); await prompt.waitFor(); const mobileSize = await prompt.boundingBox(); assert(mobileSize && mobileSize.width <= width - 32 + 1); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); if (width === 390) await screenshot("buy-decision-390"); await prompt.getByRole("button", { name: "Close buy assistance prompt" }).click(); }
@@ -40,5 +53,6 @@ export async function checkBuyAssistance({ page, origin, calls, failures, screen
   await page.setViewportSize({ width: 1440, height: 900 }); await page.goto(origin + "/"); await page.getByRole("link", { name: /Click here to refer someone to buy/i }).click(); await page.waitForURL("**/buy"); assert.equal(await prompt.count(), 0);
   assert.equal(calls.some(call => call.method !== "GET" && /purchase|payment|checkout|mortgage|referral|listings|saved-properties|inquiries|sell-assistance/.test(call.endpoint)), false);
   passed.push("Public Buy navigation always opens the shared compact non-persisted decision; No opens /buy, Yes opens /buy/assistance, and non-navbar Buy links remain direct");
+  passed.push("Buy Assistance terminology help supports keyboard/click activation, Escape/outside dismissal, responsive rendering, and never submits the form");
   passed.push("Buy Assistance validates conditional and taxonomy fields, private PDF, pending/success/failure states, shared footer, and eight widths without transaction side effects");
 }

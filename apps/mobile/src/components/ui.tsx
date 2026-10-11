@@ -16,6 +16,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon } from "./app-icon";
 import { BrandLoader } from "./brand-loader";
+import { TerminologyHelp } from "./terminology-help";
+import type { TerminologyKey } from "@/lib/terminology";
 import { elevation, radius, spacing, typography } from "@/theme/tokens";
 import { useTheme } from "@/providers/theme-provider";
 
@@ -80,13 +82,14 @@ export function Card({ children, style }: PropsWithChildren<{ style?: ViewStyle 
   );
 }
 
-export function SectionHeading({ title, description }: { title: string; description?: string }) {
+export function SectionHeading({ title, description, helpTerm }: { title: string; description?: string; helpTerm?: TerminologyKey }) {
   const { colors: themeColors } = useTheme();
   return (
     <View style={styles.headingBlock}>
-      <Text accessibilityRole="header" style={[styles.heading, { color: themeColors.text }]}>
-        {title}
-      </Text>
+      <View style={styles.labelRow}>
+        <Text accessibilityRole="header" style={[styles.heading, styles.flexLabel, { color: themeColors.text }]}>{title}</Text>
+        {helpTerm ? <TerminologyHelp term={helpTerm} /> : null}
+      </View>
       {description ? (
         <Text style={[styles.muted, { color: themeColors.textMuted }]}>{description}</Text>
       ) : null}
@@ -160,12 +163,14 @@ export function TextField({
   error,
   keyboardType,
   secureTextEntry,
+  helpTerm,
   style,
   ...props
 }: TextInputProps & {
   label: string;
   error?: string;
   keyboardType?: KeyboardTypeOptions;
+  helpTerm?: TerminologyKey;
 }) {
   const { colors: themeColors } = useTheme();
   const [hidePassword, setHidePassword] = useState(Boolean(secureTextEntry));
@@ -174,7 +179,10 @@ export function TextField({
 
   return (
     <View style={styles.field}>
-      <Text style={[styles.label, { color: themeColors.text }]}>{label}</Text>
+      <View style={styles.labelRow}>
+        <Text style={[styles.label, styles.flexLabel, { color: themeColors.text }]}>{label}</Text>
+        {helpTerm ? <TerminologyHelp term={helpTerm} /> : null}
+      </View>
       <View
         style={[
           styles.inputContainer,
@@ -326,6 +334,8 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.82 },
   field: { gap: spacing.sm },
   label: { ...typography.label },
+  labelRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  flexLabel: { flexShrink: 1 },
   inputContainer: {
     minHeight: 50,
     borderWidth: 1,

@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon } from "@/components/app-icon";
 import { DocumentPickerComponent } from "@/components/document-picker";
 import { OptionSelect } from "@/components/option-select";
+import { TerminologyHelp } from "@/components/terminology-help";
 import { Button, Card, SectionHeading, TextField } from "@/components/ui";
 import { assistanceApi } from "@/lib/assistance-api";
 import { friendlyError } from "@/lib/api-error";
@@ -175,7 +176,7 @@ export default function BuyAssistanceRoute() {
         ) : (
           <View style={styles.formStack}>
             <SectionHeading
-              title="What are your buy requirements?"
+              title="What are your buying requirements"
               description="Tell us about the property you want to buy and we'll help find matching properties."
             />
 
@@ -267,7 +268,7 @@ export default function BuyAssistanceRoute() {
               {isResidential && (
                 <>
                   <View style={styles.fieldBlock}>
-                    <Text style={styles.label}>Property Subtype *</Text>
+                    <View style={styles.labelRow}><Text style={styles.label}>Property Subtype *</Text><TerminologyHelp term="propertySubtype" /></View>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
                       {propertySubtypes.map((sub) => {
                         const active = propertySubtype === sub;
@@ -367,7 +368,7 @@ export default function BuyAssistanceRoute() {
               />
 
               <View style={styles.fieldBlock}>
-                <Text style={styles.label}>Payment Intent</Text>
+                <View style={styles.labelRow}><Text style={styles.label}>Payment Intent</Text><TerminologyHelp term="mortgage" /></View>
                 <View style={styles.chipRow}>
                   {paymentIntentOptions.map((opt) => {
                     const active = paymentIntent === opt;
@@ -410,6 +411,7 @@ export default function BuyAssistanceRoute() {
 
               <DocumentPickerComponent
                 label="Buy Mandate (Optional)"
+                helpTerm="buyMandate"
                 helper="Upload client brief or buy mandate document (PDF up to 10 MB)"
                 maxCount={1}
                 multiple={false}
@@ -420,6 +422,7 @@ export default function BuyAssistanceRoute() {
 
               <TextField
                 label="Likely Transferable Giftings"
+                helpTerm="transferableGifts"
                 placeholder="Desired appliances or fixtures"
                 value={giftings}
                 onChangeText={setGiftings}
@@ -493,6 +496,7 @@ function createStyles(colors: ColorTokens) {
     cardHeader: { ...typography.heading, color: colors.brandDark, marginBottom: spacing.xs },
     fieldBlock: { gap: spacing.xs },
     label: { ...typography.label, color: colors.text },
+    labelRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
     chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
     chip: {
       paddingHorizontal: spacing.md,

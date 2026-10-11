@@ -344,6 +344,12 @@ export async function checkListings({
       14,
     );
     assert.equal(await page.locator('[name="toilet_count"]').count(), 0);
+    assert.equal(await page.getByRole("button", { name: /^Explain / }).count(), 5);
+    if (width === 1440) {
+      await page.getByRole("button", { name: "Explain Registered Title Document" }).click();
+      await page.getByRole("tooltip").getByText("A legal document used to establish or support ownership", { exact: false }).waitFor();
+      await page.keyboard.press("Escape");
+    }
     await noOverflow(width);
     await screenshot(`listing-create-${width}`);
     await open(`/dashboard/listings/${id}`);

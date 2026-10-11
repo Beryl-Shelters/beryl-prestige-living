@@ -12,6 +12,13 @@ export async function checkSellAssistance({ page, origin, calls, failures, scree
   await navSell().click(); await prompt.getByRole("button", { name: "No", exact: true }).click(); await page.waitForURL("**/dashboard/listings/new");
   await page.goto(origin + "/buy"); await navSell().click(); await prompt.getByRole("button", { name: "Yes", exact: true }).click(); await page.waitForURL("**/sell/assistance");
   await page.getByRole("heading", { name: "Tell us about your property" }).waitFor(); const contactName = page.getByLabel(/1\. Contact Name/); await page.waitForFunction(() => [...document.querySelectorAll("input")].some(input => input.value === "Ada Okafor")); assert.equal(await contactName.inputValue(), "Ada Okafor");
+  assert.equal(await page.getByRole("button", { name: /^Explain / }).count(), 6);
+  const lienHelp = page.getByRole("button", { name: "Explain Lien" }); await lienHelp.click();
+  await page.getByRole("tooltip").getByText("A lien is a legal claim or financial obligation", { exact: false }).waitFor();
+  await page.keyboard.press("Escape"); assert.equal(await page.getByRole("tooltip").count(), 0);
+  await page.getByRole("button", { name: "Explain Transferable Gifts" }).click();
+  await page.getByText("Describe any gifts or benefits associated with the transaction", { exact: false }).waitFor();
+  await page.locator(".sell-assistance-intro").click(); assert.equal(await page.getByRole("tooltip").count(), 0);
   await page.getByRole("button", { name: "Submit", exact: true }).click(); assert.equal(await page.getByRole("alert").count() >= 4, true);
   await page.getByLabel(/2\. Preferred Contact Method/).selectOption("Email"); assert.equal(await page.getByLabel("Contact Email *").inputValue(), "ada@example.test");
   await page.getByLabel(/4\. What Location/).fill("Lekki, Lagos"); await page.getByLabel(/5\. What type of property/).selectOption("Residential");
@@ -32,5 +39,6 @@ export async function checkSellAssistance({ page, origin, calls, failures, scree
   await page.setViewportSize({ width: 1440, height: 900 }); await page.goto(origin + "/buy"); await page.locator(".public-account-trigger").click(); await page.locator(".public-account-dropdown").getByRole("link", { name: "Sell a Property" }).click(); await page.waitForURL("**/dashboard/listings/new"); assert.equal(await prompt.count(), 0);
   assert.equal(calls.some(call => call.method !== "GET" && /purchase|payment|checkout|referral|saved-properties|inquiries/.test(call.endpoint)), false);
   passed.push("Every public desktop/mobile Sell navigation click opens a non-persisted accessible decision prompt; No preserves the existing Sell route, Yes opens assistance, and dashboard Sell a Property remains direct");
+  passed.push("Sell Assistance technical terms expose accessible click/Escape/outside-dismissed explanations without changing submission behavior");
   passed.push("Sell Assistance validates conditional contact/document fields, private files, pending/success/failure states and responsive layouts at eight widths without listing or transaction side effects");
 }

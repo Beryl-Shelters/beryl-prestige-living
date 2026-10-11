@@ -12,10 +12,12 @@ import {
   type ListingOptions,
 } from "../../lib/listings-api";
 import { BrandLoader } from "../auth/brand-loader";
+import { TerminologyHelp } from "../terminology-help";
 import { useDashboard } from "../dashboard/dashboard-provider";
 import { useListingError, useListingRequest } from "./use-listing-request";
 import { SalesMandateStep } from "./sales-mandate-step";
 import { SubmissionSuccessStep } from "./submission-success-step";
+import type { TerminologyKey } from "../../lib/terminology";
 
 
 type Values = {
@@ -341,14 +343,14 @@ function ListingWizard({
     label: string,
     required = false,
     numeric = false,
-    placeholder = ""
+    placeholder = "",
+    helpTerm?: TerminologyKey
   ) {
     const money = ["property_cost", "minimum_down_payment"].includes(key);
     const signed = ["latitude", "longitude"].includes(key);
-    return (
-      <label key={key}>
-        {label}
-        {required && <> <b>*</b></>}
+    const field = (
+      <label>
+        {label}{required && <> <b>*</b></>}
         <div className="listing-input-wrap">
           <input
             name={key}
@@ -383,16 +385,18 @@ function ListingWizard({
         </div>
       </label>
     );
+    return helpTerm ? <div className="listing-field-with-help" key={key}>{field}<TerminologyHelp term={helpTerm} /></div> : <div key={key}>{field}</div>;
   }
 
   function select(
     key: keyof Values,
     label: string,
     choices: string[],
-    contextNote = ""
+    contextNote = "",
+    helpTerm?: TerminologyKey
   ) {
-    return (
-      <label key={key}>
+    const field = (
+      <label>
         {label} <b>*</b>
         {contextNote && <small className="field-context-note">{contextNote}</small>}
         <select
@@ -410,6 +414,7 @@ function ListingWizard({
         </select>
       </label>
     );
+    return helpTerm ? <div className="listing-field-with-help" key={key}>{field}<TerminologyHelp term={helpTerm} /></div> : <div key={key}>{field}</div>;
   }
 
   return (
@@ -447,7 +452,8 @@ function ListingWizard({
                   "Registered Title Document",
                   false,
                   false,
-                  "e.g. Certificate of Occupancy, Deed of Assignment"
+                  "e.g. Certificate of Occupancy, Deed of Assignment",
+                  "registeredTitleDocument"
                 )}
                 {input("title", "Property Title (Public Marketing Title)", true)}
                 <label>
@@ -524,26 +530,31 @@ function ListingWizard({
                   {select(
                     "property_subtype",
                     "Property Subtype",
-                    options.property_subtype
+                    options.property_subtype,
+                    "",
+                    "propertySubtype"
                   )}
-                  <label>
-                    Does this property have a lien on it? <b>*</b>
-                    <small className="field-context-note">
-                      Has it been used to borrow money from the bank?
-                    </small>
-                    <select
-                      name="has_lien"
-                      required
-                      value={values.has_lien}
-                      onChange={(event) => set("has_lien", event.target.value)}
-                    >
-                      <option value="" disabled>
-                        Select an Option
-                      </option>
-                      <option value="true">Yes</option>
-                      <option value="false">No</option>
-                    </select>
-                  </label>
+                  <div className="listing-field-with-help">
+                    <label>
+                      Does this property have a lien on it? <b>*</b>
+                      <small className="field-context-note">
+                        Has it been used to borrow money from the bank?
+                      </small>
+                      <select
+                        name="has_lien"
+                        required
+                        value={values.has_lien}
+                        onChange={(event) => set("has_lien", event.target.value)}
+                      >
+                        <option value="" disabled>
+                          Select an Option
+                        </option>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                      </select>
+                    </label>
+                    <TerminologyHelp term="lien" />
+                  </div>
                 </div>
               </section>
 
@@ -582,7 +593,7 @@ function ListingWizard({
                   ))}
                   {input("parking_spaces", "Parking Space", true, true)}
                   {input("units", "No. of units", false, true)}
-                  {input("land_area", "Land area (Sq.Ft.)", false, true)}
+                  {input("land_area", "Land area (Sq.Ft.)", false, true, "", "landArea")}
                   {input("year_built", "Year Built", false, true)}
                 </div>
                 <h3>Additional facilities</h3>
@@ -614,7 +625,9 @@ function ListingWizard({
                     "minimum_down_payment",
                     "Minimum Down Payment",
                     true,
-                    true
+                    true,
+                    "",
+                    "minimumDownPayment"
                   )}
                 </div>
               </section>

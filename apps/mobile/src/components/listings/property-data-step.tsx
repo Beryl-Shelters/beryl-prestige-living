@@ -9,6 +9,7 @@ import {
 import { AppIcon } from "../app-icon";
 import { MediaPicker } from "../media-picker";
 import { OptionSelect } from "../option-select";
+import { TerminologyHelp } from "../terminology-help";
 import { Button, Card, SectionHeading, TextField } from "../ui";
 import { friendlyError } from "@/lib/api-error";
 import type { PickedFile } from "@/lib/file-upload-helper";
@@ -209,6 +210,7 @@ export function PropertyDataStep({
 
         <TextField
           label="Registered Title Document Name"
+          helpTerm="registeredTitleDocument"
           placeholder="e.g. Certificate of Occupancy, Deed of Conveyance"
           value={registeredTitle}
           onChangeText={setRegisteredTitle}
@@ -295,7 +297,7 @@ export function PropertyDataStep({
         </View>
 
         <View style={styles.fieldBlock}>
-          <Text style={styles.label}>Property Subtype</Text>
+          <View style={styles.labelRow}><Text style={styles.label}>Property Subtype</Text><TerminologyHelp term="propertySubtype" /></View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
             {options.property_subtype.map((opt) => {
               const active = propertySubtype === opt;
@@ -316,7 +318,7 @@ export function PropertyDataStep({
         </View>
 
         <View style={styles.fieldBlock}>
-          <Text style={styles.label}>Has Lien / Used to borrow from bank?</Text>
+          <View style={styles.labelRow}><Text style={styles.label}>Has Lien / Used to borrow from bank?</Text><TerminologyHelp term="lien" /></View>
           <View style={styles.chipRow}>
             {[false, true].map((val) => {
               const active = hasLien === val;
@@ -412,6 +414,7 @@ export function PropertyDataStep({
           <View style={styles.flexHalf}>
             <TextField
               label="Land Area (Sq.Ft)"
+              helpTerm="landArea"
               placeholder="5000"
               value={landArea}
               onChangeText={setLandArea}
@@ -443,6 +446,7 @@ export function PropertyDataStep({
 
         <TextField
           label="Minimum Down Payment (NGN)"
+          helpTerm="minimumDownPayment"
           placeholder="e.g. 45,000,000 (0 for full payment)"
           value={downPayment}
           onChangeText={(val) => {
@@ -535,6 +539,7 @@ function createStyles(colors: ColorTokens) {
     cardTitle: { ...typography.heading, color: colors.brandDark, marginBottom: spacing.xs },
     fieldBlock: { gap: spacing.xs },
     label: { ...typography.label, color: colors.text },
+    labelRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
     chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
     chip: {
       paddingHorizontal: spacing.md,

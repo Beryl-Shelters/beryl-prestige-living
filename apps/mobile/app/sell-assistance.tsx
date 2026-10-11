@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppIcon } from "@/components/app-icon";
 import { DocumentPickerComponent } from "@/components/document-picker";
 import { MediaPicker } from "@/components/media-picker";
+import { TerminologyHelp } from "@/components/terminology-help";
 import { Button, Card, SectionHeading, TextField } from "@/components/ui";
 import { assistanceApi } from "@/lib/assistance-api";
 import { friendlyError } from "@/lib/api-error";
@@ -305,6 +306,7 @@ export default function SellAssistanceRoute() {
 
               <TextField
                 label="Land Area (Sq.Ft)"
+                helpTerm="landArea"
                 placeholder="e.g. 5000"
                 value={landArea}
                 onChangeText={setLandArea}
@@ -332,13 +334,14 @@ export default function SellAssistanceRoute() {
 
               <TextField
                 label="Title Document"
+                helpTerm="registeredTitleDocument"
                 placeholder="e.g. C of O, Governor's Consent"
                 value={titleDocument}
                 onChangeText={setTitleDocument}
               />
 
               <View style={styles.fieldBlock}>
-                <Text style={styles.label}>Does this property have a lien?</Text>
+                <View style={styles.labelRow}><Text style={styles.label}>Does this property have a lien?</Text><TerminologyHelp term="lien" /></View>
                 <View style={styles.chipRow}>
                   {lienStatusOptions.map((opt) => {
                     const active = lienStatus === opt;
@@ -376,6 +379,7 @@ export default function SellAssistanceRoute() {
 
               <TextField
                 label="Minimum Down Payment (%)"
+                helpTerm="minimumDownPayment"
                 placeholder="e.g. 30"
                 value={downPaymentPercent}
                 onChangeText={setDownPaymentPercent}
@@ -384,7 +388,7 @@ export default function SellAssistanceRoute() {
               />
 
               <View style={styles.fieldBlock}>
-                <Text style={styles.label}>Have you authorized this sale?</Text>
+                <View style={styles.labelRow}><Text style={styles.label}>Have you authorized this sale?</Text><TerminologyHelp term="authorizedThisSale" /></View>
                 <View style={styles.chipRow}>
                   {(["Yes", "No"] as const).map((opt) => {
                     const active = saleAuthorized === opt;
@@ -421,6 +425,7 @@ export default function SellAssistanceRoute() {
 
               <TextField
                 label="Likely Transferable Giftings"
+                helpTerm="transferableGifts"
                 placeholder="Any appliances, furnishings, or fixtures included in the sale"
                 value={giftings}
                 onChangeText={setGiftings}
@@ -506,6 +511,7 @@ function createStyles(colors: ColorTokens) {
     cardHeader: { ...typography.heading, color: colors.brandDark, marginBottom: spacing.xs },
     fieldBlock: { gap: spacing.xs },
     label: { ...typography.label, color: colors.text },
+    labelRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
     chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
     chip: {
       paddingHorizontal: spacing.md,

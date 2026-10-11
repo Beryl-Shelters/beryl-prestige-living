@@ -7,6 +7,8 @@ import {
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { AppIcon } from "./app-icon";
+import { TerminologyHelp } from "./terminology-help";
+import type { TerminologyKey } from "@/lib/terminology";
 import type { PickedFile } from "@/lib/file-upload-helper";
 import { useTheme } from "@/providers/theme-provider";
 import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
@@ -32,6 +34,7 @@ type DocumentPickerProps = {
   onFilesChange: (files: { file: PickedFile; title: string }[]) => void;
   onRemoveExisting?: (id: string) => void;
   error?: string;
+  helpTerm?: TerminologyKey;
 };
 
 export function DocumentPickerComponent({
@@ -45,6 +48,7 @@ export function DocumentPickerComponent({
   onFilesChange,
   onRemoveExisting,
   error,
+  helpTerm,
 }: DocumentPickerProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -115,7 +119,7 @@ export function DocumentPickerComponent({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.label}>{label}</Text>
+        <View style={styles.labelRow}><Text style={styles.label}>{label}</Text>{helpTerm ? <TerminologyHelp term={helpTerm} /> : null}</View>
         {maxCount > 1 && <Text style={styles.countText}>{totalCount} / {maxCount}</Text>}
       </View>
       {helper ? <Text style={styles.helper}>{helper}</Text> : null}
@@ -190,6 +194,7 @@ function createStyles(colors: ColorTokens) {
     container: { gap: spacing.xs },
     header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
     label: { ...typography.label, color: colors.text },
+    labelRow: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.xs },
     countText: { ...typography.caption, color: colors.textMuted, fontWeight: "600" },
     helper: { ...typography.caption, color: colors.textMuted },
     uploadBtn: {

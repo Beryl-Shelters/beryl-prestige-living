@@ -254,6 +254,7 @@ export function SalesMandateStep({
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <SectionHeading
         title="Step 2: Sales Mandate"
+        helpTerm="salesMandate"
         description="Review legal sales agency terms and authorize Beryl Shelter to represent the property."
       />
 
@@ -369,6 +370,7 @@ export function SalesMandateStep({
 
         <TextField
           label="Registered Title Document Name *"
+          helpTerm="registeredTitleDocument"
           placeholder="e.g. Certificate of Occupancy"
           value={documentTitle}
           onChangeText={setDocumentTitle}

@@ -19,6 +19,7 @@ import { fetchSettingsProfile } from "../../lib/settings-api";
 import { useListingError } from "./use-listing-request";
 import { SignatureCanvas, type SignatureCanvasHandle } from "./signature-canvas";
 import { ResubmitConfirmation } from "./listing-overlays";
+import { TerminologyHelp } from "../terminology-help";
 
 type DocumentItem = {
   id: string;
@@ -484,7 +485,10 @@ export function SalesMandateStep({
         {/* Header */}
         <div className="mandate-header">
           <span className="mandate-header-brand">BERYL SHELTER NIGERIA LIMITED</span>
-          <h1 className="mandate-header-title">Exclusive Sales Mandate (Sellers)</h1>
+          <div className="field-label-with-help mandate-title-with-help">
+            <h1 className="mandate-header-title">Exclusive Sales Mandate (Sellers)</h1>
+            <TerminologyHelp term="salesMandate" />
+          </div>
         </div>
 
         {/* Part 1 */}
@@ -857,7 +861,7 @@ export function SalesMandateStep({
         {/* Sales Mandate (Signature Section) */}
         <section className="mandate-section mandate-signature-section">
           <div className="mandate-section-header">
-            <h2>Sales Mandate</h2>
+            <div className="field-label-with-help"><h2>Sales Mandate</h2><TerminologyHelp term="salesMandate" /></div>
             <button
               type="button"
               className="mandate-reset-link"
