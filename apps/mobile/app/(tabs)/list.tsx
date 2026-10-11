@@ -144,13 +144,13 @@ export default function ListScreen() {
     return (
       <Screen edges={["top", "left", "right"]}>
         <SectionHeading
-          title="List a property"
-          description="Create and submit a property listing through the canonical Beryl sales flow."
+          title="Sell a Property"
+          description="Add and submit a property for sale through the canonical Beryl sales flow."
         />
         <Card>
           <ScreenState
-            title="Sign in to list a property"
-            message="A verified customer account is required before you can create a listing, sign the sales mandate, and track submission progress."
+            title="Sign in to sell a property"
+            message="A verified customer account is required before you can add a property for sale, sign the sales mandate, and track submission progress."
             action={
               <View style={styles.authButtons}>
                 <Button
@@ -183,7 +183,7 @@ export default function ListScreen() {
             <Text style={styles.assistancePromoTitle}>Need help selling your property?</Text>
           </View>
           <Text style={styles.assistancePromoText}>
-            Our advisory team can assist you in finding qualified buyers without creating a listing
+            Our advisory team can assist you in finding qualified buyers without adding the property
             yourself.
           </Text>
           <Button
@@ -199,7 +199,7 @@ export default function ListScreen() {
   if (draftId && editLoading) {
     return (
       <Screen edges={["top", "left", "right"]}>
-        <LoadingState label="Loading your saved listing…" />
+        <LoadingState label="Loading your saved property…" />
       </Screen>
     );
   }
@@ -209,8 +209,8 @@ export default function ListScreen() {
       <Screen edges={["top", "left", "right"]}>
         <Card>
           <ScreenState
-            title="Could not open this listing"
-            message={editError || "The saved listing could not be loaded."}
+            title="Could not open this property"
+            message={editError || "The saved property could not be loaded."}
             action={
               <View style={styles.authButtons}>
                 <Button
@@ -218,7 +218,7 @@ export default function ListScreen() {
                   onPress={() => setEditLoadAttempt((attempt) => attempt + 1)}
                 />
                 <Button
-                  label="Back to My Listings"
+                  label="Back to My Properties for Sale"
                   variant="secondary"
                   onPress={() => router.replace("/dashboard/listings" as never)}
                 />

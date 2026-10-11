@@ -75,9 +75,9 @@ export function SubmissionSuccessStep({ listing }: { listing?: Listing | null | 
           </svg>
         </div>
 
-        <h1 className="submit-success-title">Your listing has been submitted to our team</h1>
+        <h1 className="submit-success-title">Your property has been submitted to our team</h1>
         <p className="submit-success-subtitle">
-          We&apos;ll check the details and let you know within 2 working days. Thank you for listing
+          We&apos;ll check the details and let you know within 2 working days. Thank you for selling
           with Beryl
         </p>
 
@@ -97,7 +97,7 @@ export function SubmissionSuccessStep({ listing }: { listing?: Listing | null | 
             <li className="submit-timeline-item active">
               <span className="timeline-badge-dot" aria-hidden="true" />
               <div className="timeline-text">
-                <strong className="timeline-heading">We review your listing</strong>
+                <strong className="timeline-heading">We review your property</strong>
                 <p className="timeline-body">
                   We check your details and documents. If anything needs changing, we&apos;ll tell you
                   exactly what.
@@ -110,7 +110,7 @@ export function SubmissionSuccessStep({ listing }: { listing?: Listing | null | 
               <div className="timeline-text">
                 <strong className="timeline-heading">It goes live</strong>
                 <p className="timeline-body">
-                  Buyers can now find your listed property and register interest
+                  Buyers can now find your property for sale and register interest
                 </p>
               </div>
             </li>
@@ -119,7 +119,7 @@ export function SubmissionSuccessStep({ listing }: { listing?: Listing | null | 
 
         <div className="submit-success-action">
           <Link href="/dashboard/listings" className="button button-primary submit-success-cta">
-            View my listings
+            View my properties for sale
           </Link>
         </div>
       </div>

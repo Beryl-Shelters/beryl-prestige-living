@@ -449,7 +449,7 @@ export function SalesMandateStep({
 
       // 4. Final Server-Authoritative Submit
       const submitted = await submitListing(listing.id);
-      toast.success("Listing submitted to our team for review!");
+      toast.success("Property submitted to our team for review!");
       onSubmitted(submitted);
     } catch (failure) {
       error(failure);
@@ -961,7 +961,7 @@ export function SalesMandateStep({
                 href="/dashboard/listings"
                 className="button button-secondary mandate-dashboard-link"
               >
-                View in Dashboard Listings
+                View My Properties for Sale
               </Link>
             </div>
           </div>

@@ -49,7 +49,7 @@ export function AdminAuthShell({ children, variant }: AdminAuthShellProps) {
             <ShieldIcon />
             <span>Admin Portal</span>
           </div>
-          <h2>Manage listings, leads and your team.</h2>
+          <h2>Manage properties for sale, leads and your team.</h2>
           <p>Secure access for Beryl Shelter staff.</p>
           <div className="admin-invitation-note">
             <HelpIcon />

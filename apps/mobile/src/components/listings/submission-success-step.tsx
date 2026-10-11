@@ -25,11 +25,11 @@ export function SubmissionSuccessStep({ listing, onReset }: SubmissionSuccessSte
       </View>
 
       <Text accessibilityRole="header" style={styles.title}>
-        Your listing has been submitted to our team
+        Your property has been submitted to our team
       </Text>
 
       <Text style={styles.subtext}>
-        We&apos;ll check the details and let you know within 2 working days. Thank you for listing with Beryl.
+        We&apos;ll check the details and let you know within 2 working days. Thank you for selling with Beryl.
       </Text>
 
       <Card style={styles.timelineCard}>
@@ -58,7 +58,7 @@ export function SubmissionSuccessStep({ listing, onReset }: SubmissionSuccessSte
             <View style={styles.stepLine} />
           </View>
           <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>We review your listing</Text>
+            <Text style={styles.stepTitle}>We review your property</Text>
             <Text style={styles.stepDesc}>Takes 1–2 working days</Text>
           </View>
         </View>
@@ -77,17 +77,17 @@ export function SubmissionSuccessStep({ listing, onReset }: SubmissionSuccessSte
       </Card>
 
       <View style={styles.listingSummary}>
-        <Text style={styles.listingSummaryCode}>Listing Code: {listing.listing_code || "PENDING"}</Text>
+        <Text style={styles.listingSummaryCode}>Property Code: {listing.listing_code || "PENDING"}</Text>
         <Text style={styles.listingSummaryTitle}>{listing.title}</Text>
       </View>
 
       <View style={styles.actionButtons}>
         <Button
-          label="View my listings"
+          label="View my properties for sale"
           onPress={() => router.push("/dashboard/listings")}
         />
         <Button
-          label="Create another listing"
+          label="Add another property for sale"
           variant="secondary"
           onPress={onReset}
         />

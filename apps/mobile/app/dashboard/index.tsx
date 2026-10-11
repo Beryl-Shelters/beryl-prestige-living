@@ -213,15 +213,15 @@ export default function DashboardOverviewScreen() {
         {/* Recent Property Listings */}
         <View style={styles.sectionHeader}>
           <Text accessibilityRole="header" style={styles.sectionTitle}>
-            Recent Property Listings
+            Recent Properties for Sale
           </Text>
           {recentListings.length > 0 && (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="See all listings"
+              accessibilityLabel="See all properties for sale"
               onPress={() => router.push("/dashboard/listings")}
             >
-              <Text style={styles.seeAllLink}>See all listings</Text>
+              <Text style={styles.seeAllLink}>See all properties</Text>
             </Pressable>
           )}
         </View>
@@ -234,7 +234,7 @@ export default function DashboardOverviewScreen() {
                 <Pressable
                   key={listing.id}
                   accessibilityRole="button"
-                  accessibilityLabel={`Listing: ${listing.title}, status: ${label}, price: ${formatNaira(listing.priceMinor)}`}
+                  accessibilityLabel={`Property: ${listing.title}, status: ${label}, price: ${formatNaira(listing.priceMinor)}`}
                   onPress={() => router.push(`/dashboard/listings/${listing.id}` as never)}
                   style={styles.recentListingCard}
                 >
@@ -273,12 +273,12 @@ export default function DashboardOverviewScreen() {
         ) : (
           <Card style={styles.emptyCard}>
             <AppIcon name="list-outline" size={32} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>No properties listed yet</Text>
+            <Text style={styles.emptyTitle}>No properties for sale yet</Text>
             <Text style={styles.emptyMessage}>
-              Create your first property listing to sell with Beryl Shelter.
+              Add your first property for sale with Beryl Shelter.
             </Text>
             <Button
-              label="List a Property"
+              label="Sell a Property"
               onPress={() => router.push("/(tabs)/list")}
             />
           </Card>

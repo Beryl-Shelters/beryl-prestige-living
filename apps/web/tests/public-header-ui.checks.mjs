@@ -13,9 +13,12 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
   assert.equal(await trigger.count(), 0);
   assert.equal(await page.getByRole("link", { name: "Register" }).count(), 1);
   assert.equal(await page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Analytics & Insights" }).count(), 0);
-  assert.equal(await page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell / List a Property" }).getAttribute("href"), "/sell");
+  const signedOutSell = page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell — List a Property" });
+  assert.equal(await signedOutSell.getAttribute("href"), "/sell");
+  assert.equal(await signedOutSell.locator(".public-nav-sell-primary").innerText(), "Sell");
+  assert.equal(await signedOutSell.locator(".public-nav-sell-secondary").innerText(), "List a Property");
   await page.goto(origin + "/sell");
-  await page.getByRole("heading", { name: "Sign in to list a property" }).waitFor();
+  await page.getByRole("heading", { name: "Sign in to sell a property" }).waitFor();
   assert.equal(await page.getByRole("link", { name: "Create free account" }).getAttribute("href"), "/register?next=%2Fdashboard%2Flistings%2Fnew");
   assert.equal(await page.getByRole("link", { name: "Log In" }).getAttribute("href"), "/login?next=%2Fdashboard%2Flistings%2Fnew");
   failures.delete("/me");
@@ -29,7 +32,7 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
     assert.equal(await page.locator(".header-actions .public-account-menu").count(), 1, route);
     const nav = page.getByRole("navigation", { name: "Public navigation" });
     assert.equal(await nav.getByRole("link", { name: "Analytics & Insights" }).count(), 0, route);
-    assert.equal(await nav.getByRole("link", { name: "Sell / List a Property" }).getAttribute("href"), "/sell", route);
+    assert.equal(await nav.getByRole("link", { name: "Sell — List a Property" }).getAttribute("href"), "/sell", route);
     assert.equal(await nav.getByRole("link", { name: "Buy", exact: true }).getAttribute("href"), "/buy", route);
   }
   await page.goto(origin + "/referrals"); await page.waitForURL("**/dashboard/referrals");
@@ -43,7 +46,7 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
   await page.goto(origin + "/"); await trigger.waitFor();
   await page.getByRole("link", { name: /Click here to refer someone to sell/i }).click(); await page.waitForURL("**/dashboard/referrals");
 
-  for (const width of [1440, 1280, 768, 430, 390, 360]) {
+  for (const width of [1440, 1280, 1024, 768, 430, 390, 360, 320]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(origin + "/buy");
     if (width <= 700) await page.getByRole("button", { name: "Toggle navigation" }).click();
@@ -55,7 +58,11 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
     assert.equal(await trigger.getAttribute("aria-expanded"), "true");
     await dropdown.waitFor();
     assert.deepEqual((await dropdown.locator(":scope > *").allTextContents()).map(value => value.trim()),
-      ["My Dashboard", "List Property", "Referrals", "Saved Property", "Compare Property", "Mortgage Calculator", "Log Out"]);
+      ["My Dashboard", "Sell a Property", "Referrals", "Saved Property", "Compare Property", "Mortgage Calculator", "Log Out"]);
+    const sellLink = page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell — List a Property" });
+    assert.equal(await sellLink.count(), 1, `one Sell link at ${width}`);
+    const sellSizes = await sellLink.evaluate(element => ({ primary: Number.parseFloat(getComputedStyle(element.querySelector(".public-nav-sell-primary")).fontSize), secondary: Number.parseFloat(getComputedStyle(element.querySelector(".public-nav-sell-secondary")).fontSize) }));
+    assert.equal(sellSizes.primary > sellSizes.secondary, true, `Sell hierarchy at ${width}`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `header overflow at ${width}`);
     if (width > 700) {
       assert.equal(await dropdown.evaluate(element => getComputedStyle(element).position), "absolute");
@@ -81,9 +88,9 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
   await dropdown.getByRole("link", { name: "My Dashboard" }).click();
   await page.waitForURL("**/dashboard");
   await page.goto(origin + "/buy"); await trigger.waitFor();
-  await page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell / List a Property" }).click();
+  await page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell — List a Property" }).click();
   const sellPrompt=page.getByRole("dialog",{name:"Do you need assistance"});await sellPrompt.waitFor();await sellPrompt.getByRole("button",{name:"No",exact:true}).click();await page.waitForURL("**/dashboard/listings/new");
-  for (const [label, path] of [["List Property", "/dashboard/listings/new"], ["Referrals", "/dashboard/referrals"]]) {
+  for (const [label, path] of [["Sell a Property", "/dashboard/listings/new"], ["Referrals", "/dashboard/referrals"]]) {
     await page.goto(origin + "/buy"); await trigger.waitFor(); await trigger.click();
     assert.equal(await dropdown.getByRole("link", { name: label }).getAttribute("href"), path);
     await dropdown.getByRole("link", { name: label }).click(); await page.waitForURL(`**${path}`);
@@ -100,5 +107,5 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
   assert.equal(await page.getByText("Analytics & Insights", { exact: true }).count(), 0);
   passed.push("Shared authenticated public header uses session identity on five public routes; signed-in Referrals redirects to dashboard");
   passed.push("Public desktop/mobile navigation omits Analytics & Insights and retired /analytics returns 404");
-  passed.push("Signed-out controls, six widths, menu toggle/outside/Escape, truthful unavailable items, valid routes and existing logout work");
+  passed.push("Signed-out controls, eight widths, two-line Sell hierarchy, menu toggle/outside/Escape, valid routes and existing logout work");
 }

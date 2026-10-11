@@ -35,7 +35,7 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index" options={{ title: "Home", tabBarAccessibilityLabel: "Home tab" }} />
       <Tabs.Screen name="properties" options={{ title: "Properties", tabBarAccessibilityLabel: "Properties tab" }} />
-      <Tabs.Screen name="list" options={{ title: "List", tabBarAccessibilityLabel: "List a property tab" }} />
+      <Tabs.Screen name="list" options={{ title: "Sell", tabBarAccessibilityLabel: "Sell a property tab" }} />
       <Tabs.Screen name="mortgage" options={{ title: "Mortgage", tabBarAccessibilityLabel: "Mortgage calculator tab" }} />
       <Tabs.Screen name="account" options={{ title: "Account", tabBarAccessibilityLabel: "Account tab" }} />
     </Tabs>

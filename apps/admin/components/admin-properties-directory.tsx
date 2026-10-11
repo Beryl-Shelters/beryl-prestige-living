@@ -10,7 +10,7 @@ import { AdminAppShell } from "./admin-app-shell";
 
 const statuses:PropertyDirectoryStatus[]=["ALL","PENDING","LISTED","REJECTED"];
 const sorts:PropertySort[]=["NEWEST","OLDEST","TITLE_ASC","TITLE_DESC"];
-const labels:Record<PropertyStatus,string>={UNLISTED:"Unlisted",PENDING:"Pending Review",LISTED:"Approved",REJECTED:"Rejected"};
+const labels:Record<PropertyStatus,string>={UNLISTED:"Not Yet for Sale",PENDING:"Pending Review",LISTED:"For Sale",REJECTED:"Rejected"};
 
 function date(value:string|null){return value?new Intl.DateTimeFormat("en-GB",{day:"2-digit",month:"short",year:"numeric"}).format(new Date(value)):"—";}
 function statusLabel(value:PropertyDirectoryStatus){return value==="ALL"?"All":labels[value];}
@@ -33,7 +33,7 @@ function DirectoryContent(){
   const empty=status==="PENDING"?{title:"Queue’s clear",copy:"No properties waiting for review."}:status==="LISTED"?{title:"Nothing here yet",copy:"No approved properties so far."}:{title:"No matching properties",copy:"Try another search or status."};
   const first=data&&data.total?(data.page-1)*data.pageSize+1:0,last=data?Math.min(data.page*data.pageSize,data.total):0;
   return <main className="admin-properties-page">
-    <header className="admin-page-heading"><h1>Properties</h1><p>Review submissions and control what goes live on the marketplace.</p></header>
+    <header className="admin-page-heading"><h1>Properties for Sale</h1><p>Review property submissions and control what goes live on the marketplace.</p></header>
     <section className="property-directory-controls">
       <div className="property-search-sort"><form role="search" onSubmit={submit}><span aria-hidden="true">⌕</span><input aria-label="Search properties" defaultValue={search} key={search} name="search" placeholder="Search by title, ID, seller or location"/><button type="submit">Search</button></form><label><span>Sort by</span><select aria-label="Sort properties" value={sort} onChange={event=>update({sort:event.target.value,page:1})}><option value="NEWEST">Newest submission</option><option value="OLDEST">Oldest submission</option><option value="TITLE_ASC">Title A–Z</option><option value="TITLE_DESC">Title Z–A</option></select></label></div>
       <nav aria-label="Property status filters" className="property-status-tabs">{statuses.map(value=><button aria-current={status===value?"page":undefined} className={status===value?"is-active":""} key={value} onClick={()=>update({status:value,page:1})} type="button"><span>{statusLabel(value)}</span><small>{data?statusCount(data,value):0}</small></button>)}</nav>

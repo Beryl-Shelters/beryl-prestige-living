@@ -82,14 +82,14 @@ export function listingStatusPresentation(status: ListingStatus): {
 } {
   switch (status) {
     case "LISTED":
-      return { label: "Approved", tone: "success" };
+      return { label: "For Sale", tone: "success" };
     case "PENDING":
       return { label: "Pending", tone: "warning" };
     case "REJECTED":
       return { label: "Rejected", tone: "danger" };
     case "UNLISTED":
     default:
-      return { label: "Unlisted", tone: "neutral" };
+      return { label: "Not Yet for Sale", tone: "neutral" };
   }
 }
 

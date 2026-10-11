@@ -13,7 +13,7 @@ export const dashboardFixture = {
 
 export async function checkDashboard({ page, origin, calls, failures, screenshot, passed, pauseRequest, resume, toast }) {
   const endpoint = "/dashboard/overview";
-  const sections = ["Overview", "Listings", "Analytics", "Messages", "Properties", "Referrals", "Settings"];
+  const sections = ["Overview", "My Properties for Sale", "Analytics", "Messages", "Properties", "Referrals", "Settings"];
   const ready = () => page.locator(".dashboard-greeting").waitFor();
   const open = async (path = "/dashboard") => { await page.goto(origin + path); await ready(); await page.evaluate(() => document.fonts.ready); };
   for (const width of [1440, 768, 390, 320]) {
@@ -27,8 +27,8 @@ export async function checkDashboard({ page, origin, calls, failures, screenshot
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Overflow at ${width}`);
     await page.getByText("No messages yet", { exact: true }).waitFor();
     assert.equal(await page.getByRole("link", { name: "Go to messages", exact: true }).getAttribute("href"), "/dashboard/messages");
-    await page.getByText("No properties listed yet", { exact: true }).waitFor();
-    assert.equal(await page.getByRole("link", { name: "List a property", exact: true }).getAttribute("href"), "/dashboard/listings/new");
+    await page.getByText("No properties for sale yet", { exact: true }).waitFor();
+    assert.equal(await page.getByRole("link", { name: "Sell a Property", exact: true }).getAttribute("href"), "/dashboard/listings/new");
     const hierarchy = await page.locator(".dashboard-greeting, .dashboard-kpis, .dashboard-upper, .recent-listings").evaluateAll(elements => elements.map(element => element.getBoundingClientRect().top));
     assert(hierarchy.every((top, index) => index === 0 || top > hierarchy[index - 1]), `Overview hierarchy at ${width}`);
     const columns = await page.locator(".dashboard-kpi").evaluateAll(cards => new Set(cards.map(card => Math.round(card.getBoundingClientRect().left))).size);
@@ -75,7 +75,7 @@ export async function checkDashboard({ page, origin, calls, failures, screenshot
     await page.getByRole("link", { name, exact: true }).click();
     await page.getByRole("heading", { name: name === "Messages" ? "My Tickets" : name === "Properties" ? "Purchased Properties" : name === "Settings" ? "Account Settings" : name, exact: true, level: 1 }).waitFor();
     assert.equal(await page.locator('.dashboard-navigation [aria-current="page"]').innerText(), name);
-    if (name === "Listings") await page.getByRole("heading", { name: "No listings yet", exact: true }).waitFor();
+    if (name === "My Properties for Sale") await page.getByRole("heading", { name: "No properties for sale yet", exact: true }).waitFor();
     else if (name === "Analytics") await page.getByRole("heading", {name:"Category Performance",exact:true}).waitFor();
     else if (name === "Messages") await page.getByRole("heading", { name: "No messages yet", exact: true }).waitFor();
     else if (name === "Properties") await page.getByRole("heading", { name: "No purchased properties yet", exact: true }).waitFor();
@@ -114,11 +114,11 @@ export async function checkDashboard({ page, origin, calls, failures, screenshot
     assert.deepEqual(await page.locator(".dashboard-kpi p").allTextContents(), ["₦125,000,000.00", "3 Units", "₦750,000.00", "2 messages"]);
     assert.deepEqual(await page.locator(".recent-message-link span:nth-child(2)").allTextContents(), ["Viewing confirmation", "Mandate review update"]);
     assert.equal(await page.locator(".recent-listings li").count(), 4);
-    assert.deepEqual(await page.locator(".listing-status").allTextContents(), ["LISTED", "PENDING", "REJECTED", "UNLISTED"]);
+    assert.deepEqual(await page.locator(".listing-status").allTextContents(), ["FOR SALE", "PENDING", "REJECTED", "NOT YET FOR SALE"]);
     assert.equal(await page.getByText("DRAFT", { exact: true }).count(), 0);
     assert.equal(await page.locator('.recent-listings a[href="/dashboard/listings/listing-1"]').count(), 1);
     assert.equal(await page.locator(".recent-listing-image img").count(), 1);
-    assert.equal(await page.getByRole("link", { name: "See all listings", exact: true }).getAttribute("href"), "/dashboard/listings");
+    assert.equal(await page.getByRole("link", { name: "See all properties", exact: true }).getAttribute("href"), "/dashboard/listings");
     await screenshot(`dashboard-populated-${width}`);
   }
   dashboardFixture.summary = { total_investments: 0, properties_owned: 0, referral_earnings: 0, new_messages: 0 };

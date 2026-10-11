@@ -5,14 +5,14 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEven
 import type { Customer } from "../../lib/auth-api";
 import { submitPublicInquiry } from "../../lib/public-inquiries-api";
 
-const inquiryTypes=["Property Inquiry","Buying a Property","Selling/Listing a Property","Property Viewing","General Inquiry","Other"] as const;
+const inquiryTypes=["Property Inquiry","Buying a Property","Selling a Property","Property Viewing","General Inquiry","Other"] as const;
 const contexts:Record<string,{title:string;copy:string;source:string}>={
   "/":{title:"Home",copy:"Search for properties and explore Beryl services. You can also refer buyers or sellers.",source:"home"},
   "/about":{title:"About",copy:"Learn about Beryl Shelter, our leadership, vision, and office locations.",source:"about"},
   "/referrals":{title:"Referrals",copy:"Refer someone to buy or sell a property through the available referral options.",source:"referrals"},
   "/buy":{title:"Buy",copy:"Search and filter currently listed properties to find options that suit your needs.",source:"buy"},
   "/buy/assistance":{title:"Buy Assistance",copy:"Tell Beryl what you want to buy and request help finding suitable properties.",source:"buy"},
-  "/sell":{title:"Sell / List a Property",copy:"Sign in or create an account to list a property and manage its submission.",source:"sell"},
+  "/sell":{title:"Sell a Property",copy:"Sign in or create an account to add a property for sale and manage its submission.",source:"sell"},
   "/sell/assistance":{title:"Sell Assistance",copy:"Tell Beryl about a property you want to sell and request help finding potential buyers.",source:"sell"},
   "/careers":{title:"Careers",copy:"Explore available roles and submit an application to join the Beryl team.",source:"careers"},
   "/support":{title:"Support",copy:"Browse common questions, contact Beryl, or report a property or agent.",source:"support"},

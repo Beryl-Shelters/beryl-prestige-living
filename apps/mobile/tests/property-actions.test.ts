@@ -16,7 +16,7 @@ const read = (path: string) => readFileSync(join(root, path), "utf8");
 test("signed-out List auth boundary enforces customer login and offers assistance entry", () => {
   const listScreen = read("app/(tabs)/list.tsx");
   assert.match(listScreen, /status\s*!==\s*"signedIn"/);
-  assert.match(listScreen, /Sign in to list a property/);
+  assert.match(listScreen, /Sign in to sell a property/);
   assert.match(listScreen, /\/\(auth\)\/login/);
   assert.match(listScreen, /\/\(auth\)\/register/);
   assert.match(listScreen, /const nextPath = draftId/);
@@ -51,7 +51,7 @@ test("canonical property fields and required validation are preserved in Propert
   assert.match(step, /onPress=\{\(\) => void handleSave\(true\)\}/);
   assert.match(step, /onPress=\{\(\) => void handleSave\(false\)\}/);
   assert.match(step, /if \(proceedToMandate\) \{\s*onNext\(savedListing\)/);
-  assert.match(step, /setDraftNotice\("Listing draft saved successfully \(UNLISTED\)\."\)/);
+  assert.match(step, /setDraftNotice\("Property draft saved successfully \(Not Yet for Sale\)\."\)/);
 });
 
 test("long Nigerian state lists use the shared vertical selector",()=>{
@@ -234,7 +234,7 @@ test("Sales Mandate enforces 10 clauses, fixed 5% commission, 180 days validity 
 
 test("listing submission transitions to PENDING review without customer self-approval", () => {
   const successStep = read("src/components/listings/submission-success-step.tsx");
-  assert.match(successStep, /Your listing has been submitted to our team/);
+  assert.match(successStep, /Your property has been submitted to our team/);
   assert.match(successStep, /Takes 1–2 working days/);
   assert.match(successStep, /It goes live/);
   assert.doesNotMatch(successStep, /approved|APPROVED|live now|published immediately/i);

@@ -6,8 +6,8 @@ import { PublicSiteFooter } from "./public-site-footer";
 
 const questions = [
   { question: "How do I search for properties on Beryl Shelter Nigeria Limited?", answer: "Use the search bar on the Home page to search by title/keyword, then refine results using filters like Location, Property Type, Budget, and Bedrooms. You can also browse all listings from the “Buy” page and apply filters there." },
-  { question: "How do I list a property for sale?", answer: "Sign in and open Dashboard Listings to create a property listing. New listings are submitted for review." },
-  { question: "How does the referral program work and when do I get paid?", answer: "You can refer a specific property from Listings or create a seller referral link in Dashboard Referrals. The program rate is 2%. Please contact support for questions about payment timing." },
+  { question: "How do I sell a property?", answer: "Sign in and open My Properties for Sale to add your property. New properties are submitted for review before they appear publicly for sale." },
+  { question: "How does the referral program work and when do I get paid?", answer: "You can refer a specific property from Properties for Sale or create a seller referral link in Dashboard Referrals. The program rate is 2%. Please contact support for questions about payment timing." },
   { question: "I can’t log in / verify my account. What should I do?", answer: "Use Forgot Password on the Login page if you need to reset your password. If verification or sign-in still fails, contact support using the details below." },
   { question: "How do I report a suspicious property or agent?", answer: "Use the form below to report an agent. For concerns about a property, contact support using the email or phone number below." },
 ];

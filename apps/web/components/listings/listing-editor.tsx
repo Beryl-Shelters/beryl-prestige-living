@@ -327,7 +327,7 @@ function ListingWizard({
         setImages(persisted.images);
       }
       refreshOverview();
-      toast.success(activeListing ? "Listing updated" : "Listing created");
+      toast.success(activeListing ? "Property saved successfully" : "Property added successfully");
       setStep(2);
     } catch (failure) {
       error(failure);
@@ -435,7 +435,7 @@ function ListingWizard({
           aria-busy={pending}
         >
           <div className="listings-title">
-            <h1>{savedListing || listing ? "Edit Listing" : "Create Listing"}</h1>
+            <h1>{savedListing || listing ? "Edit Property" : "Add Property for Sale"}</h1>
           </div>
 
           <div className="listing-editor-columns">

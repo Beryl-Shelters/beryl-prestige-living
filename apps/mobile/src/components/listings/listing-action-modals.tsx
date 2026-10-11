@@ -43,19 +43,19 @@ export function UnlistModal({ visible, listing, onClose, onSuccess }: UnlistModa
           </View>
 
           <Text accessibilityRole="header" style={styles.dialogTitle}>
-            Unlist Listing?
+            Remove Property from Sale?
           </Text>
 
           <Text style={styles.dialogMessage}>
-            Are you sure you want to unlist <Text style={styles.bold}>{listing.title}</Text> (
-            {listing.listing_code})?
+            Are you sure you want to remove <Text style={styles.bold}>{listing.title}</Text> (
+            {listing.listing_code}) from sale?
           </Text>
 
           <View style={styles.warningBox}>
             <Text style={styles.warningTitle}>What happens next</Text>
             <Text style={styles.warningText}>
               The property will stop appearing in public Buy results and direct public property
-              pages until it is reviewed and listed again.
+              pages until it is reviewed and made available for sale again.
             </Text>
           </View>
 
@@ -68,7 +68,7 @@ export function UnlistModal({ visible, listing, onClose, onSuccess }: UnlistModa
           <View style={styles.buttonRow}>
             <Button label="Cancel" variant="secondary" disabled={submitting} onPress={onClose} />
             <Button
-              label={submitting ? "Unlisting…" : "Unlist"}
+              label={submitting ? "Removing…" : "Remove from Sale"}
               variant="danger"
               disabled={submitting}
               loading={submitting}
@@ -117,7 +117,7 @@ export function DeleteModal({ visible, listing, onClose, onSuccess }: DeleteModa
           </View>
 
           <Text accessibilityRole="header" style={styles.dialogTitle}>
-            Delete Listing?
+            Delete Property?
           </Text>
 
           <Text style={styles.dialogMessage}>
@@ -128,7 +128,7 @@ export function DeleteModal({ visible, listing, onClose, onSuccess }: DeleteModa
           <View style={[styles.warningBox, styles.dangerBox]}>
             <Text style={[styles.warningTitle, styles.dangerTitle]}>Warning</Text>
             <Text style={styles.warningText}>
-              This removes the property and its attached listing media permanently. This action
+              This removes the property and its attached media permanently. This action
               cannot be reversed.
             </Text>
           </View>
@@ -199,7 +199,7 @@ export function RejectionModal({
           <View style={styles.reviewAlert}>
             <Text style={styles.reviewAlertTitle}>A few changes needed</Text>
             <Text style={styles.reviewAlertText}>
-              {rejectedDate ? `We reviewed your listing on ${rejectedDate}. ` : ""}
+              {rejectedDate ? `We reviewed your property on ${rejectedDate}. ` : ""}
               Fix the requested items and send it back for review.
             </Text>
           </View>

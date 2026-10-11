@@ -160,7 +160,7 @@ export function PropertyDataStep({
       if (proceedToMandate) {
         onNext(savedListing);
       } else {
-        setDraftNotice("Listing draft saved successfully (UNLISTED).");
+        setDraftNotice("Property draft saved successfully (Not Yet for Sale).");
       }
     } catch (err: unknown) {
       setServerError(friendlyError(err));
@@ -187,7 +187,7 @@ export function PropertyDataStep({
         <View style={styles.rejectedBanner}>
           <AppIcon name="alert-circle" size={20} color={colors.danger} />
           <View style={{ flex: 1, gap: 2 }}>
-            <Text style={styles.rejectedTitle}>Listing Requires Correction</Text>
+            <Text style={styles.rejectedTitle}>Property Requires Correction</Text>
             <Text style={styles.rejectedBody}>
               {existingListing.rejection_reason || "Please update the required property details and resubmit for review."}
             </Text>

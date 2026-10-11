@@ -70,8 +70,8 @@ function DetailContent({ customerId }: { customerId: string }) {
         <ActivityCard hasActivity={customer.propertyActivity.hasActivity} title="Property Activity" emptyCopy="No saved properties or verified completed purchases have been recorded.">
           <dl><Field label="Saved Properties" value={customer.propertyActivity.savedProperties.toLocaleString()}/><Field label="Verified Completed Purchases" value={customer.propertyActivity.completedPurchases.toLocaleString()}/><Field label="First Property Activity" value={date(customer.propertyActivity.firstActivityAt)}/></dl>
         </ActivityCard>
-        <ActivityCard hasActivity={customer.listingActivity.hasActivity} title="Listing Activity" emptyCopy="No customer listings have been recorded.">
-          <dl><Field label="Listings" value={customer.listingActivity.listingCount.toLocaleString()}/><Field label="First Listing Date" value={date(customer.listingActivity.firstListingAt)}/></dl>
+        <ActivityCard hasActivity={customer.listingActivity.hasActivity} title="Property Sale Activity" emptyCopy="No customer properties for sale have been recorded.">
+          <dl><Field label="Properties for Sale" value={customer.listingActivity.listingCount.toLocaleString()}/><Field label="First Property Added" value={date(customer.listingActivity.firstListingAt)}/></dl>
         </ActivityCard>
         <ActivityCard hasActivity={customer.referralActivity.hasActivity} title="Referral Activity" emptyCopy="No referral links have been generated.">
           <dl><Field label="Referral Links" value={customer.referralActivity.referralLinkCount.toLocaleString()}/><Field label="Referral Code" value={customer.referralActivity.referralCode ?? "—"}/><Field label="First Referral Link Date" value={date(customer.referralActivity.firstReferralLinkAt)}/></dl>

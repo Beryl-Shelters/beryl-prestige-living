@@ -3,7 +3,7 @@ import { runIfMain } from "./run-ui-suite.mjs";
 
 runIfMain(import.meta.url, "sell-assistance");
 export async function checkSellAssistance({ page, origin, calls, failures, screenshot, passed, pauseRequest, resume }) {
-  const navSell = () => page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell / List a Property" });
+  const navSell = () => page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell — List a Property" });
   const prompt = page.getByRole("dialog", { name: "Do you need assistance" });
   await page.goto(origin + "/buy"); await navSell().click(); await prompt.waitFor(); await screenshot("sell-decision-1440");
   const promptSize = await prompt.boundingBox(); assert(promptSize && promptSize.width <= 520 && promptSize.height < 260);
@@ -29,8 +29,8 @@ export async function checkSellAssistance({ page, origin, calls, failures, scree
     if (width <= 700) { await page.getByRole("button", { name: "Toggle navigation" }).click(); await navSell().click(); await prompt.waitFor(); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `prompt overflow ${width}`); if (width === 390) await screenshot("sell-decision-390"); await prompt.getByRole("button", { name: "Close sell assistance prompt" }).click(); }
     if (width === 1440 || width === 390) await screenshot(`sell-assistance-${width}`);
   }
-  await page.setViewportSize({ width: 1440, height: 900 }); await page.goto(origin + "/buy"); await page.locator(".public-account-trigger").click(); await page.locator(".public-account-dropdown").getByRole("link", { name: "List Property" }).click(); await page.waitForURL("**/dashboard/listings/new"); assert.equal(await prompt.count(), 0);
+  await page.setViewportSize({ width: 1440, height: 900 }); await page.goto(origin + "/buy"); await page.locator(".public-account-trigger").click(); await page.locator(".public-account-dropdown").getByRole("link", { name: "Sell a Property" }).click(); await page.waitForURL("**/dashboard/listings/new"); assert.equal(await prompt.count(), 0);
   assert.equal(calls.some(call => call.method !== "GET" && /purchase|payment|checkout|referral|saved-properties|inquiries/.test(call.endpoint)), false);
-  passed.push("Every public desktop/mobile Sell navigation click opens a non-persisted accessible decision prompt; No preserves the existing Sell route, Yes opens assistance, and dashboard List Property remains direct");
+  passed.push("Every public desktop/mobile Sell navigation click opens a non-persisted accessible decision prompt; No preserves the existing Sell route, Yes opens assistance, and dashboard Sell a Property remains direct");
   passed.push("Sell Assistance validates conditional contact/document fields, private files, pending/success/failure states and responsive layouts at eight widths without listing or transaction side effects");
 }

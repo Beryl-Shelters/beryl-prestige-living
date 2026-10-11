@@ -147,7 +147,7 @@ export async function checkPublicBuy({ page, origin, calls, failures, screenshot
   buyState.authenticated = true; await page.reload(); await page.getByRole("button", { name: "Toggle navigation" }).click();
   await page.locator(".public-account-trigger").waitFor();
   await page.locator(".public-account-trigger").click();
-  for (const label of ["My Dashboard","List Property","Referrals"]) assert.equal(await page.locator(".public-account-dropdown").getByRole("link", { name: label }).count(), 1);
+  for (const label of ["My Dashboard","Sell a Property","Referrals"]) assert.equal(await page.locator(".public-account-dropdown").getByRole("link", { name: label }).count(), 1);
   for (const label of ["Saved Property","Compare Property","Mortgage Calculator"]) assert.equal(await page.locator(".public-account-dropdown").getByText(label, { exact: false }).count(), 1);
   assert.equal(await page.locator('.buy-property-card button:has-text("Copy Referral Link")').count(), 10);
   assert.equal(calls.filter(call => call.endpoint === "/dashboard/referrals/public-property").length, 0);

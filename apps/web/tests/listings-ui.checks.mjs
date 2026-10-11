@@ -317,7 +317,7 @@ export async function checkListings({
     await page.setViewportSize({ width, height: 900 });
     listingState.items = [];
     await open();
-    await page.getByText("No listings yet", { exact: true }).waitFor();
+    await page.getByText("No properties for sale yet", { exact: true }).waitFor();
     await noOverflow(width);
     await screenshot(`listings-empty-${width}`);
     listingState.items = [
@@ -429,7 +429,7 @@ export async function checkListings({
   await page
     .getByRole("button", { name: "Save & Continue", exact: true })
     .click();
-  await toast("Listing created");
+  await toast("Property added successfully");
   await page.locator(".mandate-step-shell").waitFor();
   assert.equal(await page.locator('.wizard-step-item.current .wizard-step-label').innerText(), "Sales Mandate");
   assert.equal(await page.locator(".mandate-shell-status-badge strong").innerText(), "UNLISTED");
@@ -443,16 +443,16 @@ export async function checkListings({
   assert.equal(await page.locator('[name="title"]').inputValue(), "A new listing");
   assert.equal(await page.locator('[name="registered_title_document"]').inputValue(), "Certificate of Occupancy");
   await page.getByRole("button", { name: "Save & Continue", exact: true }).click();
-  await toast("Listing updated");
+  await toast("Property saved successfully");
   await page.locator(".mandate-step-shell").waitFor();
-  await page.getByRole("link", { name: "View in Dashboard Listings" }).click();
+  await page.getByRole("link", { name: "View My Properties for Sale" }).click();
   await page.waitForURL("**/dashboard/listings");
   await page.locator(".customer-listing-card").waitFor();
   assert.equal(
     await page
       .locator('.dashboard-navigation [aria-current="page"]')
       .innerText(),
-    "Listings",
+    "My Properties for Sale",
   );
   const menu = page.locator(".listing-action-menu");
   await menu.locator("summary").click();
@@ -502,9 +502,9 @@ export async function checkListings({
   await page
     .getByRole("button", { name: "Save & Continue", exact: true })
     .click();
-  await toast("Listing updated");
+  await toast("Property saved successfully");
   await page.locator(".mandate-step-shell").waitFor();
-  await page.getByRole("link", { name: "View in Dashboard Listings" }).click();
+  await page.getByRole("link", { name: "View My Properties for Sale" }).click();
   await page.waitForURL("**/dashboard/listings");
   assert.equal(listingState.items[0].images.length, 1);
   assert.equal(
@@ -517,7 +517,7 @@ export async function checkListings({
     .getByRole("menuitem", { name: /Delete/ })
     .click();
   await page
-    .getByRole("dialog", { name: "Delete Listing?", exact: true })
+    .getByRole("dialog", { name: "Delete Property?", exact: true })
     .waitFor();
   await screenshot("listing-delete-modal");
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -531,8 +531,8 @@ export async function checkListings({
     .getByRole("dialog")
     .getByRole("button", { name: "Delete", exact: true })
     .click();
-  await toast("Listing deleted");
-  await page.getByText("No listings yet", { exact: true }).waitFor();
+  await toast("Property deleted");
+  await page.getByText("No properties for sale yet", { exact: true }).waitFor();
   listingState.items = Array.from({ length: 11 }, (_, index) => ({
     ...structuredClone(listingFixture),
     id: crypto.randomUUID(),
@@ -569,7 +569,7 @@ export async function checkListings({
   } finally {
     await page.clock.resume();
   }
-  await page.getByLabel("Search", { exact: true }).fill("Property 0");
+  await page.getByLabel("Search properties for sale", { exact: true }).fill("Property 0");
   await page.waitForFunction(
     () =>
       document.querySelector(".listing-card-information h2")?.textContent ===
@@ -577,7 +577,7 @@ export async function checkListings({
   );
   assert(listingState.calls.some((call) => call.url.includes("q=Property+0")));
   await page.getByRole("button", { name: /^Pending/ }).click();
-  await page.getByText("No matching listings", { exact: true }).waitFor();
+  await page.getByText("No matching properties", { exact: true }).waitFor();
 
   const listed = {...structuredClone(listingFixture),id:crypto.randomUUID(),title:"Approved property",listing_status:"LISTED",listed_at:"2026-09-20T12:00:00Z",time_on_market:6};
   const pendingListing = {...structuredClone(listingFixture),id:crypto.randomUUID(),title:"Pending property",listing_status:"PENDING",requested_at:"2026-09-24T12:00:00Z"};
@@ -585,23 +585,23 @@ export async function checkListings({
   const unlisted = {...structuredClone(listingFixture),id:crypto.randomUUID(),title:"Unlisted property"};
   listingState.items=[listed,pendingListing,rejected,unlisted];
   await open();
-  for(const [label,count] of [["All",4],["Approved",1],["Pending",1],["Rejected",1],["Unlisted",1]]) assert.match(await page.getByRole("button",{name:new RegExp(`^${label}`)}).innerText(),new RegExp(`${count}$`));
+  for(const [label,count] of [["All",4],["For Sale",1],["Pending",1],["Rejected",1],["Not Yet for Sale",1]]) assert.match(await page.getByRole("button",{name:new RegExp(`^${label}`)}).innerText(),new RegExp(`${count}$`));
   const pendingCard=page.locator(".customer-listing-card").filter({hasText:"Pending property"});
   await pendingCard.locator("summary").click();
-  assert.equal((await pendingCard.locator(".listing-action-menu").innerText()).includes("Unlist"),false);
+  assert.equal((await pendingCard.locator(".listing-action-menu").innerText()).includes("Remove from Sale"),false);
   assert.equal((await pendingCard.locator(".listing-action-menu").innerText()).includes("Refer Property"),false);
   const listedCard=page.locator(".customer-listing-card").filter({hasText:"Approved property"});
   await listedCard.locator("summary").click();
   assert((await listedCard.locator(".listing-action-menu").innerText()).includes("Refer Property"));
-  assert((await listedCard.locator(".listing-action-menu").innerText()).includes("Unlist"));
+  assert((await listedCard.locator(".listing-action-menu").innerText()).includes("Remove from Sale"));
   assert.equal((await listedCard.locator(".listing-action-menu").innerText()).includes("Edit"),false);
   await context.grantPermissions(["clipboard-read","clipboard-write"],{origin});
   await listedCard.getByRole("menuitem",{name:"Refer Property",exact:true}).click();
   await toast("Referral link copied to clipboard");
   assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),`${origin}/properties/${listed.listing_code}?ref=${referralsState.links.at(-1).id}`);
   assert.equal(referralsState.links.at(-1).listingId,listed.id);
-  await listedCard.getByRole("button",{name:"Unlist",exact:true}).click();
-  await page.getByRole("dialog",{name:"Unlist Listing?",exact:true}).waitFor();
+  await listedCard.getByRole("button",{name:"Remove from Sale",exact:true}).click();
+  await page.getByRole("dialog",{name:"Remove Property from Sale?",exact:true}).waitFor();
   await screenshot("listing-unlist-modal");
   await page.getByRole("button",{name:"Cancel",exact:true}).click();
   const rejectedCard=page.locator(".customer-listing-card").filter({hasText:"Rejected property"});
@@ -634,7 +634,7 @@ export async function checkListings({
   await open(`/dashboard/listings/${listingState.items[0].id}/edit`);
   await page.locator('[name="title"]').waitFor();
   await page.getByRole("button", { name: "Save & Continue", exact: true }).click();
-  await toast("Listing updated");
+  await toast("Property saved successfully");
   await page.locator(".sales-mandate-step").waitFor();
   assert((await page.locator(".mandate-header-title").innerText()).includes("Exclusive Sales Mandate (Sellers)"));
 
@@ -746,20 +746,20 @@ export async function checkListings({
 
   // Submit Mandate
   await page.getByRole("button", { name: "Submit Mandate", exact: true }).click();
-  await toast("Listing submitted to our team for review!");
+  await toast("Property submitted to our team for review!");
 
   // Step 3 Submission Success Screen
   await page.locator(".submit-success-container").waitFor();
-  assert((await page.locator(".submit-success-title").innerText()).includes("Your listing has been submitted to our team"));
+  assert((await page.locator(".submit-success-title").innerText()).includes("Your property has been submitted to our team"));
   assert((await page.locator(".submit-success-subtitle").innerText()).includes("within 2 working days"));
   assert((await page.locator(".submit-success-timeline-card").innerText()).includes("What Happens Next?"));
   assert((await page.locator(".submit-success-timeline-card").innerText()).includes("Submitted"));
-  assert((await page.locator(".submit-success-timeline-card").innerText()).includes("We review your listing"));
+  assert((await page.locator(".submit-success-timeline-card").innerText()).includes("We review your property"));
   assert((await page.locator(".submit-success-timeline-card").innerText()).includes("It goes live"));
   await screenshot("listing-submission-success");
 
-  // CTA View my listings
-  await page.getByRole("link", { name: "View my listings", exact: true }).click();
+  // CTA View my properties for sale
+  await page.getByRole("link", { name: "View my properties for sale", exact: true }).click();
   await page.waitForURL("**/dashboard/listings");
   assert.equal(listingState.items[0].listing_status, "PENDING");
 
@@ -772,18 +772,18 @@ export async function checkListings({
   await open(`/dashboard/listings/${listingState.items[0].id}/edit`);
   await page.locator('[name="title"]').waitFor();
   await page.getByRole("button",{name:"Save & Continue",exact:true}).click();
-  await toast("Listing updated");
+  await toast("Property saved successfully");
   await page.locator(".sales-mandate-step").waitFor();
   await page.getByRole("button",{name:"Submit Mandate",exact:true}).click();
-  const resubmitDialog=page.getByRole("dialog",{name:"Confirm listing resubmission"});
+  const resubmitDialog=page.getByRole("dialog",{name:"Confirm property resubmission"});
   await resubmitDialog.waitFor();
   await noOverflow(390);
   await screenshot("listing-resubmit-confirmation-390");
   await resubmitDialog.getByRole("button",{name:"No, Go back",exact:true}).click();
   assert.equal(listingState.items[0].listing_status,"REJECTED");
   await page.getByRole("button",{name:"Submit Mandate",exact:true}).click();
-  await page.getByRole("dialog",{name:"Confirm listing resubmission"}).getByRole("button",{name:"Yes, Submit",exact:true}).click();
-  await toast("Listing submitted to our team for review!");
+  await page.getByRole("dialog",{name:"Confirm property resubmission"}).getByRole("button",{name:"Yes, Submit",exact:true}).click();
+  await toast("Property submitted to our team for review!");
   await page.locator(".submit-success-container").waitFor();
   assert.equal(listingState.items[0].listing_status,"PENDING");
   assert.equal(listingState.items[0].rejection_reason,null);

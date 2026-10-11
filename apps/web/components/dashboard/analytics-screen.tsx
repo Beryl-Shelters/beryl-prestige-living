@@ -60,13 +60,13 @@ function AnalyticsCards({ q, year, changeYear, retry }: { q: string; year: numbe
     <div className="analytics-upper">
       <CategoryPerformance analytics={analytics} changeYear={changeYear} />
       <section className="dashboard-card analytics-overview" aria-labelledby="listings-overview-title">
-        <h2 id="listings-overview-title">Listings Overview</h2>
-        <div className="analytics-total" style={{ "--analytics-represented": `${represented}%` } as CSSProperties}><div><strong>{analytics.listingsOverview.total}</strong><span>Total Listings</span></div></div>
+        <h2 id="listings-overview-title">Properties for Sale Overview</h2>
+        <div className="analytics-total" style={{ "--analytics-represented": `${represented}%` } as CSSProperties}><div><strong>{analytics.listingsOverview.total}</strong><span>Total Properties</span></div></div>
         <div className="analytics-statuses">{(["listed", "pending", "rejected"] as const).map(status => {
           const metric = analytics.listingsOverview[status];
           const label = status.charAt(0).toUpperCase() + status.slice(1);
           return <div className="analytics-status" key={status}><div><span>{label}</span><span>{new Intl.NumberFormat("en", { maximumFractionDigits: 2 }).format(metric.percentage)}%</span></div>
-            <progress value={metric.percentage} max={100} aria-label={`${label}: ${metric.count} listings, ${metric.percentage}%`} />
+            <progress value={metric.percentage} max={100} aria-label={`${label}: ${metric.count} properties, ${metric.percentage}%`} />
           </div>;
         })}</div>
       </section>
@@ -95,7 +95,7 @@ export function AnalyticsScreen({ initialYear }: { initialYear: number }) {
     <h1>Analytics</h1>
     <form className="analytics-search" role="search" onSubmit={event => { event.preventDefault(); setQ(search.trim()); }}>
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="8" cy="8" r="4.5" /><path d="m11.5 11.5 4 4" /></svg>
-      <input aria-label="Search your listings by title or code" placeholder="Search your listings by title or code" maxLength={100} value={search} onChange={event => setSearch(event.target.value)} />
+      <input aria-label="Search your properties by title or code" placeholder="Search your properties by title or code" maxLength={100} value={search} onChange={event => setSearch(event.target.value)} />
       <button className="dashboard-sr-only" type="submit">Search</button>
     </form>
     <AnalyticsCards key={JSON.stringify([q, year, attempt])} q={q} year={year} changeYear={setYear} retry={() => setAttempt(value => value + 1)} />

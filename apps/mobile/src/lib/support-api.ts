@@ -12,9 +12,9 @@ export const supportQuestions: SupportQuestion[] = [
       "Use the search bar on the Home page to search by title/keyword, then refine results using filters like Location, Property Type, Budget, and Bedrooms. You can also browse all listings from the “Buy” tab.",
   },
   {
-    question: "How do I list a property for sale?",
+    question: "How do I sell a property?",
     answer:
-      "Sign in and open the “Sell” tab to create a property listing. New listings are submitted for review with a Sales Mandate.",
+      "Sign in and open the “Sell” tab to add a property for sale. New properties are submitted for review with a Sales Mandate.",
   },
   {
     question: "How does the referral program work and when do I get paid?",

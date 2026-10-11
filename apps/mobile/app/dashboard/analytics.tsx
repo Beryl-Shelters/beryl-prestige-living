@@ -99,8 +99,8 @@ export default function DashboardAnalyticsScreen() {
       <View style={styles.searchWrapper}>
         <AppIcon name="search-outline" size={18} color={colors.textMuted} />
         <TextInput
-          accessibilityLabel="Search your listings by title or code"
-          placeholder="Search your listings by title or code"
+          accessibilityLabel="Search your properties by title or code"
+          placeholder="Search your properties by title or code"
           placeholderTextColor={colors.textMuted}
           value={search}
           onChangeText={setSearch}
@@ -151,12 +151,12 @@ export default function DashboardAnalyticsScreen() {
           {overview ? (
             <Card style={styles.overviewCard}>
               <Text accessibilityRole="header" style={styles.cardHeading}>
-                Listings Overview
+                Properties for Sale Overview
               </Text>
 
               <View style={styles.totalBadge}>
                 <Text style={styles.totalNumber}>{overview.total}</Text>
-                <Text style={styles.totalLabel}>Total Listings</Text>
+                <Text style={styles.totalLabel}>Total Properties</Text>
               </View>
 
               <View style={styles.statusBreakdown}>
@@ -233,7 +233,7 @@ export default function DashboardAnalyticsScreen() {
                 {overview.unlisted ? (
                   <View style={styles.statusItem}>
                     <View style={styles.statusHeader}>
-                      <Text style={styles.statusTitle}>Unlisted</Text>
+                      <Text style={styles.statusTitle}>Not Yet for Sale</Text>
                       <Text style={styles.statusValue}>
                         {overview.unlisted.count} (
                         {new Intl.NumberFormat("en", { maximumFractionDigits: 1 }).format(

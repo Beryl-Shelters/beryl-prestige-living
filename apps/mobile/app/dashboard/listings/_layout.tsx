@@ -18,12 +18,12 @@ export default function ListingsLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: "My Listings",
+          title: "My Properties for Sale",
           headerLeft: () => <DashboardHeaderLeft />,
           headerRight: () => (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Add new listing"
+              accessibilityLabel="Add property for sale"
               onPress={() => router.push("/(tabs)/list")}
               hitSlop={8}
               style={{ paddingHorizontal: 10, paddingVertical: 6 }}
@@ -35,7 +35,7 @@ export default function ListingsLayout() {
           ),
         }}
       />
-      <Stack.Screen name="[id]" options={{ title: "Listing Details" }} />
+      <Stack.Screen name="[id]" options={{ title: "Property Details" }} />
     </Stack>
   );
 }

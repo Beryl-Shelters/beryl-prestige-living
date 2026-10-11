@@ -153,7 +153,7 @@ test("edit loading failure and forbidden statuses never fall back to a blank cre
   const editor = read("app/(tabs)/list.tsx");
   assert.match(editor, /if \(draftId && editLoading\)/);
   assert.match(editor, /if \(draftId && \(editError \|\| !activeListing\)\)/);
-  assert.match(editor, /title="Could not open this listing"/);
+  assert.match(editor, /title="Could not open this property"/);
   assert.match(editor, /key=\{draftId \?\? "new-listing"\}/);
 
   assert.equal(canEditListing("UNLISTED"), true);

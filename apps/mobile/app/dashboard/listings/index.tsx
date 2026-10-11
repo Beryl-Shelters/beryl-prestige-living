@@ -36,10 +36,10 @@ type FilterOption = {
 
 const filterTabs: FilterOption[] = [
   { label: "All", value: "" },
-  { label: "Approved", value: "LISTED" },
+  { label: "For Sale", value: "LISTED" },
   { label: "Pending", value: "PENDING" },
   { label: "Rejected", value: "REJECTED" },
-  { label: "Unlisted", value: "UNLISTED" },
+  { label: "Not Yet for Sale", value: "UNLISTED" },
 ];
 
 export default function MyListingsScreen() {
@@ -183,7 +183,7 @@ export default function MyListingsScreen() {
     const timeOnMarket =
       item.time_on_market !== null && item.time_on_market !== undefined
         ? `${item.time_on_market} days`
-        : "Not listed";
+        : "Not yet for sale";
 
     const isEditable = canEditListing(item.listing_status);
 
@@ -290,7 +290,7 @@ export default function MyListingsScreen() {
 
           {item.listing_status === "LISTED" && (
             <Button
-              label="Unlist"
+              label="Remove from Sale"
               variant="danger"
               onPress={() => setActiveModal({ type: "unlist", listing: item })}
             />
@@ -314,16 +314,16 @@ export default function MyListingsScreen() {
       {/* Header bar with CTA */}
       <View style={styles.topHeader}>
         <Text accessibilityRole="header" style={styles.pageTitle}>
-          My Listings
+          My Properties for Sale
         </Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Create listing"
+          accessibilityLabel="Add property for sale"
           onPress={() => router.push("/(tabs)/list")}
           style={styles.createBtn}
         >
           <AppIcon name="add" size={18} color="#FFF" />
-          <Text style={styles.createBtnText}>Create Listing</Text>
+          <Text style={styles.createBtnText}>Add Property for Sale</Text>
         </Pressable>
       </View>
 
@@ -331,7 +331,7 @@ export default function MyListingsScreen() {
       <View style={styles.searchWrapper}>
         <AppIcon name="search-outline" size={18} color={colors.textMuted} />
         <TextInput
-          accessibilityLabel="Search listings"
+          accessibilityLabel="Search properties for sale"
           placeholder="Search by title, code or location"
           placeholderTextColor={colors.textMuted}
           value={search}
@@ -363,7 +363,7 @@ export default function MyListingsScreen() {
             <Pressable
               key={tab.label}
               accessibilityRole="tab"
-              accessibilityLabel={`${tab.label} listings, ${count}`}
+              accessibilityLabel={`${tab.label} properties, ${count}`}
               accessibilityState={{ selected: isSelected }}
               onPress={() => handleFilterSelect(tab.value)}
               style={[styles.filterChip, isSelected && styles.filterChipActive]}
@@ -393,12 +393,12 @@ export default function MyListingsScreen() {
       {/* Main Content Area */}
       {loading && !refreshing ? (
         <View style={styles.centered}>
-          <LoadingState label="Loading your listings…" />
+          <LoadingState label="Loading your properties for sale…" />
         </View>
       ) : error && listings.length === 0 ? (
         <View style={styles.centered}>
           <ScreenState
-            title="Listings Unavailable"
+            title="Properties Unavailable"
             message={error}
             action={<Button label="Try Again" onPress={handleRetry} />}
           />
@@ -408,14 +408,14 @@ export default function MyListingsScreen() {
           <Card style={styles.emptyContainer}>
             <AppIcon name="list-outline" size={48} color={colors.textMuted} />
             <Text accessibilityRole="header" style={styles.emptyTitle}>
-              No listings yet
+              No properties for sale yet
             </Text>
             <Text style={styles.emptyText}>
               Properties you list for sale will appear here with review status and management
               tools.
             </Text>
             <Button
-              label="＋ Create a listing"
+              label="＋ Add a property for sale"
               onPress={() => router.push("/(tabs)/list")}
             />
           </Card>
@@ -425,7 +425,7 @@ export default function MyListingsScreen() {
           <Card style={styles.emptyContainer}>
             <AppIcon name="search-outline" size={48} color={colors.textMuted} />
             <Text accessibilityRole="header" style={styles.emptyTitle}>
-              No matching listings
+              No matching properties
             </Text>
             <Text style={styles.emptyText}>
               Try another search term or change your status filter.
@@ -459,7 +459,7 @@ export default function MyListingsScreen() {
           ListFooterComponent={
             loadingMore ? (
               <View style={styles.loadMoreFooter}>
-                <LoadingState label="Loading more listings…" />
+                <LoadingState label="Loading more properties…" />
               </View>
             ) : null
           }

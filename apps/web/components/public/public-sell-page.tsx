@@ -46,9 +46,9 @@ export function PublicSellPage() {
                   <polyline points="9 22 9 12 15 12 15 22" />
                 </svg>
               </div>
-              <h1 className="public-sell-title">Sign in to list a property</h1>
+              <h1 className="public-sell-title">Sign in to sell a property</h1>
               <p className="public-sell-body">
-                Please log in to your account to list a property and track your listings. If you don&apos;t have an account yet, you can easily create one to get started
+                Please log in to your account to add a property for sale and track your properties. If you don&apos;t have an account yet, you can easily create one to get started
               </p>
               <div className="public-sell-actions">
                 <Link

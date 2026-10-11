@@ -14,7 +14,7 @@ const navigation = [
   ["About", "/about"],
   ["Referrals", "/referrals"],
   ["Buy", "/buy"],
-  ["Sell / List a Property", "/sell"],
+  ["Sell", "/sell"],
   ["Careers", "/careers"],
   ["Support", "/support"],
 ] as const;
@@ -77,12 +77,12 @@ export function PublicHeader({ sessionAware = false, mobileMenu = false, onSessi
       <div className={`public-site-menu${open ? " open" : ""}`}>
         <nav className="public-nav" aria-label="Public navigation">
           {navigation.map(([label, href]) => {
-            const isSell = label === "Sell / List a Property";
+            const isSell = href === "/sell";
             const isBuy = label === "Buy";
             return <Link ref={isSell ? sellTrigger : isBuy ? buyTrigger : undefined} className={pathname === href || isSell && pathname.startsWith("/sell") || isBuy && pathname.startsWith("/buy") ? "active" : undefined} href={href} key={label} onClick={event => {
               if (isSell || isBuy) { event.preventDefault(); setOpen(false); setAccountOpen(false); setAssistancePrompt(isSell ? "sell" : "buy"); return; }
               setOpen(false);
-            }}>{label}</Link>;
+            }} aria-label={isSell ? "Sell — List a Property" : undefined}>{isSell ? <span className="public-nav-sell"><span className="public-nav-sell-primary">Sell</span><span className="public-nav-sell-secondary">List a Property</span></span> : label}</Link>;
           })}
         </nav>
         <div className="header-actions">
@@ -95,7 +95,7 @@ export function PublicHeader({ sessionAware = false, mobileMenu = false, onSessi
           </button>
           {accountOpen && <nav id="public-account-dropdown" className="public-account-dropdown" aria-label="Account navigation">
             <Link href="/dashboard" onClick={() => { setAccountOpen(false); setOpen(false); }}><AccountIcon name="dashboard"/>My Dashboard</Link>
-            <Link href="/dashboard/listings/new" onClick={() => { setAccountOpen(false); setOpen(false); }}><AccountIcon name="listing"/>List Property</Link>
+            <Link href="/dashboard/listings/new" onClick={() => { setAccountOpen(false); setOpen(false); }}><AccountIcon name="listing"/>Sell a Property</Link>
             <Link href="/dashboard/referrals" onClick={() => { setAccountOpen(false); setOpen(false); }}><AccountIcon name="referrals"/>Referrals</Link>
             <Link href="/saved-properties" onClick={() => { setAccountOpen(false); setOpen(false); }}><AccountIcon name="saved"/>Saved Property</Link>
             <Link href="/compare-properties" onClick={() => { setAccountOpen(false); setOpen(false); }}><AccountIcon name="compare"/>Compare Property</Link>

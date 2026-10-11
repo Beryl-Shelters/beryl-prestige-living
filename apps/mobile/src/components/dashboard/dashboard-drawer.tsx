@@ -46,7 +46,7 @@ type NavEntry = {
 
 const dashboardNavItems: NavEntry[] = [
   { id: "overview", label: "Dashboard", icon: "grid-outline", route: "/dashboard" },
-  { id: "listings", label: "My Listings", icon: "list-outline", route: "/dashboard/listings" },
+  { id: "listings", label: "My Properties for Sale", icon: "list-outline", route: "/dashboard/listings" },
   { id: "analytics", label: "Analytics", icon: "analytics-outline", route: "/dashboard/analytics" },
   { id: "messages", label: "Messages", icon: "chatbubble-ellipses-outline", route: "/dashboard/messages" },
   { id: "purchased", label: "Purchased Properties", icon: "home-outline", route: "/dashboard/purchased-properties" },

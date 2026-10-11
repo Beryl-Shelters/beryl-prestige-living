@@ -53,10 +53,14 @@ function SummaryIcon({ kind }: { kind: "total" | "property" | "listing" | "refer
 }
 
 function ActivityChips({ property, listing, referral }: { property: boolean; listing: boolean; referral: boolean }) {
-  const activities = [property && "Property", listing && "Listing", referral && "Referral"].filter((value): value is string => Boolean(value));
+  const activities = [
+    property && { key: "property", label: "Property" },
+    listing && { key: "listing", label: "Properties for Sale" },
+    referral && { key: "referral", label: "Referral" },
+  ].filter((value): value is { key: string; label: string } => Boolean(value));
   if (!activities.length) return <span className="admin-empty-value">—</span>;
-  return <div className="customer-activity-list" aria-label={activities.map((value) => `${value} Activity`).join(", ")}>
-    {activities.map((activity) => <span className={`customer-activity customer-activity--${activity.toLowerCase()}`} key={activity}>{activity}</span>)}
+  return <div className="customer-activity-list" aria-label={activities.map(({ label }) => `${label} Activity`).join(", ")}>
+    {activities.map(({ key, label }) => <span className={`customer-activity customer-activity--${key}`} key={key}>{label}</span>)}
   </div>;
 }
 
@@ -122,7 +126,7 @@ function DirectoryContent() {
       {[
         ["total", "Total Users", summary?.totalUsers ?? 0],
         ["property", "Property Activity", summary?.propertyActivityCustomers ?? 0],
-        ["listing", "Listing Activity", summary?.listingActivityCustomers ?? 0],
+        ["listing", "Properties for Sale Activity", summary?.listingActivityCustomers ?? 0],
         ["referral", "Referral Activity", summary?.referralActivityCustomers ?? 0],
       ].map(([kind, label, value]) => <article key={label}><SummaryIcon kind={kind as "total" | "property" | "listing" | "referral"}/><span>{label}</span><strong>{Number(value).toLocaleString()}</strong></article>)}
     </section>

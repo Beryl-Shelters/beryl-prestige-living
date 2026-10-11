@@ -33,7 +33,7 @@ export function formatMoney(minor:number,fraction=true) {
   return `₦${whole.toLocaleString("en-NG")}${fraction?`.${cents}`:""}`;
 }
 export function commaInput(value:string) {const [whole="",fraction]=value.split(".");return whole.replace(/\B(?=(\d{3})+(?!\d))/g,",")+(fraction===undefined?"":`.${fraction}`);}
-export function statusLabel(value:string) {return value==="LISTED"?"Approved":value.charAt(0)+value.slice(1).toLowerCase();}
+export function statusLabel(value:string) {return value==="LISTED"?"For Sale":value==="UNLISTED"?"Not Yet for Sale":value.charAt(0)+value.slice(1).toLowerCase();}
 export function listingDate(value:string|null) {return value?new Date(value).toLocaleDateString("en-GB"):"-";}
 
 export type MandateDocument = {

@@ -74,7 +74,7 @@ export default function OwnerListingDetailScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <LoadingState label="Loading listing details…" />
+        <LoadingState label="Loading property details…" />
       </View>
     );
   }
@@ -83,9 +83,9 @@ export default function OwnerListingDetailScreen() {
     return (
       <View style={styles.centered}>
         <ScreenState
-          title="Listing Unavailable"
-          message={error || "Could not find this listing."}
-          action={<Button label="Back to Listings" onPress={() => router.back()} />}
+          title="Property Unavailable"
+          message={error || "Could not find this property."}
+          action={<Button label="Back to Properties for Sale" onPress={() => router.back()} />}
         />
       </View>
     );
@@ -191,7 +191,7 @@ export default function OwnerListingDetailScreen() {
             </View>
             <Text style={styles.pendingText}>
               This property is currently under review by the Beryl team. While under review,
-              details cannot be edited or unlisted.
+              details cannot be edited or removed from sale.
             </Text>
           </Card>
         )}
@@ -355,11 +355,11 @@ export default function OwnerListingDetailScreen() {
 
         {/* Actions Card */}
         <Card style={styles.actionsCard}>
-          <Text style={styles.cardHeader}>Listing Management</Text>
+          <Text style={styles.cardHeader}>Property Management</Text>
 
           {isEditable && (
             <Button
-              label={listing.listing_status === "REJECTED" ? "Make changes" : "Edit Listing"}
+              label={listing.listing_status === "REJECTED" ? "Make changes" : "Edit Property"}
               variant="primary"
               onPress={() => router.push(`/(tabs)/list?draftId=${listing.id}` as never)}
             />
@@ -375,7 +375,7 @@ export default function OwnerListingDetailScreen() {
 
           {listing.listing_status === "LISTED" && (
             <Button
-              label="Unlist Property"
+              label="Remove from Sale"
               variant="danger"
               onPress={() => setActiveModal("unlist")}
             />
@@ -383,7 +383,7 @@ export default function OwnerListingDetailScreen() {
 
           {isEditable && (
             <Button
-              label="Delete Listing"
+              label="Delete Property"
               variant="danger"
               onPress={() => setActiveModal("delete")}
             />

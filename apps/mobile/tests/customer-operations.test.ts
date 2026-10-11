@@ -68,10 +68,10 @@ test("Dashboard Overview uses real API data and does not fabricate metrics", asy
   assert.match(overviewScreen, /summary\?\.properties_owned/);
   assert.match(overviewScreen, /summary\?\.referral_earnings/);
   assert.match(overviewScreen, /summary\?\.new_messages/);
-  assert.match(overviewScreen, /No properties listed yet/);
+  assert.match(overviewScreen, /No properties for sale yet/);
 });
 
-test("My Listings uses canonical owner-scoped API with search, filters and pagination", async () => {
+test("My Properties for Sale uses canonical owner-scoped API with search, filters and pagination", async () => {
   const calls: { path: string; options: unknown }[] = [];
   const client = {
     request: async <T>(path: string, options?: unknown) => {
@@ -99,10 +99,10 @@ test("My Listings uses canonical owner-scoped API with search, filters and pagin
 
   // Exact filters from Customer Web
   assert.match(listingsScreen, /label:\s*"All",\s*value:\s*""/);
-  assert.match(listingsScreen, /label:\s*"Approved",\s*value:\s*"LISTED"/);
+  assert.match(listingsScreen, /label:\s*"For Sale",\s*value:\s*"LISTED"/);
   assert.match(listingsScreen, /label:\s*"Pending",\s*value:\s*"PENDING"/);
   assert.match(listingsScreen, /label:\s*"Rejected",\s*value:\s*"REJECTED"/);
-  assert.match(listingsScreen, /label:\s*"Unlisted",\s*value:\s*"UNLISTED"/);
+  assert.match(listingsScreen, /label:\s*"Not Yet for Sale",\s*value:\s*"UNLISTED"/);
 
   // No synthetic DRAFT filter
   assert.doesNotMatch(listingsScreen, /label:\s*"Draft"/i);
@@ -120,9 +120,9 @@ test("canonical listing lifecycle: UNLISTED, PENDING, LISTED, REJECTED supported
     assert.ok(presentation.tone);
   }
 
-  // LISTED has customer-facing 'Approved' label without changing its canonical value
+  // LISTED has customer-facing 'For Sale' label without changing its canonical value
   const listedPres = listingStatusPresentation("LISTED");
-  assert.equal(listedPres.label, "Approved");
+  assert.equal(listedPres.label, "For Sale");
   assert.equal(listedPres.tone, "success");
 
   // PENDING has friendly presentation without changing its canonical value
@@ -137,7 +137,7 @@ test("canonical listing lifecycle: UNLISTED, PENDING, LISTED, REJECTED supported
 
   // UNLISTED presentation
   const unlistedPres = listingStatusPresentation("UNLISTED");
-  assert.equal(unlistedPres.label, "Unlisted");
+  assert.equal(unlistedPres.label, "Not Yet for Sale");
   assert.equal(unlistedPres.tone, "neutral");
 
   // Inspect source files to ensure NO synthetic domain/API status exists
@@ -156,7 +156,7 @@ test("canonical listing lifecycle: UNLISTED, PENDING, LISTED, REJECTED supported
   // No PENDING_REVIEW status
   assert.doesNotMatch(filesToCheck, /["']PENDING_REVIEW["']/);
 
-  // No APPROVED domain status (only 'Approved' as UI label)
+  // No APPROVED domain status
   assert.doesNotMatch(filesToCheck, /ListingStatus\s*=\s*[^;]*["']APPROVED["']/);
   assert.doesNotMatch(filesToCheck, /status\s*===\s*["']APPROVED["']/);
   assert.doesNotMatch(filesToCheck, /listing_status\s*:\s*["']APPROVED["']/);
@@ -218,18 +218,18 @@ test("listing action eligibility: only LISTED can be unlisted; PENDING cannot be
   // Check detail screen UI rules
   const detailScreen = read("app/dashboard/listings/[id].tsx");
 
-  // Only LISTED listings have the Unlist button
-  assert.match(detailScreen, /listing\.listing_status\s*===\s*"LISTED"\s*&&\s*\(\s*<Button\s+label="Unlist Property"/);
+  // Only LISTED properties have the Remove from Sale button
+  assert.match(detailScreen, /listing\.listing_status\s*===\s*"LISTED"\s*&&\s*\(\s*<Button\s+label="Remove from Sale"/);
 
   // PENDING displays review notice and NO unlist button
   assert.match(detailScreen, /listing\.listing_status\s*===\s*"PENDING"/);
-  assert.match(detailScreen, /While under review,\s*details cannot be edited or unlisted/);
+  assert.match(detailScreen, /While under review,\s*details cannot be edited or removed from sale/);
 
   // Modal checks
   const modals = read("src/components/listings/listing-action-modals.tsx");
-  assert.match(modals, /Unlist Listing\?/);
-  assert.match(modals, /Delete Listing\?/);
-  assert.match(modals, /This removes the property and its attached listing media permanently/);
+  assert.match(modals, /Remove Property from Sale\?/);
+  assert.match(modals, /Delete Property\?/);
+  assert.match(modals, /This removes the property and its attached media permanently/);
 });
 
 test("profile completion is not fabricated; listing completeness comes from API", () => {
@@ -277,7 +277,7 @@ test("Dashboard Analytics uses real owner data and preserves truthful zeros", as
   const analyticsScreen = read("app/dashboard/analytics.tsx");
   assert.match(analyticsScreen, /dashboardApi\.getAnalytics/);
   assert.match(analyticsScreen, /Category Performance/);
-  assert.match(analyticsScreen, /Listings Overview/);
+  assert.match(analyticsScreen, /Properties for Sale Overview/);
   assert.match(analyticsScreen, /Bedrooms Contained in Properties/);
   assert.match(analyticsScreen, /Property Type Distribution/);
 });

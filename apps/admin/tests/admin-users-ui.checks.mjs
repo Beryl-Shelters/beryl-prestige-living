@@ -84,9 +84,9 @@ try {
   await page.goto(origin);
   await page.getByRole("heading", { name: "Admin Portal" }).waitFor();
   const navigation = page.getByRole("navigation", { name: "Admin navigation" });
-  for (const name of ["Dashboard", "Users", "Properties", "Leads"]) assert.equal(await navigation.getByText(name, { exact: true }).count(), 1);
+  for (const name of ["Dashboard", "Users", "Properties for Sale", "Leads"]) assert.equal(await navigation.getByText(name, { exact: true }).count(), 1);
   for (const obsolete of ["My Listings", "Payments", "Subaccounts", "Save-as-you-earn", "Invest", "Refer & earn", "Support", "Settings"]) assert.equal(await navigation.getByText(obsolete, { exact: true }).count(), 0);
-  assert.equal(await navigation.getByRole("link", { name: "Properties" }).getAttribute("href"), "/dashboard/properties");
+  assert.equal(await navigation.getByRole("link", { name: "Properties for Sale" }).getAttribute("href"), "/dashboard/properties");
   assert.equal(await page.getByRole("button", { name: "Invite Admin" }).isVisible(), true);
 
   await navigation.getByRole("link", { name: "Users" }).click();
@@ -94,8 +94,8 @@ try {
   await page.getByText("Customer directory. View only — no changes can be made here.").waitFor();
   assert.equal(await page.getByText("8", { exact: true }).first().isVisible(), true);
   assert.equal(await page.locator("tbody tr").count(), 6);
-  assert.equal(await page.getByLabel("Property Activity, Listing Activity, Referral Activity").count(), 1);
-  for (const label of ["Property Activity", "Listing Activity", "Referral Activity"]) assert.equal(await page.getByText(label, { exact: true }).count() > 0, true);
+  assert.equal(await page.getByLabel("Property Activity, Properties for Sale Activity, Referral Activity").count(), 1);
+  for (const label of ["Property Activity", "Properties for Sale Activity", "Referral Activity"]) assert.equal(await page.getByText(label, { exact: true }).count() > 0, true);
   assert.equal(await page.getByText("Verified", { exact: true }).count() > 0, true);
   assert.equal(await page.getByText("Unverified", { exact: true }).count() > 0, true);
 
@@ -140,7 +140,7 @@ try {
 
   await page.goto(`${origin}/dashboard/users/${ids[2]}`);
   await page.getByRole("heading", { name: "Chidi Empty" }).waitFor();
-  assert.equal(await page.getByText("No customer listings have been recorded.", { exact: true }).isVisible(), true);
+  assert.equal(await page.getByText("No customer properties for sale have been recorded.", { exact: true }).isVisible(), true);
   assert.equal(await page.getByText("No referral links have been generated.", { exact: true }).isVisible(), true);
   assert.equal(await page.getByText("Unverified", { exact: true }).isVisible(), true);
 

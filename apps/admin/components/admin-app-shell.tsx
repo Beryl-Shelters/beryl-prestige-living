@@ -119,7 +119,7 @@ export function AdminAppShell({ children }: { children: ReactNode }) {
               <Icon kind="users"/><span>Users</span>
             </Link>
             <Link className={propertiesActive ? "is-active" : ""} href="/dashboard/properties" onClick={closeMenu}>
-              <Icon kind="properties"/><span>Properties</span>
+              <Icon kind="properties"/><span>Properties for Sale</span>
             </Link>
             <Link className={leadsActive ? "is-active" : ""} href="/dashboard/leads" onClick={closeMenu}>
               <Icon kind="leads"/><span>Leads</span>
