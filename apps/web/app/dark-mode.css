@@ -118,6 +118,11 @@
 [data-theme="dark"] :is(.property-payment dl>div+div,.property-mortgage-results>div+div) { border-color: var(--line); }
 [data-theme="dark"] :is(.property-payment dd,.property-mortgage-results dd) { background: var(--surface-muted); color: var(--ink); }
 [data-theme="dark"] .property-viewing-fields input { background: var(--input-bg); border-color: var(--input-border); color: var(--ink); }
+[data-theme="dark"] :is(.viewing-phone-notice,.viewing-success-call) { background: #241d16; border-color: #c58b43; color: var(--ink); }
+[data-theme="dark"] :is(.viewing-phone-notice,.viewing-success-call)>strong,
+[data-theme="dark"] .viewing-success-call>b { color: #f0b866; }
+[data-theme="dark"] .viewing-phone-notice a { background: #302518; color: var(--ink); }
+[data-theme="dark"] .viewing-success-got-it { border-color: #c58b43; color: var(--ink); }
 [data-theme="dark"] .property-detail-save { background: var(--surface-muted); border-color: var(--line); color: var(--ink); }
 [data-theme="dark"] .similar-save { background: var(--surface-muted); color: var(--ink); }
 [data-theme="dark"] .similar-save[aria-pressed="true"] { color: var(--gold-dark); }

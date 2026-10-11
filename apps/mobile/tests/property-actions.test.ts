@@ -305,8 +305,17 @@ test("Property Viewing uses canonical property code and supports anonymous viewi
   assert.equal((calls[0]!.options as { authenticated: boolean }).authenticated, false);
 
   const modal = read("src/components/viewing-modal.tsx");
+  const contact = read("src/lib/viewing-contact.ts");
   assert.match(modal, /Viewing requests\s+are free and do not require any payment/i);
-  assert.match(modal, /We will contact you through your email or phone/i);
+  assert.match(modal, /IMPORTANT: PHONE CONFIRMATION REQUIRED/);
+  assert.match(modal, /Viewing Request Submitted/);
+  assert.match(modal, /appointment is not yet confirmed/);
+  assert.match(modal, /YOU MUST CALL TO CONFIRM/);
+  assert.match(modal, /Linking\.openURL\(VIEWING_OFFICE_PHONE_URL\)/);
+  assert.match(contact, /0704 205 5678/);
+  assert.match(contact, /\+2347042055678/);
+  assert.match(modal, /label="First Name \*"/);
+  assert.match(modal, /label="Preferred Time \*"/);
   assert.doesNotMatch(modal, /checkout|paystack|flutterwave|buy now/i);
 });
 

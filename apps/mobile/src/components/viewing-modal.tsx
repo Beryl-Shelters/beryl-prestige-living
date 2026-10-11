@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   Image,
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -14,6 +15,7 @@ import { Button, TextField } from "./ui";
 import { friendlyError } from "@/lib/api-error";
 import { formatNaira } from "@/lib/money";
 import { publicServicesApi } from "@/lib/public-services-api";
+import { VIEWING_OFFICE_PHONE_DISPLAY, VIEWING_OFFICE_PHONE_URL } from "@/lib/viewing-contact";
 import { useTheme } from "@/providers/theme-provider";
 import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
@@ -123,6 +125,10 @@ export function ViewingModal({
     }
   }
 
+  function callOffice() {
+    void Linking.openURL(VIEWING_OFFICE_PHONE_URL).catch(() => {});
+  }
+
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={handleClose}>
       <SafeAreaView style={styles.safe}>
@@ -145,12 +151,20 @@ export function ViewingModal({
                 <AppIcon name="checkmark" size={32} color="#FFF" />
               </View>
               <Text accessibilityRole="header" style={styles.successTitle}>
-                Viewing Scheduled Successfully
+                Viewing Request Submitted
               </Text>
               <Text style={styles.successBody}>
-                Your viewing has been scheduled. We will contact you through your email or phone
-                number within 24 hours to confirm the details.
+                Your viewing request has been received, but your appointment is not yet confirmed.
               </Text>
+
+              <View accessibilityLabel="You must call to confirm your viewing" style={styles.callNotice}>
+                <Text style={styles.callNoticeTitle}>YOU MUST CALL TO CONFIRM</Text>
+                <Text style={styles.callNoticeBody}>
+                  Please call Beryl Shelter&apos;s office to confirm your preferred viewing date and time.
+                </Text>
+                <Text style={styles.callNoticeNumber}>{VIEWING_OFFICE_PHONE_DISPLAY}</Text>
+                <Button label="Call Now to Confirm" onPress={callOffice} />
+              </View>
 
               <View style={styles.propertySummary}>
                 {propertyImage ? (
@@ -167,7 +181,7 @@ export function ViewingModal({
                 </View>
               </View>
 
-              <Button label="Got it" onPress={handleClose} />
+              <Button label="Close" variant="secondary" onPress={handleClose} />
             </View>
           ) : (
             <View style={styles.form}>
@@ -254,6 +268,16 @@ export function ViewingModal({
                 <Text accessibilityRole="alert" style={styles.errorBanner}>{submitError}</Text>
               ) : null}
 
+              <View accessibilityLabel="Important phone confirmation required" style={styles.callNotice}>
+                <Text style={styles.callNoticeTitle}>IMPORTANT: PHONE CONFIRMATION REQUIRED</Text>
+                <Text style={styles.callNoticeBody}>
+                  Submitting this form does not confirm your viewing. You must call our office after
+                  submitting to confirm your appointment.
+                </Text>
+                <Text style={styles.callNoticeNumber}>{VIEWING_OFFICE_PHONE_DISPLAY}</Text>
+                <Button label="Call the Office" variant="secondary" onPress={callOffice} />
+              </View>
+
               <Button
                 label={submitting ? "Submitting Request…" : "Submit Viewing Request"}
                 loading={submitting}
@@ -310,6 +334,18 @@ function createStyles(colors: ColorTokens) {
   checkboxActive: { backgroundColor: colors.brand, borderColor: colors.brand },
   checkboxLabel: { ...typography.body, color: colors.text },
   errorBanner: { ...typography.caption, color: colors.danger, paddingVertical: spacing.xs },
+  callNotice: {
+    width: "100%",
+    gap: spacing.sm,
+    backgroundColor: colors.brandTint,
+    borderWidth: 2,
+    borderColor: colors.brandGold,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  callNoticeTitle: { ...typography.label, color: colors.brandDark, textAlign: "center" },
+  callNoticeBody: { ...typography.caption, color: colors.text, textAlign: "center" },
+  callNoticeNumber: { ...typography.heading, color: colors.brandDark, textAlign: "center" },
   successBox: { alignItems: "center", gap: spacing.lg, paddingVertical: spacing.xl },
   successIcon: {
     width: 64,
