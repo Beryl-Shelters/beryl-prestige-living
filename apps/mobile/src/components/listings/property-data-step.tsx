@@ -347,7 +347,7 @@ export function PropertyDataStep({
 
         <TextField
           label="Property Address / Location *"
-          placeholder="e.g. Admiralty Way, Lekki Phase 1, Lagos"
+          placeholder="e.g. 12 Admiralty Way, Lekki Phase 1, Lagos"
           value={location}
           onChangeText={setLocation}
           error={errors.location}

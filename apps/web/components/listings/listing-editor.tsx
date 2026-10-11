@@ -638,7 +638,7 @@ function ListingWizard({
 
               <section>
                 <h2>Location & Other Information</h2>
-                {input("location", "Location", true, false, "e.g. Admiralty Way, Lekki Phase 1, Lagos")}
+                {input("location", "Location", true, false, "e.g. 12 Admiralty Way, Lekki Phase 1, Lagos")}
                 <div className="listing-two-fields">
                   <label>
                     State <b>*</b>
