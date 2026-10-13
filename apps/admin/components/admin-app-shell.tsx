@@ -125,7 +125,7 @@ export function AdminAppShell({ children }: { children: ReactNode }) {
               <Icon kind="leads"/><span>Leads</span>
             </Link>
             <Link className={referrersActive ? "is-active" : ""} href="/dashboard/referrers" onClick={closeMenu}>
-              <Icon kind="referrers"/><span>Referrers</span>
+              <Icon kind="referrers"/><span>Referrals</span>
             </Link>
           </nav>
           <div className="admin-sidebar-account">

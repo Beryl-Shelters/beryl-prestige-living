@@ -200,7 +200,7 @@ export function PaymentDialog({
           <h3>Recipient Details</h3>
           <dl>
             <div>
-              <dt>Referrer</dt>
+              <dt>Referring Customer</dt>
               <dd>{preview.referrerName}</dd>
             </div>
             <div>
@@ -290,7 +290,7 @@ function Content({ id }: { id: string }) {
           setError(
             reason instanceof Error
               ? reason.message
-              : "Referrer could not be loaded.",
+              : "Referral details could not be loaded.",
           );
       });
     return () => controller.abort();
@@ -304,20 +304,20 @@ function Content({ id }: { id: string }) {
     return (
       <main>
         <Link className="admin-back-link" href="/dashboard/referrers">
-          ‹ Back to referrers
+          ‹ Back to referrals
         </Link>
         <p className="admin-data-error">{error}</p>
       </main>
     );
   if (!data)
     return (
-      <main className="admin-directory-loading">Loading referrer…</main>
+      <main className="admin-directory-loading">Loading referral details…</main>
     );
 
   return (
     <main className="admin-referrer-detail">
       <Link className="admin-back-link" href="/dashboard/referrers">
-        ‹ Back to referrers
+        ‹ Back to referrals
       </Link>
       {error && (
         <p className="admin-data-error" role="alert">
@@ -385,7 +385,7 @@ function Content({ id }: { id: string }) {
             </p>
           )}
           <small>
-            Set by the referrer in Customer Settings. Admins can view but not
+            Set by the referring customer in Customer Settings. Admins can view but not
             edit.
           </small>
         </section>

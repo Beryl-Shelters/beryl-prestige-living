@@ -11,6 +11,11 @@ const read = (path) => readFileSync(join(root, path), "utf8");
 test("Web ThemeProvider handles system, light, dark and anti-flash script", () => {
   const provider = read("components/theme/theme-provider.tsx");
   assert.match(provider, /STORAGE_KEY = "beryl_theme"/);
+  assert.match(provider, /DEFAULT_THEME: ThemePreference = "light"/);
+  assert.match(provider, /useSyncExternalStore\(subscribeToTheme, getStoredTheme, \(\) => DEFAULT_THEME\)/);
+  assert.match(provider, /window\.dispatchEvent\(new Event\(THEME_CHANGE_EVENT\)\)/);
+  assert.match(provider, /localStorage\.getItem\('\$\{STORAGE_KEY\}'\)\|\|'light'/);
+  assert.doesNotMatch(provider, /localStorage\.getItem\('\$\{STORAGE_KEY\}'\)\|\|'system'/);
   assert.match(provider, /useSyncExternalStore/);
   assert.match(provider, /document\.documentElement\.setAttribute\("data-theme", resolvedTheme\)/);
   assert.match(provider, /document\.documentElement\.style\.colorScheme = resolvedTheme/);

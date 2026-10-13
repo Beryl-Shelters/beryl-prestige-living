@@ -54,7 +54,7 @@ test("canonical property fields and required validation are preserved in Propert
   assert.match(step, /Describe the property's location, condition, key features, nearby amenities and what makes it attractive to buyers\./);
   assert.match(step, /e\.g\. Spacious 3-bedroom duplex in Lekki Phase 1, Lagos, with 4 bathrooms, fitted kitchen, parking for 2 cars, reliable water supply and easy access to major roads\./);
   assert.match(step, /e\.g\. Spacious 3-Bedroom Duplex in Lekki/);
-  assert.match(step, /e\.g\. Admiralty Way, Lekki Phase 1, Lagos/);
+  assert.match(step, /e\.g\. 12 Admiralty Way, Lekki Phase 1, Lagos/);
   assert.match(step, /OptionSelect label="State \*"/);
   assert.doesNotMatch(step, /State \*<\/Text>[\s\S]{0,200}<ScrollView horizontal/);
   // Both actions persist the same resumable photo draft. Only Next advances.

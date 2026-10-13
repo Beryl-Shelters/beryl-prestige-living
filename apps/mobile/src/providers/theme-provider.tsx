@@ -17,9 +17,14 @@ import {
   elevation,
   type ColorTokens,
 } from "@/theme/tokens";
+import {
+  DEFAULT_THEME_PREFERENCE,
+  resolveThemePreference,
+  type EffectiveTheme,
+  type ThemePreference,
+} from "@/theme/theme-preference";
 
-export type ThemePreference = "system" | "light" | "dark";
-export type EffectiveTheme = "light" | "dark";
+export type { EffectiveTheme, ThemePreference } from "@/theme/theme-preference";
 
 export interface ThemeContextValue {
   themePreference: ThemePreference;
@@ -52,7 +57,7 @@ async function readStoredTheme(): Promise<ThemePreference> {
           return legacy;
         }
       }
-      return "system";
+      return DEFAULT_THEME_PREFERENCE;
     }
     const item = await SecureStore.getItemAsync(STORAGE_KEY);
     if (validPreference(item)) return item;
@@ -64,7 +69,7 @@ async function readStoredTheme(): Promise<ThemePreference> {
   } catch {
     // Ignore read errors
   }
-  return "system";
+  return DEFAULT_THEME_PREFERENCE;
 }
 
 async function writeStoredTheme(pref: ThemePreference): Promise<void> {
@@ -82,7 +87,7 @@ async function writeStoredTheme(pref: ThemePreference): Promise<void> {
 }
 
 export function ThemeProvider({ children }: PropsWithChildren) {
-  const [themePreference, setThemeState] = useState<ThemePreference>("system");
+  const [themePreference, setThemeState] = useState<ThemePreference>(DEFAULT_THEME_PREFERENCE);
   const systemScheme = useColorScheme();
 
   useEffect(() => {
@@ -95,12 +100,10 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
-  const effectiveTheme: EffectiveTheme = useMemo(() => {
-    if (themePreference === "system") {
-      return systemScheme === "dark" ? "dark" : "light";
-    }
-    return themePreference;
-  }, [themePreference, systemScheme]);
+  const effectiveTheme: EffectiveTheme = useMemo(
+    () => resolveThemePreference(themePreference, systemScheme),
+    [themePreference, systemScheme],
+  );
 
   const activeColors = useMemo(() => getColors(effectiveTheme), [effectiveTheme]);
 

@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { test } from "node:test";
+import {
+  DEFAULT_THEME_PREFERENCE,
+  resolveThemePreference,
+} from "../src/theme/theme-preference";
 
 const root = process.cwd();
 const read = (path: string) => readFileSync(join(root, path), "utf8");
@@ -65,6 +69,19 @@ test("Mobile ThemeProvider handles system, light, dark and local persistence", (
   assert.match(provider, /SecureStore/);
   assert.match(provider, /effectiveTheme/);
   assert.match(provider, /setThemePreference/);
+  assert.match(provider, /useState<ThemePreference>\(DEFAULT_THEME_PREFERENCE\)/);
+  assert.match(provider, /return DEFAULT_THEME_PREFERENCE/);
+});
+
+test("Mobile defaults fresh installs to Light while preserving explicit theme behavior", () => {
+  assert.equal(DEFAULT_THEME_PREFERENCE, "light");
+  assert.equal(resolveThemePreference(DEFAULT_THEME_PREFERENCE, "dark"), "light");
+  assert.equal(resolveThemePreference("light", "dark"), "light");
+  assert.equal(resolveThemePreference("dark", "light"), "dark");
+  assert.equal(resolveThemePreference("system", "dark"), "dark");
+  assert.equal(resolveThemePreference("system", "light"), "light");
+  assert.equal(resolveThemePreference("system", "unspecified"), "light");
+  assert.equal(resolveThemePreference("system", "unspecified"), "light");
 });
 
 test("UI components integrate useTheme for dynamic styling and accessible contrast", () => {

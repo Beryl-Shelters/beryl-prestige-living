@@ -217,11 +217,12 @@ try {
   page.setDefaultNavigationTimeout(60000);
   await page.setViewportSize({ width: 1440, height: 950 });
   await page.goto(`${origin}/dashboard/referrers`);
-  await page.getByRole("heading", { name: "Referrers" }).waitFor();
+  await page.getByRole("heading", { name: "Referrals" }).waitFor();
+  assert.equal(await page.title(), "Referrals | Beryl Shelter Admin");
   assert.equal(
     await page
       .getByText(
-        "Everyone who has sent Beryl a referral, and what they're owed.",
+        "Customers who have sent Beryl referrals, and what they're owed.",
       )
       .count(),
     1,
@@ -230,7 +231,7 @@ try {
   assert.equal(
     await page
       .getByRole("navigation", { name: "Admin navigation" })
-      .getByRole("link", { name: "Referrers" })
+      .getByRole("link", { name: "Referrals" })
       .getAttribute("href"),
     "/dashboard/referrers",
   );
@@ -240,12 +241,14 @@ try {
     () => document.querySelectorAll("tbody tr").length === 1,
   );
   assert.equal(await page.locator("tbody tr").count(), 1);
-  await page.getByLabel("Search referrers").fill("Controlled");
+  await page.getByLabel("Search referring customers").fill("Controlled");
   await page.getByRole("button", { name: "Search", exact: true }).click();
   await page.waitForURL(/search=Controlled/);
   await page.getByText("Controlled Referrer", { exact: true }).waitFor();
   await page.getByRole("link", { name: "View Controlled Referrer" }).click();
   await page.getByRole("heading", { name: "Controlled Referrer" }).waitFor();
+  assert.equal(await page.title(), "Referral Details | Beryl Shelter Admin");
+  assert.equal(await page.getByRole("link", { name: "‹ Back to referrals" }).count(), 1);
   assert.equal(await page.getByText("••••••6789").count(), 1);
   assert.equal(await page.getByText("0123456789").count(), 0);
   await page.getByRole("button", { name: /Record payment/ }).click();
@@ -276,12 +279,12 @@ try {
   assert.equal(await page.getByRole("link",{name:"Withdrawals"}).count(),0);
   empty = true;
   await page.goto(`${origin}/dashboard/referrers`);
-  await page.getByRole("heading", { name: "No referrers yet" }).waitFor();
+  await page.getByRole("heading", { name: "No referrals yet" }).waitFor();
   for (const width of [1440, 1280, 1024, 768, 430, 390, 360]) {
     empty = false;
     await page.setViewportSize({ width, height: 900 });
     await page.goto(`${origin}/dashboard/referrers`);
-    await page.getByRole("heading", { name: "Referrers" }).waitFor();
+    await page.getByRole("heading", { name: "Referrals" }).waitFor();
     assert.equal(
       await page.evaluate(
         () => document.documentElement.scrollWidth > innerWidth,
@@ -298,7 +301,7 @@ try {
   assert.deepEqual(errors, []);
   await browser.close();
   console.log(
-    "Admin Referrers UI: directory, detail, payment, empty state and responsive widths passed",
+    "Admin Referrals UI: directory, detail, payment, empty state and responsive widths passed",
   );
 } finally {
   server.kill();

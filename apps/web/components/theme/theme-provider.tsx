@@ -6,7 +6,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
@@ -21,6 +20,8 @@ export interface ThemeContextValue {
 }
 
 const STORAGE_KEY = "beryl_theme";
+const THEME_CHANGE_EVENT = "beryl-theme-change";
+const DEFAULT_THEME: ThemePreference = "light";
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function subscribeToMedia(callback: () => void) {
@@ -40,7 +41,7 @@ function getSystemServerSnapshot(): ResolvedTheme {
 }
 
 function getStoredTheme(): ThemePreference {
-  if (typeof window === "undefined") return "system";
+  if (typeof window === "undefined") return DEFAULT_THEME;
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === "light" || stored === "dark" || stored === "system") {
@@ -49,11 +50,22 @@ function getStoredTheme(): ThemePreference {
   } catch {
     // ignore
   }
-  return "system";
+  return DEFAULT_THEME;
+}
+
+function subscribeToTheme(callback: () => void) {
+  if (typeof window === "undefined") return () => {};
+  const notify = () => callback();
+  window.addEventListener("storage", notify);
+  window.addEventListener(THEME_CHANGE_EVENT, notify);
+  return () => {
+    window.removeEventListener("storage", notify);
+    window.removeEventListener(THEME_CHANGE_EVENT, notify);
+  };
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemePreference>(getStoredTheme);
+  const theme = useSyncExternalStore(subscribeToTheme, getStoredTheme, () => DEFAULT_THEME);
   const systemTheme = useSyncExternalStore(subscribeToMedia, getSystemSnapshot, getSystemServerSnapshot);
 
   const resolvedTheme: ResolvedTheme = theme === "system" ? systemTheme : theme;
@@ -64,9 +76,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [resolvedTheme]);
 
   const setTheme = useCallback((newTheme: ThemePreference) => {
-    setThemeState(newTheme);
     try {
       localStorage.setItem(STORAGE_KEY, newTheme);
+      window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
     } catch {
       // Storage unavailable
     }
@@ -92,4 +104,4 @@ export function useTheme(): ThemeContextValue {
   return context;
 }
 
-export const themeScript = `(function(){try{var t=localStorage.getItem('${STORAGE_KEY}')||'system';var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');document.documentElement.style.colorScheme=d?'dark':'light';}catch(e){}})();`;
+export const themeScript = `(function(){try{var t=localStorage.getItem('${STORAGE_KEY}')||'light';var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.setAttribute('data-theme',d?'dark':'light');document.documentElement.style.colorScheme=d?'dark':'light';}catch(e){document.documentElement.setAttribute('data-theme','light');document.documentElement.style.colorScheme='light';}})();`;
