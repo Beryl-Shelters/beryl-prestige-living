@@ -53,11 +53,12 @@ const defaultOptions: ListingOptions = {
 };
 
 export default function ListScreen() {
-  const params = useLocalSearchParams<{ draftId?: string | string[] }>();
+  const params = useLocalSearchParams<{ draftId?: string | string[]; step?: string | string[] }>();
   const draftId =
     typeof params.draftId === "string" && params.draftId.trim()
       ? params.draftId.trim()
       : null;
+  const openMandateStep=params.step==="mandate";
   const { status } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -112,7 +113,7 @@ export default function ListScreen() {
     void loadEditableListing(draftId, listingsApi.get)
       .then((listing) => {
         if (!active) return;
-        setWorkflow({ routeKey: draftId, currentStep: 1, listing });
+        setWorkflow({ routeKey: draftId, currentStep: openMandateStep ? 2 : 1, listing });
         setEditResult({ key: editRequestKey, error: "" });
       })
       .catch((error) => {
@@ -122,7 +123,7 @@ export default function ListScreen() {
     return () => {
       active = false;
     };
-  }, [draftId, editRequestKey, status]);
+  }, [draftId, editRequestKey, openMandateStep, status]);
 
   function handleReset() {
     setActiveListing(null);
@@ -139,7 +140,7 @@ export default function ListScreen() {
 
   if (status !== "signedIn") {
     const nextPath = draftId
-      ? `/(tabs)/list?draftId=${encodeURIComponent(draftId)}`
+      ? `/(tabs)/list?draftId=${encodeURIComponent(draftId)}${openMandateStep?"&step=mandate":""}`
       : "/(tabs)/list";
     return (
       <Screen edges={["top", "left", "right"]}>

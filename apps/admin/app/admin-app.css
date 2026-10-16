@@ -797,10 +797,25 @@
 .property-location > div { display: flex; justify-content: space-between; gap: 1rem; }
 .property-detail-empty { color: #827970; }
 .property-mandate-links { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.2rem; }
+.physical-mandate { display: grid; gap: 1rem; }
+.physical-mandate-history { display: grid; gap: .75rem; }
+.physical-mandate-submission { border: 1px solid #ded8cf; border-radius: 10px; padding: 1rem; }
+.physical-mandate-submission > header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .6rem; }
+.physical-mandate-submission > header span { border-radius: 999px; background: #efede8; padding: .25rem .55rem; font-size: .75rem; font-weight: 800; }
+.physical-mandate-submission > p { margin: .55rem 0 0; color: #827970; }
+.physical-mandate-reason { color: #9f2725 !important; }
+.physical-mandate-review { display: grid; gap: .75rem; border-top: 1px solid #ded8cf; padding-top: 1rem; }
+.physical-mandate-review h3,.physical-mandate-review p { margin: 0; }
+.physical-mandate-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.physical-mandate-actions button { padding: .75rem 1rem; }
+.legacy-mandate { border-top: 1px solid #ded8cf; padding-top: 1rem; }
+.legacy-mandate summary { cursor: pointer; font-weight: 700; }
 .property-detail-aside,.property-rejected-panels { display: grid; gap: 1rem; }
 .property-review-panel,.property-live-panel,.property-rejected-panels aside,.property-seller-card { padding: 1.35rem; }
 .property-review-panel h2,.property-live-panel h2,.property-rejected-panels h2,.property-seller-card h2 { margin: 0 0 .8rem; font-size: 1.15rem; }
 .property-review-panel > button { width: 100%; margin-top: .75rem; }
+.property-mandate-gate { border-radius:8px; background:#fff5df; padding:.75rem; color:#7b5411; font-weight:650; }
+.property-review-panel button:disabled { cursor:not-allowed; opacity:.5; }
 .property-approve { border: 1px solid transparent; background: #158346; color: #fff; transition: background-color .15s ease, border-color .15s ease, color .15s ease; }
 .property-approve:hover { background: #116938 !important; color: #fff !important; }
 .property-approve:active { background: #0d522c !important; }
@@ -1228,6 +1243,27 @@
 
 [data-theme="dark"] .property-attempt {
   border-top-color: var(--line);
+}
+
+[data-theme="dark"] .physical-mandate-submission,
+[data-theme="dark"] .physical-mandate-review,
+[data-theme="dark"] .legacy-mandate {
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .physical-mandate-submission > header span {
+  background: var(--soft);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .physical-mandate-submission > p {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .property-mandate-links button {
+  background: var(--soft);
+  border-color: var(--line);
+  color: var(--ink);
 }
 
 [data-theme="dark"] .property-live-panel small {

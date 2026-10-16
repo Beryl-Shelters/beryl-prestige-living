@@ -18,4 +18,6 @@ export class AdminPropertiesService {
     if (!value) throw new AuthError(404, "PROPERTY_DOCUMENT_NOT_FOUND", "Property document not found.");
     return value;
   }
+  async physicalDocument(code:string,documentId:string){const value=await this.repository.physicalDocument(code,documentId);if(!value)throw new AuthError(404,"PROPERTY_DOCUMENT_NOT_FOUND","Signed mandate document not found.");return value;}
+  reviewMandate(code:string,submissionId:string,reviewerId:string,action:"APPROVE"|"REJECT",reason?:string){return this.repository.reviewMandate(code,submissionId,reviewerId,action,reason);}
 }

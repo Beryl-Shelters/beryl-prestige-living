@@ -42,7 +42,7 @@ export function parseContent(value: unknown): ListingContent {
 export type MediaAsset = { public_id: string; resource_type: "image" | "raw"; delivery_type: "upload" | "authenticated"; url: string; mime_type: string; size_bytes: number };
 export type ListingImage = MediaAsset & { id: string; sort_order: number };
 export type ListingDocument = MediaAsset & { id: string; batch_id: string; title: string; document_type: string; description: string; sort_order: number };
-export type Listing = ListingContent & { id: string; user_id: string; listing_code: string; listing_status: ListingStatus; property_status: "AVAILABLE"; toilet_count: number | null; version: number; created_at: string; updated_at: string; requested_at: string | null; listed_at: string | null; rejection_reason: string | null; rejected_at: string | null; images: ListingImage[]; documents: ListingDocument[] };
+export type Listing = ListingContent & { id: string; user_id: string; listing_code: string; listing_status: ListingStatus; property_status: "AVAILABLE"; toilet_count: number | null; version: number; created_at: string; updated_at: string; requested_at: string | null; listed_at: string | null; rejection_reason: string | null; rejected_at: string | null; requires_signed_mandate?: boolean; images: ListingImage[]; documents: ListingDocument[]; mandate_versions?:PhysicalMandateVersion[] };
 export type ListingCounts = { all: number } & Record<ListingStatus, number>;
 export const listingQuery = z.object({ q: z.string().trim().max(100).default(""), status: z.enum(statuses).optional(), page: z.coerce.number().int().min(1).max(100000).default(1), page_size: z.coerce.number().int().min(1).max(50).default(PAGE_SIZE) }).strict();
 export type ListingQuery = z.output<typeof listingQuery>;
@@ -95,6 +95,44 @@ export function presentMandate(mandate: SalesMandate): SalesMandateView {
   };
 }
 
+export const physicalMandateStatuses = ["AWAITING_UPLOAD", "UNDER_REVIEW", "APPROVED", "REJECTED"] as const;
+export type PhysicalMandateStatus = typeof physicalMandateStatuses[number];
+export type PhysicalMandateDocument = MediaAsset & { id: string; title: string; sort_order: number; created_at: string };
+export type PhysicalMandateSubmission = {
+  id: string; mandate_version_id: string; listing_id: string; user_id: string; submission_number: number;
+  status: Exclude<PhysicalMandateStatus, "AWAITING_UPLOAD">; uploaded_at: string;
+  reviewed_by: string | null; reviewed_at: string | null; rejection_reason: string | null;
+  documents: PhysicalMandateDocument[];
+};
+export type PhysicalMandateVersion = {
+  id: string; listing_id: string; user_id: string; version: number; agreement_version: string;
+  agreement_snapshot: Record<string, unknown>; snapshot_hash: string; pdf_public_id: string;
+  pdf_resource_type: "raw"; pdf_delivery_type: "authenticated"; pdf_mime_type: "application/pdf";
+  pdf_size_bytes: number; generated_at: string; email_status: "NOT_SENT" | "SENT" | "FAILED";
+  email_attempts: number; last_email_attempt_at: string | null; email_sent_at: string | null;
+  submissions: PhysicalMandateSubmission[];
+};
+export type PhysicalMandateView = {
+  version_id: string; version: number; agreement_version: string; generated_at: string;
+  email_status: PhysicalMandateVersion["email_status"]; email_sent_at: string | null;
+  status: PhysicalMandateStatus; rejection_reason: string | null;
+  submissions: Array<{ id: string; submission_number: number; status: PhysicalMandateSubmission["status"]; uploaded_at: string; reviewed_at: string | null; rejection_reason: string | null; documents: Array<Pick<PhysicalMandateDocument,"id"|"title"|"mime_type"|"size_bytes"|"sort_order">> }>;
+};
+export function presentPhysicalMandate(value: PhysicalMandateVersion): PhysicalMandateView {
+  const submissions=[...value.submissions].sort((a,b)=>b.submission_number-a.submission_number);
+  const latest=submissions[0];
+  return {
+    version_id:value.id,version:value.version,agreement_version:value.agreement_version,generated_at:value.generated_at,
+    email_status:value.email_status,email_sent_at:value.email_sent_at,
+    status:latest?.status??"AWAITING_UPLOAD",rejection_reason:latest?.status==="REJECTED"?latest.rejection_reason:null,
+    submissions:submissions.map(submission=>({id:submission.id,submission_number:submission.submission_number,status:submission.status,uploaded_at:submission.uploaded_at,reviewed_at:submission.reviewed_at,rejection_reason:submission.rejection_reason,documents:submission.documents.map(({id,title,mime_type,size_bytes,sort_order})=>({id,title,mime_type,size_bytes,sort_order}))})),
+  };
+}
+
+export const physicalMandateSubmissionInput=z.object({
+  version_id:z.uuid(),documents:z.array(z.object({upload_id:uploadHandle,title:text(160)}).strict()).min(1).max(24),
+}).strict();
+
 export function completeness(listing: Listing) {
   const required = [listing.title, listing.description, listing.occupancy_type, listing.ownership_type, listing.property_type, listing.property_subtype,
     typeof listing.has_lien === "boolean", listing.bedrooms >= 0, listing.bathrooms >= 0, listing.parking_spaces >= 0,
@@ -104,8 +142,9 @@ export function completeness(listing: Listing) {
   return Math.min(100, Math.round(required.filter(Boolean).length / required.length * 80 + optional.filter(Boolean).length * 4));
 }
 export function presentListing(listing: Listing, webOrigin: string) {
-  const { user_id: _owner, images, documents, ...fields } = listing;
+  const { user_id: _owner, images, documents, mandate_versions, ...fields } = listing;
   void _owner;
+  const currentMandate=mandate_versions?.length?[...mandate_versions].sort((a,b)=>b.version-a.version)[0]:null;
   return { ...fields,
     rejection_reason: listing.listing_status === "REJECTED" ? listing.rejection_reason ?? null : null,
     rejected_at: listing.listing_status === "REJECTED" ? listing.rejected_at ?? null : null,
@@ -116,5 +155,6 @@ export function presentListing(listing: Listing, webOrigin: string) {
     completeness: completeness(listing), leads: 0, views: 0,
     time_on_market: listing.listing_status === "LISTED" && listing.listed_at ? Math.max(0, Math.floor((Date.now() - Date.parse(listing.listed_at)) / 86400000)) : null,
     referral_url: `${webOrigin}/properties/${encodeURIComponent(listing.listing_code)}?ref=share`,
+    mandate_workflow:currentMandate?presentPhysicalMandate(currentMandate):null,
   };
 }

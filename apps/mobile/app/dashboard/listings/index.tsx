@@ -26,6 +26,7 @@ import {
 } from "@/lib/listings-api";
 import { formatNaira } from "@/lib/money";
 import { canEditListing } from "@/lib/listing-edit";
+import { downloadAndOpenMandate } from "@/lib/mandate-download";
 import { useTheme } from "@/providers/theme-provider";
 import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
@@ -64,6 +65,7 @@ export default function MyListingsScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [mandateActionId,setMandateActionId]=useState<string|null>(null);
 
   // Modals state
   const [activeModal, setActiveModal] = useState<
@@ -186,6 +188,10 @@ export default function MyListingsScreen() {
         : "Not yet for sale";
 
     const isEditable = canEditListing(item.listing_status);
+    const mandate=item.mandate_workflow;
+    const mandateActionPending=mandateActionId===item.id;
+    async function downloadMandate(){setMandateActionId(item.id);setError("");try{await downloadAndOpenMandate(item.id,item.listing_code);}catch(value){setError(friendlyError(value));}finally{setMandateActionId(null);}}
+    async function resendMandate(){setMandateActionId(item.id);setError("");try{await listingsApi.resendPhysicalMandate(item.id);await handleRefresh();}catch(value){setError(friendlyError(value));}finally{setMandateActionId(null);}}
 
     return (
       <Card style={styles.card}>
@@ -263,6 +269,12 @@ export default function MyListingsScreen() {
             />
           </View>
         </View>
+
+        {mandate&&<View style={[styles.mandateBanner,mandate.status==="REJECTED"&&styles.mandateBannerRejected,mandate.status==="APPROVED"&&styles.mandateBannerApproved]}>
+          <Text style={styles.mandateTitle}>{mandate.status==="AWAITING_UPLOAD"?"Signed Sales Mandate Required":mandate.status==="UNDER_REVIEW"?"Signed Mandate Under Review":mandate.status==="REJECTED"?"Mandate Needs Correction":"Mandate Approved"}</Text>
+          <Text style={styles.mandateText}>{mandate.status==="AWAITING_UPLOAD"?"Your property cannot go live until you upload your handwritten, signed mandate and Admin approves it.":mandate.status==="UNDER_REVIEW"?"Your document has been received and is awaiting Admin review.":mandate.status==="REJECTED"?(mandate.rejection_reason??"Upload a corrected complete signed mandate."):"Your signed Sales Mandate has been approved."}</Text>
+          {(mandate.status==="AWAITING_UPLOAD"||mandate.status==="REJECTED")&&<View style={styles.mandateActions}><Button label="Download Mandate" variant="secondary" disabled={mandateActionPending} onPress={()=>void downloadMandate()}/>{mandate.status==="AWAITING_UPLOAD"&&<Button label="Resend Email" variant="secondary" disabled={mandateActionPending} onPress={()=>void resendMandate()}/>}<Button label={mandate.status==="REJECTED"?"Upload Corrected Mandate":"Upload Signed Mandate"} disabled={mandateActionPending} onPress={()=>router.push(`/(tabs)/list?draftId=${encodeURIComponent(item.id)}&step=mandate` as never)}/></View>}
+        </View>}
 
         {/* Action Buttons */}
         <View style={styles.actionRow}>
@@ -743,6 +755,12 @@ function createStyles(colors: ColorTokens) {
       borderTopColor: colors.border,
       paddingTop: spacing.sm,
     },
+    mandateBanner:{gap:spacing.xs,borderWidth:1,borderColor:colors.warning,borderRadius:radius.md,backgroundColor:colors.surfaceMuted,padding:spacing.md},
+    mandateBannerRejected:{borderColor:colors.danger},
+    mandateBannerApproved:{borderColor:colors.success},
+    mandateTitle:{...typography.label,color:colors.text,fontWeight:"700"},
+    mandateText:{...typography.caption,color:colors.textMuted},
+    mandateActions:{gap:spacing.xs,marginTop:spacing.xs},
     statusChip: {
       paddingHorizontal: spacing.xs + 2,
       paddingVertical: 1,

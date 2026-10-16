@@ -16,6 +16,14 @@
 .listings-pagination button:last-child { border-radius:0 5px 5px 0; }
 .listing-results { display:grid; gap:20px; }
 .customer-listing-card { border:1px solid #bfc0c4; border-radius:6px; font-size:13px; min-width:0; }
+.listing-mandate-banner { grid-column:1/-1; padding:16px 18px; border-bottom:1px solid #d9b36a; background:#fff8e8; color:#372b16; }
+.listing-mandate-banner.status-rejected { border-color:#dc8d8d; background:#fff1f1; }
+.listing-mandate-banner.status-approved { border-color:#82bd96; background:#eef9f1; }
+.listing-mandate-banner h3 { margin:0 0 5px; font-size:15px; }
+.listing-mandate-banner p { margin:0; line-height:1.45; }
+.listing-mandate-actions { display:flex; flex-wrap:wrap; align-items:center; gap:9px; margin-top:12px; }
+.listing-mandate-actions a,.listing-mandate-actions button,.listing-mandate-actions label { border:1px solid #aa7a27; border-radius:7px; background:transparent; padding:8px 11px; color:inherit; font:inherit; font-weight:650; text-decoration:none; cursor:pointer; }
+.listing-mandate-actions input { position:absolute; width:1px; height:1px; clip-path:inset(50%); overflow:hidden; }
 .listing-card-top { display:grid; grid-template-columns:20% 40% 40%; min-height:158px; }
 .listing-photo { background:#eeeeef; display:block; min-width:0; border-radius:5px 0 0 0; overflow:hidden; }
 .listing-photo img { display:block; width:100%; height:100%; min-height:158px; max-height:180px; object-fit:cover; }
@@ -190,6 +198,27 @@
 
 /* Sales Mandate Step 2 Design */
 .sales-mandate-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px 36px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); }
+.physical-mandate-step h1 { margin:0 0 12px; font-size:26px; }
+.mandate-ready-meta { display:grid; gap:6px; margin:20px 0; padding:16px; border-radius:9px; background:#f4f2ef; }
+.mandate-ready-meta p { margin:0; overflow-wrap:anywhere; }
+.mandate-progress { display:grid; gap:8px; margin:20px 0; padding-left:22px; }
+.mandate-ready-actions { display:flex; flex-wrap:wrap; gap:10px; margin:24px 0; }
+.mandate-ready-actions .button { display:inline-flex; align-items:center; justify-content:center; border-radius:7px; padding:10px 14px; text-decoration:none; }
+.mandate-ready-actions .button-primary,.signed-mandate-upload .button-primary { border:1px solid var(--gold); background:var(--gold); color:#fff; }
+.mandate-ready-actions .button-secondary { border:1px solid #d1cbc1; background:#fff; color:#302a22; }
+.mandate-review-state { margin:18px 0; border-left:4px solid #4b8d60; border-radius:6px; background:#eef9f1; padding:14px; }
+.mandate-review-state.is-rejected { border-color:#c63f3f; background:#fff1f1; }
+.mandate-review-state h2,.mandate-review-state p { margin:0; }
+.mandate-review-state h2 { margin-bottom:5px; font-size:16px; }
+.signed-mandate-upload { display:grid; gap:12px; margin:22px 0; border:1px solid #d8d2c7; border-radius:10px; padding:18px; }
+.signed-mandate-upload label { display:grid; gap:8px; font-weight:700; }
+.signed-mandate-upload input { width:100%; border:1px dashed #9c8a6d; border-radius:8px; padding:12px; background:#fbfaf7; color:inherit; }
+.signed-mandate-upload p { margin:0; }
+.signed-mandate-upload button { justify-self:start; border-radius:7px; padding:10px 14px; }
+[data-theme="dark"] .listing-mandate-banner,[data-theme="dark"] .mandate-ready-meta,[data-theme="dark"] .mandate-review-state,[data-theme="dark"] .signed-mandate-upload { background:#151e29; color:#f7f8fa; }
+[data-theme="dark"] .listing-mandate-banner.status-rejected,[data-theme="dark"] .mandate-review-state.is-rejected { background:#29191c; }
+[data-theme="dark"] .listing-mandate-banner.status-approved { background:#15251b; }
+[data-theme="dark"] .mandate-ready-actions .button-secondary,[data-theme="dark"] .signed-mandate-upload input { border-color:#435064; background:#101720; color:#f7f8fa; }
 .mandate-header { text-align: center; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid #e5e7eb; }
 .mandate-header-brand { display: block; font-size: 11px; font-weight: 700; color: var(--gold, #8f6b2e); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
 .mandate-header-title { font-size: 22px; font-weight: 800; color: #111827; margin: 0; }

@@ -37,6 +37,7 @@ import {
   adminPropertyQuerySchema,
   adminPropertyRejectionSchema,
   adminPropertyVersionSchema,
+  adminMandateReviewSchema,
 } from "./properties-model.js";
 import type { AdminPropertiesRepository } from "./properties-repository.js";
 import { AdminPropertiesService } from "./properties-service.js";
@@ -278,6 +279,31 @@ export function adminRouter(
         "attachment; filename=mandate-signature.png",
       );
       response.send(Buffer.from(bytes));
+    }),
+  );
+  router.get(
+    "/properties/:propertyCode/signed-mandates/documents/:documentId",
+    wrap(async (request, response) => {
+      await sessions.account(request);
+      const document = await properties.physicalDocument(
+          adminPropertyCodeSchema.parse(request.params.propertyCode),
+          adminPropertyDocumentIdSchema.parse(request.params.documentId),
+        ),
+        bytes = await storage.download(document);
+      response.setHeader("Content-Type", document.mime_type);
+      response.setHeader("Content-Disposition", `attachment; filename="signed-sales-mandate-${request.params.documentId}"`);
+      response.send(Buffer.from(bytes));
+    }),
+  );
+  router.post(
+    "/properties/:propertyCode/signed-mandates/review",
+    limited(30),
+    wrap(async (request, response) => {
+      const caller = await sessions.account(request),
+        code = adminPropertyCodeSchema.parse(request.params.propertyCode),
+        input = adminMandateReviewSchema.parse(request.body);
+      await properties.reviewMandate(code, input.submissionId, caller.userId, input.action, input.reason);
+      response.json({ success: true, data: { property: await properties.detail(code) } });
     }),
   );
   router.get(

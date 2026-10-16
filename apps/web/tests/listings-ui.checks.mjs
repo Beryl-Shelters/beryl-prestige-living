@@ -63,6 +63,7 @@ export const listingFixture = {
     "http://localhost:3000/properties/RES-D5K7Y2?ref=share",
   images: [image],
   documents: [],
+  mandate_workflow: null,
   owner: {
     full_name: "Ada Okafor",
     email: "ada@example.test",
@@ -171,6 +172,20 @@ export async function mockListings(route, origin) {
     data = item;
   } else if (current) {
     data = current;
+    if (path.endsWith("/physical-mandate") && req.method() === "GET") data = current.mandate_workflow;
+    if (path.endsWith("/physical-mandate/prepare")) {
+      current.mandate_workflow = current.mandate_workflow ?? {version_id:crypto.randomUUID(),version:1,agreement_version:"web-exclusive-sales-mandate-v1",generated_at:new Date().toISOString(),email_status:"SENT",email_sent_at:new Date().toISOString(),status:"AWAITING_UPLOAD",rejection_reason:null,registered_email:current.owner.email,property_reference:current.listing_code,submissions:[]};
+      data={...current.mandate_workflow,email_attempted:true,email_sent:true};
+    }
+    if (path.endsWith("/physical-mandate/resend")) {current.mandate_workflow.email_status="SENT";data={sent:true,registered_email:current.owner.email};}
+    if (path.endsWith("/physical-mandate/pdf")) return route.fulfill({status:200,headers,contentType:"application/pdf",body:"%PDF-1.4 mock mandate"});
+    if (path.endsWith("/physical-mandate/uploads")) {
+      data=(Array.isArray(body)?body:["signed-mandate.pdf"]).map((title,index)=>({upload_id:`opaque-signed-mandate-${crypto.randomUUID()}-${index}`,mime_type:"application/pdf",size_bytes:2048,sort_order:index,title}));
+      current.physicalMandateUploads=data;
+    }
+    if (path.endsWith("/physical-mandate/submit")) {
+      assert.equal(body.version_id,current.mandate_workflow.version_id);assert.equal(body.documents.length>0,true);current.mandate_workflow={...current.mandate_workflow,status:"UNDER_REVIEW",submissions:[{id:crypto.randomUUID(),submission_number:1,status:"UNDER_REVIEW",uploaded_at:new Date().toISOString(),reviewed_at:null,rejection_reason:null,documents:body.documents.map((document,index)=>({id:crypto.randomUUID(),title:document.title,mime_type:"application/pdf",size_bytes:2048,sort_order:index}))}]};current.listing_status="PENDING";current.requested_at=new Date().toISOString();current.rejection_reason=null;current.rejected_at=null;current.version++;data={listing:current,mandate:current.mandate_workflow};
+    }
     if (req.method() === "PATCH") {
       Object.assign(current, body.content);
       current.version++;
@@ -259,7 +274,7 @@ export async function mockListings(route, origin) {
       }
       data = current.mandate;
     }
-    if (path.endsWith("/submit")) {
+    if (path === `/${current.id}/submit`) {
       current.listing_status = "PENDING";
       current.requested_at = new Date().toISOString();
       current.rejection_reason = null;
@@ -340,7 +355,7 @@ export async function checkListings({
     assert.equal(await description.inputValue(), "", "Description example must remain a placeholder, not a submitted value");
     assert.equal(await description.locator("xpath=preceding-sibling::*[contains(@class,'field-helper-text')][1]").innerText(), "Describe the property's location, condition, key features, nearby amenities and what makes it attractive to buyers.");
     assert.equal(await page.locator('[name="title"]').getAttribute("placeholder"), "e.g. Spacious 3-Bedroom Duplex in Lekki");
-    assert.equal(await page.locator('[name="location"]').getAttribute("placeholder"), "e.g. Admiralty Way, Lekki Phase 1, Lagos");
+    assert.equal(await page.locator('[name="location"]').getAttribute("placeholder"), "e.g. 12 Admiralty Way, Lekki Phase 1, Lagos");
     assert.equal(
       await page.locator(".listing-editor-fields>section").count(),
       4,
@@ -379,7 +394,7 @@ export async function checkListings({
     await noOverflow(width);
     await screenshot(`listing-edit-${width}`);
     await page.getByRole("button", { name: "Save & Continue", exact: true }).click();
-    await page.locator(".sales-mandate-step").waitFor();
+    await page.locator(".physical-mandate-step").waitFor();
     await noOverflow(width);
     await screenshot(`listing-mandate-${width}`);
     assert.equal(await page.locator("header,footer").count(), 0);
@@ -450,7 +465,8 @@ export async function checkListings({
   await toast("Property added successfully");
   await page.locator(".mandate-step-shell").waitFor();
   assert.equal(await page.locator('.wizard-step-item.current .wizard-step-label').innerText(), "Sales Mandate");
-  assert.equal(await page.locator(".mandate-shell-status-badge strong").innerText(), "UNLISTED");
+  assert.equal(await page.getByRole("heading",{name:"Your Sales Mandate Is Ready"}).count(),1);
+  assert.match(await page.locator(".mandate-ready-meta").innerText(),/web-exclusive-sales-mandate-v1/);
   assert.equal(listingState.items[0].listing_status, "UNLISTED");
   assert.notEqual(listingState.items[0].listing_status, "PENDING");
   assert.equal(listingState.items[0].registered_title_document, "Certificate of Occupancy");
@@ -648,6 +664,47 @@ export async function checkListings({
     assert.equal(await page.getByLabel("Basketball Court", { exact: true }).isChecked(), true);
   }
 
+  // Physical Sales Mandate (Step 2) -> Admin review submission validation
+  await open(`/dashboard/listings/${listingState.items[0].id}/edit`);
+  await page.locator('[name="title"]').waitFor();
+  await page.getByRole("button", { name: "Save & Continue", exact: true }).click();
+  await toast("Property saved successfully");
+  await page.locator(".physical-mandate-step").waitFor();
+  assert.equal(await page.getByRole("heading",{name:"Your Sales Mandate Is Ready"}).count(),1);
+  assert.match(await page.locator(".sales-mandate-card").innerText(),/print it, fill in any missing details and sign it by hand using a pen/i);
+  assert.match(await page.locator(".mandate-ready-meta").innerText(),/ada@example\.test/);
+  assert.match(await page.locator(".mandate-ready-meta").innerText(),/web-exclusive-sales-mandate-v1/);
+  assert.equal(await page.getByRole("link",{name:"Download Mandate"}).count(),1);
+  assert.equal(await page.getByRole("button",{name:"Resend Email"}).count(),1);
+  await page.locator('.signed-mandate-upload input[type="file"]').setInputFiles({name:"signed-sales-mandate.pdf",mimeType:"application/pdf",buffer:Buffer.from("%PDF-1.4 signed mandate")});
+  await page.getByRole("button",{name:"Upload Signed Mandate",exact:true}).click();
+  await toast("Signed Sales Mandate uploaded for Admin review.");
+  await page.locator(".submit-success-container").waitFor();
+  assert.equal(listingState.items[0].listing_status,"PENDING");
+  assert.equal(listingState.items[0].mandate_workflow.status,"UNDER_REVIEW");
+  await page.getByRole("link",{name:"View my properties for sale",exact:true}).click();
+  await page.waitForURL("**/dashboard/listings");
+  await page.getByRole("heading",{name:"Signed Mandate Under Review"}).waitFor();
+
+  listingState.items[0].listing_status="REJECTED";
+  listingState.items[0].rejection_reason="Property detail correction required.";
+  listingState.items[0].mandate_workflow.status="REJECTED";
+  listingState.items[0].mandate_workflow.rejection_reason="Upload all signed pages in the correct order.";
+  await open("/dashboard/listings");
+  await page.getByRole("heading",{name:"Mandate Needs Correction"}).waitFor();
+  assert.match(await page.locator(".listing-mandate-banner").innerText(),/Upload all signed pages/);
+  await open(`/dashboard/listings/${listingState.items[0].id}/edit`);
+  await page.locator('[name="title"]').waitFor();
+  await page.getByRole("button",{name:"Save & Continue",exact:true}).click();
+  await page.locator(".physical-mandate-step").waitFor();
+  await page.locator('.signed-mandate-upload input[type="file"]').setInputFiles({name:"corrected-signed-sales-mandate.png",mimeType:"image/png",buffer:png});
+  await page.getByRole("button",{name:"Upload Corrected Mandate",exact:true}).click();
+  await toast("Signed Sales Mandate uploaded for Admin review.");
+  assert.equal(listingState.items[0].listing_status,"PENDING");
+  assert.equal(listingState.items[0].mandate_workflow.status,"UNDER_REVIEW");
+
+  if(process.env.RUN_RETIRED_DIGITAL_MANDATE_TEST==="1"){
+  // Retained only as an opt-in historical regression for the retired digital workflow.
   // Full Sales Mandate (Step 2) -> Submission Success (Step 3) validation
   await open(`/dashboard/listings/${listingState.items[0].id}/edit`);
   await page.locator('[name="title"]').waitFor();
@@ -806,6 +863,8 @@ export async function checkListings({
   assert.equal(listingState.items[0].listing_status,"PENDING");
   assert.equal(listingState.items[0].rejection_reason,null);
   assert.equal(listingState.items[0].rejected_at,null);
+
+  }
 
   // The standard dashboard suite covers four widths; explicitly verify the requested 1024px label/help layout.
   await page.setViewportSize({width:1024,height:900});

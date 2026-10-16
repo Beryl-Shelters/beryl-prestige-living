@@ -12,9 +12,10 @@ import { notFound, type ListingsRepository } from "./repository.js";
 import type { MediaStorage } from "./media.js";
 import { readUpload, readMandateUpload } from "./uploads.js";
 import { ListingsService } from "./service.js";
+import type { MandateEmail } from "./mandate-email.js";
 const wrap=(fn:(request:Request,response:Response)=>Promise<void>)=>(request:Request,response:Response,next:NextFunction)=>{void fn(request,response).catch(next);};
-export function listingsRouter(config:AuthConfig,gateway:AuthGateway,repository:ListingsRepository,storage:MediaStorage) {
-  const router=Router(); const sessions=new AuthSessions(config,gateway); const service=new ListingsService(repository,storage,new AuthCipher(config.encryptionKey));
+export function listingsRouter(config:AuthConfig,gateway:AuthGateway,repository:ListingsRepository,storage:MediaStorage,mandateEmail?:MandateEmail) {
+  const router=Router(); const sessions=new AuthSessions(config,gateway); const service=new ListingsService(repository,storage,new AuthCipher(config.encryptionKey),mandateEmail);
   router.use((_req,res,next)=>{res.setHeader("Cache-Control","no-store");res.vary("Cookie");next();});
   router.use((req,_res,next)=>{
     if(req.method!=="GET" && (!isTrustedCustomerRequest(req,config) || !(req.is("application/json") || req.is("multipart/form-data")))) return next(new AuthError(403,"UNTRUSTED_ORIGIN","This request is not permitted."));
@@ -68,6 +69,14 @@ export function listingsRouter(config:AuthConfig,gateway:AuthGateway,repository:
     const owner=customer(res).id; const listingId=id(req); await service.own(owner,listingId);
     res.status(201).json({success:true,data:presentListing(await service.submit(owner,listingId),config.webOrigin)});
   }));
+
+  const mandateEmailLimit=rateLimit({windowMs:15*60000,limit:5,standardHeaders:"draft-7",legacyHeaders:false,message:{success:false,error:{code:"RATE_LIMITED",message:"Too many mandate email requests. Please try again later."}}});
+  router.get("/:id/physical-mandate",wrap(async(req,res)=>{const account=customer(res),listingId=id(req),mandate=await service.physicalMandate(account.id,listingId),listing=await service.own(account.id,listingId);res.json({success:true,data:mandate?{...mandate,registered_email:account.email,property_reference:listing.listing_code}:null});}));
+  router.post("/:id/physical-mandate/prepare",mandateEmailLimit,wrap(async(req,res)=>{res.status(201).json({success:true,data:await service.preparePhysicalMandate(customer(res),id(req),true)});}));
+  router.post("/:id/physical-mandate/resend",mandateEmailLimit,wrap(async(req,res)=>{res.json({success:true,data:await service.resendPhysicalMandate(customer(res),id(req))});}));
+  router.get("/:id/physical-mandate/pdf",wrap(async(req,res)=>{const result=await service.physicalMandatePdf(customer(res).id,id(req));res.setHeader("Content-Type","application/pdf");res.setHeader("Content-Disposition",`attachment; filename="Beryl-Shelter-Sales-Mandate-${result.reference}.pdf"`);res.send(Buffer.from(result.bytes));}));
+  router.post("/:id/physical-mandate/uploads",wrap(async(req,res)=>{const owner=customer(res).id,listingId=id(req);await service.own(owner,listingId);const {files}=await readMandateUpload(req,false);res.status(201).json({success:true,data:await service.physicalMandateDocumentUploads(owner,listingId,files)});}));
+  router.post("/:id/physical-mandate/submit",wrap(async(req,res)=>{const owner=customer(res).id,listingId=id(req);const result=await service.submitPhysicalMandate(owner,listingId,req.body);res.status(201).json({success:true,data:{listing:presentListing(result.listing,config.webOrigin),mandate:result.mandate}});}));
 
   return router;
 }

@@ -21,6 +21,7 @@ export const adminPropertyRejectionSchema = z.object({
   version: z.number().int().positive(),
   reason: z.string().trim().min(1).max(2000),
 }).strict();
+export const adminMandateReviewSchema=z.object({submissionId:z.uuid(),action:z.enum(["APPROVE","REJECT"]),reason:z.string().trim().min(1).max(2000).optional()}).strict().superRefine((value,ctx)=>{if(value.action==="REJECT"&&!value.reason)ctx.addIssue({code:"custom",message:"A rejection reason is required.",path:["reason"]});if(value.action==="APPROVE"&&value.reason)ctx.addIssue({code:"custom",message:"Do not provide a reason when approving.",path:["reason"]});});
 
 export type AdminPropertyDirectoryItem = {
   id: string; code: string; title: string; propertyType: string; propertySubtype: string;
@@ -59,6 +60,7 @@ export type AdminPropertyDetail = {
     mandateDate: string; signedAt: string; submittedAt: string | null;
     hasSignature: boolean; documents: AdminPropertyDocument[];
   };
+  physicalMandate: null | { id:string; version:number; agreementVersion:string; generatedAt:string; submissions:Array<{id:string;mandateVersion:number;agreementVersion:string;submissionNumber:number;status:"UNDER_REVIEW"|"APPROVED"|"REJECTED";uploadedAt:string;reviewedAt:string|null;reviewerName:string|null;rejectionReason:string|null;documents:AdminPropertyDocument[]}> };
   reviews: AdminPropertyReview[];
 };
 

@@ -225,21 +225,16 @@ test("blank signature is rejected and valid touch stroke produces compliant PNG"
   assert.ok(png.length > 500, "PNG output must be non-trivial binary payload");
 });
 
-test("Sales Mandate enforces 10 clauses, fixed 5% commission, 180 days validity and Clause 10 consent", () => {
+test("Sales Mandate uses the physical print-sign-upload workflow without digital signature drawing", () => {
   const mandateStep = read("src/components/listings/sales-mandate-step.tsx");
-  assert.match(mandateStep, /5\.00%/);
-  assert.match(mandateStep, /180\s*days/);
-  assert.match(mandateStep, /Appointment & Authority/);
-  assert.match(mandateStep, /Mandate Validity/);
-  assert.match(mandateStep, /Marketing & Inspections/);
-  assert.match(mandateStep, /Commission & Fee Structure/);
-  assert.match(mandateStep, /Non-Circumvention/);
-  assert.match(mandateStep, /Title & Legal Representation/);
-  assert.match(mandateStep, /Governing Law & Disputes/);
-  assert.match(mandateStep, /Clause 10 Acceptance/);
-  assert.match(mandateStep, /agreed_to_mandate/);
-  assert.match(mandateStep, /telephone/);
-  assert.match(mandateStep, /Upload at least 1 legal title document/);
+  assert.match(mandateStep, /print it, fill in any missing details and sign it by hand using a pen/i);
+  assert.match(mandateStep, /Download Mandate/);
+  assert.match(mandateStep, /Resend Email/);
+  assert.match(mandateStep, /Upload Signed Mandate/);
+  assert.match(mandateStep, /PDF, JPEG or PNG/);
+  assert.match(mandateStep, /UNDER_REVIEW/);
+  assert.match(mandateStep, /Mandate Needs Correction/);
+  assert.doesNotMatch(mandateStep, /SignaturePad|agreed_to_mandate|Non-Circumvention|Governing Law & Disputes/);
 });
 
 test("listing submission transitions to PENDING review without customer self-approval", () => {

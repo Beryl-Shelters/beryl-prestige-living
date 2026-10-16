@@ -52,6 +52,7 @@ import { SupabaseAdminPropertiesRepository, type AdminPropertiesRepository } fro
 import { SupabaseAdminLeadsRepository, type AdminLeadsRepository } from "./admin/leads-repository.js";
 import { SupabaseAdminPurchasesRepository, type AdminPurchasesRepository } from "./admin/purchases-repository.js";
 import { SupabaseAdminReferrersRepository, type AdminReferrersRepository } from "./admin/referrers-repository.js";
+import { ResendMandateEmail, type MandateEmail } from "./listings/mandate-email.js";
 
 export interface AppConfig {
   webAppUrl: string | undefined;
@@ -87,6 +88,7 @@ export interface AppConfig {
   propertyViewingsRepository?: PropertyViewingsRepository;
   trustProxyHops?: number;
   enableApiDocs?: boolean;
+  mandateEmail?: MandateEmail;
 }
 
 export function createApp(config: AppConfig): Express {
@@ -134,7 +136,8 @@ export function createApp(config: AppConfig): Express {
     app.use("/api/v1/saved-properties", savedPropertiesRouter(config.auth, gateway, config.savedPropertiesRepository ?? new SupabaseSavedPropertiesRepository(config.auth)));
     app.use("/api/v1/dashboard/settings", settingsRouter(config.auth,gateway,config.settingsRepository??new SupabaseSettingsRepository(config.auth),storage));
     app.use("/api/v1/dashboard/kyc",kycRouter(config.auth,gateway,config.kycRepository??new SupabaseKycRepository(config.auth),storage));
-    app.use("/api/v1/listings", listingsRouter(config.auth, gateway, listings, storage));
+    const mandateEmail=config.mandateEmail??(config.admin?new ResendMandateEmail(config.admin,config.webAppUrl??config.auth.webOrigin):undefined);
+    app.use("/api/v1/listings", listingsRouter(config.auth, gateway, listings, storage,mandateEmail));
     app.use("/api/v1/messages", messagesRouter(config.auth,gateway,tickets,storage));
     if(config.admin)app.use("/api/v1/admin",adminRouter(config.auth,config.admin,config.adminRepository??new SupabaseAdminRepository(config.auth),config.adminCustomersRepository??new SupabaseAdminCustomersRepository(config.auth),config.adminPropertiesRepository??new SupabaseAdminPropertiesRepository(config.auth),config.adminLeadsRepository??new SupabaseAdminLeadsRepository(config.auth),config.adminPurchasesRepository??new SupabaseAdminPurchasesRepository(config.auth),config.adminReferrersRepository??new SupabaseAdminReferrersRepository(config.auth),storage,config.adminIdentity??new SupabaseAdminIdentity(config.auth),config.adminEmail??new ResendAdminInvitationEmail(config.admin)));
   } else app.use(["/api/v1/auth", "/api/v1/dashboard", "/api/v1/listings", "/api/v1/messages"], (_request, _response, next) => next(unavailable()));

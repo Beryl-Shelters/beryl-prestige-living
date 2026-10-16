@@ -158,8 +158,9 @@ test("canonical listing lifecycle: UNLISTED, PENDING, LISTED, REJECTED supported
 
   // No APPROVED domain status
   assert.doesNotMatch(filesToCheck, /ListingStatus\s*=\s*[^;]*["']APPROVED["']/);
-  assert.doesNotMatch(filesToCheck, /status\s*===\s*["']APPROVED["']/);
   assert.doesNotMatch(filesToCheck, /listing_status\s*:\s*["']APPROVED["']/);
+  // The independent signed-mandate workflow may legitimately be APPROVED.
+  assert.match(filesToCheck, /PhysicalMandateStatus[^;]*"APPROVED"/);
 
   // No CHANGES_REQUESTED status
   assert.doesNotMatch(filesToCheck, /["']CHANGES_REQUESTED["']/);

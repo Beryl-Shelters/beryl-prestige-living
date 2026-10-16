@@ -11,6 +11,7 @@ export type Listing = {
   documents:{id:string;batch_id:string;title:string;document_type:string;description:string;sort_order:number}[];
   registered_title_document?:string|null;
   additional_information?:string|null;
+  mandate_workflow?:PhysicalMandate|null;
   owner?:{full_name:string;email:string;phone:string|null};
 };
 export type ListingCounts = {all:number} & Record<ListingStatus,number>;
@@ -153,3 +154,13 @@ export async function submitListing(listingId: string): Promise<Listing> {
     body: {},
   });
 }
+
+export type PhysicalMandateStatus="AWAITING_UPLOAD"|"UNDER_REVIEW"|"APPROVED"|"REJECTED";
+export type PhysicalMandate={version_id:string;version:number;agreement_version:string;generated_at:string;email_status:"NOT_SENT"|"SENT"|"FAILED";email_sent_at:string|null;status:PhysicalMandateStatus;rejection_reason:string|null;registered_email?:string;property_reference?:string;email_attempted?:boolean;email_sent?:boolean;submissions:Array<{id:string;submission_number:number;status:Exclude<PhysicalMandateStatus,"AWAITING_UPLOAD">;uploaded_at:string;reviewed_at:string|null;rejection_reason:string|null;documents:Array<{id:string;title:string;mime_type:string;size_bytes:number;sort_order:number}>}>};
+export type PhysicalMandateUpload={upload_id:string;mime_type:string;size_bytes:number;sort_order:number};
+export async function getPhysicalMandate(listingId:string){return listingsRequest<PhysicalMandate|null>(`/${listingId}/physical-mandate`);}
+export async function preparePhysicalMandate(listingId:string){return listingsRequest<PhysicalMandate>(`/${listingId}/physical-mandate/prepare`,{method:"POST",body:{}});}
+export async function resendPhysicalMandate(listingId:string){return listingsRequest<{sent:true;registered_email:string}>(`/${listingId}/physical-mandate/resend`,{method:"POST",body:{}});}
+export async function uploadPhysicalMandateFiles(listingId:string,files:File[]){const form=new FormData();form.set("data",JSON.stringify(files.map(file=>file.name)));for(const file of files)form.append("documents",file);return listingsRequest<PhysicalMandateUpload[]>(`/${listingId}/physical-mandate/uploads`,{method:"POST",body:form});}
+export async function submitPhysicalMandate(listingId:string,versionId:string,files:File[]){const uploads=await uploadPhysicalMandateFiles(listingId,files);return listingsRequest<{listing:Listing;mandate:PhysicalMandate}>(`/${listingId}/physical-mandate/submit`,{method:"POST",body:{version_id:versionId,documents:uploads.map((upload,index)=>({upload_id:upload.upload_id,title:files[index]?.name??`Signed mandate page ${index+1}`}))}});}
+export function physicalMandateDownloadUrl(listingId:string){const base=(process.env.NEXT_PUBLIC_API_BASE_URL??"").replace(/\/$/,"");return `${base}/api/v1/listings/${listingId}/physical-mandate/pdf`;}

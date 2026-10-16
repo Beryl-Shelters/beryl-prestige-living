@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { AuthConfig } from "../auth/config.js";
 import type { RecentListing } from "../dashboard/repository.js";
 import { AuthError } from "../auth/errors.js";
-import type { Listing, ListingContent, ListingCounts, ListingDocument, ListingImage, ListingQuery, ListingStatus, MandateContent, MandateDocumentInput, MediaAsset, SalesMandate } from "./model.js";
+import type { Listing, ListingContent, ListingCounts, ListingDocument, ListingImage, ListingQuery, ListingStatus, MandateContent, MandateDocumentInput, MediaAsset, PhysicalMandateVersion, SalesMandate } from "./model.js";
 
 export type Mutation = { action: "CREATE" | "EDIT" | "DELETE" | "REQUEST_APPROVAL" | "UNLIST" | "DOCUMENTS"; id: string | null; version: number | null; content?: ListingContent; images?: ListingImage[]; documents?: Omit<ListingDocument, "id" | "batch_id">[] };
 export type CleanupAsset = Pick<MediaAsset, "public_id" | "resource_type" | "delivery_type">;
@@ -20,6 +20,11 @@ export interface ListingsRepository {
   mutateMandate(owner: string, listingId: string, content: MandateContent, documents: MandateDocumentInput[]): Promise<string>;
   submit(owner: string, listingId: string): Promise<string>;
   unlist(owner: string, listingId: string, version: number): Promise<string>;
+  physicalMandate(owner:string,listingId:string):Promise<PhysicalMandateVersion|null>;
+  createPhysicalMandate(owner:string,listingId:string,input:{agreementVersion:string;agreementSnapshot:Record<string,unknown>;snapshotHash:string;pdfPublicId:string;pdfSizeBytes:number;generatedAt:string}):Promise<string>;
+  recordMandateEmail(owner:string,versionId:string,sent:boolean):Promise<void>;
+  validateMandateUploads(owner:string,listingId:string,documents:Array<{public_id:string}>):Promise<boolean>;
+  createMandateSubmission(owner:string,listingId:string,versionId:string,documents:Array<{title:string;public_id:string;mime_type:string;size_bytes:number;sort_order:number}>):Promise<string>;
 }
 export const notFound = () => new AuthError(404, "LISTING_NOT_FOUND", "Listing not found.");
 export const conflict = () => new AuthError(409, "LISTING_CHANGED", "This listing has changed. Refresh and try again.");
@@ -30,7 +35,7 @@ function check(error: { code?: string; message?: string } | null) {
   if (["23514", "23505", "23502", "22P02"].includes(error.code ?? "")) throw new AuthError(409, "LISTING_NOT_READY", "This listing cannot be updated. Check its details and current status.");
   throw new AuthError(503, "LISTINGS_UNAVAILABLE", "Listings are temporarily unavailable. Please try again.");
 }
-const selection = "*,images:customer_listing_images(*),documents:customer_listing_documents(*)";
+const selection = "*,images:customer_listing_images(*),documents:customer_listing_documents(*),mandate_versions:listing_mandate_versions(*,submissions:listing_mandate_submissions(*,documents:listing_mandate_submission_documents(*)))";
 function ordered(row: Listing): Listing { return { ...row, images: row.images.sort((a,b) => a.sort_order-b.sort_order), documents: row.documents.sort((a,b) => a.batch_id.localeCompare(b.batch_id) || a.sort_order-b.sort_order) }; }
 export class SupabaseListingsRepository implements ListingsRepository {
   private readonly db;
@@ -85,13 +90,15 @@ export class SupabaseListingsRepository implements ListingsRepository {
   }
   async referenced(_owner: string, asset: CleanupAsset) {
     // Internal cleanup safety checks all references, not browser-visible data.
-    for (const table of ["customer_listing_images", "customer_listing_documents", "sales_mandate_documents"]) {
+    for (const table of ["customer_listing_images", "customer_listing_documents", "sales_mandate_documents", "listing_mandate_submission_documents"]) {
       const { data, error } = await this.db.from(table).select("id").eq("public_id", asset.public_id).eq("resource_type", asset.resource_type).eq("delivery_type", asset.delivery_type).limit(1); check(error);
       if (data?.length) return true;
     }
     if (asset.resource_type === "raw" && asset.delivery_type === "authenticated") {
       const { data, error } = await this.db.from("sales_mandates").select("id").eq("signature_public_id", asset.public_id).limit(1); check(error);
       if (data?.length) return true;
+      const version = await this.db.from("listing_mandate_versions").select("id").eq("pdf_public_id", asset.public_id).limit(1); check(version.error);
+      if (version.data?.length) return true;
     }
     return false;
   }
@@ -116,5 +123,27 @@ export class SupabaseListingsRepository implements ListingsRepository {
   async unlist(owner: string, listingId: string, version: number) {
     const { data, error } = await this.db.rpc("unlist_customer_listing", { p_owner: owner, p_id: listingId, p_version: version });
     check(error); return data as string;
+  }
+  async physicalMandate(owner:string,listingId:string) {
+    const {data,error}=await this.db.from("listing_mandate_versions")
+      .select("*,submissions:listing_mandate_submissions(*,documents:listing_mandate_submission_documents(*))")
+      .eq("user_id",owner).eq("listing_id",listingId).order("version",{ascending:false}).limit(1).maybeSingle();
+    check(error); return data as PhysicalMandateVersion|null;
+  }
+  async createPhysicalMandate(owner:string,listingId:string,input:{agreementVersion:string;agreementSnapshot:Record<string,unknown>;snapshotHash:string;pdfPublicId:string;pdfSizeBytes:number;generatedAt:string}) {
+    const {data,error}=await this.db.rpc("create_listing_mandate_version",{p_owner:owner,p_listing_id:listingId,p_agreement_version:input.agreementVersion,p_agreement_snapshot:input.agreementSnapshot,p_snapshot_hash:input.snapshotHash,p_pdf_public_id:input.pdfPublicId,p_pdf_size_bytes:input.pdfSizeBytes,p_generated_at:input.generatedAt});
+    check(error); return data as string;
+  }
+  async recordMandateEmail(owner:string,versionId:string,sent:boolean) {
+    const {error}=await this.db.rpc("record_listing_mandate_email",{p_owner:owner,p_version_id:versionId,p_sent:sent}); check(error);
+  }
+  async validateMandateUploads(owner:string,listingId:string,documents:Array<{public_id:string}>) {
+    const publicIds=documents.map(document=>document.public_id),prefix=`beryl-v2/mandates/signed/${listingId}/`;
+    if(new Set(publicIds).size!==publicIds.length||publicIds.some(publicId=>!publicId.startsWith(prefix)))return false;
+    const {data,error}=await this.db.from("customer_listing_media_cleanup").select("public_id").eq("user_id",owner).eq("resource_type","raw").eq("delivery_type","authenticated").eq("claimed",false).in("public_id",publicIds);
+    check(error);return new Set((data??[]).map(value=>value.public_id)).size===publicIds.length;
+  }
+  async createMandateSubmission(owner:string,listingId:string,versionId:string,documents:Array<{title:string;public_id:string;mime_type:string;size_bytes:number;sort_order:number}>) {
+    const {data,error}=await this.db.rpc("create_listing_mandate_submission",{p_owner:owner,p_listing_id:listingId,p_version_id:versionId,p_documents:documents});check(error);return data as string;
   }
 }

@@ -1,23 +1,27 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { AuthCipher } from "../auth/crypto.js";
 import { AuthError } from "../auth/errors.js";
-import { documentInput, mandateInput, mandateSaveInput, MAX_IMAGES, parseContent, presentMandate, type ListingImage, type MandateDocumentInput, type MediaAsset, type SalesMandate, type SalesMandateView } from "./model.js";
+import type { Customer } from "../auth/gateway.js";
+import { documentInput, mandateInput, mandateSaveInput, MAX_IMAGES, parseContent, physicalMandateSubmissionInput, presentMandate, presentPhysicalMandate, type ListingImage, type MandateDocumentInput, type MediaAsset, type PhysicalMandateView, type SalesMandate, type SalesMandateView } from "./model.js";
 import { conflict, notFound, type CleanupAsset, type ListingsRepository, type Mutation } from "./repository.js";
 import { planAsset, type MediaStorage } from "./media.js";
 import { validateFile, type UploadFile } from "./uploads.js";
+import { SALES_MANDATE_AGREEMENT_SNAPSHOT, SALES_MANDATE_AGREEMENT_VERSION } from "./mandate-agreement.js";
+import { generateSalesMandatePdf } from "./mandate-pdf.js";
+import type { MandateEmail } from "./mandate-email.js";
 const envelope = z.object({ content:z.unknown(), retained_images:z.array(z.uuid()).max(MAX_IMAGES).optional(), version:z.number().int().positive().optional() }).strict();
 export class ListingsService {
-  constructor(readonly repository: ListingsRepository, readonly storage: MediaStorage, private readonly uploadCipher?: AuthCipher) {}
+  constructor(readonly repository: ListingsRepository, readonly storage: MediaStorage, private readonly uploadCipher?: AuthCipher, private readonly mandateEmail?: MandateEmail) {}
   private handlePurpose = "listing-mandate-upload";
-  private uploadHandle(owner:string,listingId:string,purpose:"document"|"signature",asset:MediaAsset) {
+  private uploadHandle(owner:string,listingId:string,purpose:"document"|"signature"|"signed-document",asset:MediaAsset) {
     if (!this.uploadCipher) throw new AuthError(503,"LISTINGS_UNAVAILABLE","Listings are temporarily unavailable. Please try again.");
     return this.uploadCipher.seal({ version:1, owner, listing_id:listingId, purpose, expires_at:Date.now()+3600000, asset },this.handlePurpose);
   }
-  private resolveUpload(owner:string,listingId:string,purpose:"document"|"signature",uploadId:string):MediaAsset {
+  private resolveUpload(owner:string,listingId:string,purpose:"document"|"signature"|"signed-document",uploadId:string):MediaAsset {
     const value=this.uploadCipher?.open<unknown>(uploadId,this.handlePurpose);
     const parsed=z.object({
-      version:z.literal(1),owner:z.uuid(),listing_id:z.uuid(),purpose:z.enum(["document","signature"]),expires_at:z.number().int(),
+      version:z.literal(1),owner:z.uuid(),listing_id:z.uuid(),purpose:z.enum(["document","signature","signed-document"]),expires_at:z.number().int(),
       asset:z.object({public_id:z.string().min(1).max(200),resource_type:z.literal("raw"),delivery_type:z.literal("authenticated"),url:z.literal(""),mime_type:z.enum(["application/pdf","image/png","image/jpeg"]),size_bytes:z.number().int().positive().max(10485760)}).strict(),
     }).strict().safeParse(value);
     if(!parsed.success||parsed.data.owner!==owner||parsed.data.listing_id!==listingId||parsed.data.purpose!==purpose||parsed.data.expires_at<Date.now())
@@ -164,5 +168,77 @@ export class ListingsService {
   async submit(owner: string, id: string) {
     await this.repository.submit(owner, id);
     return this.own(owner, id);
+  }
+
+  async physicalMandate(owner:string,id:string):Promise<PhysicalMandateView|null> {
+    await this.own(owner,id);
+    const value=await this.repository.physicalMandate(owner,id);
+    return value?presentPhysicalMandate(value):null;
+  }
+
+  private pdfAsset(value:{pdf_public_id:string;pdf_size_bytes:number}):MediaAsset {
+    return {public_id:value.pdf_public_id,resource_type:"raw",delivery_type:"authenticated",url:"",mime_type:"application/pdf",size_bytes:value.pdf_size_bytes};
+  }
+
+  async preparePhysicalMandate(customer:Customer,id:string,sendEmail=true) {
+    const listing=await this.own(customer.id,id);
+    if(listing.listing_status==="LISTED") throw new AuthError(409,"LISTING_LOCKED","Published property mandates are historical.");
+    const sellerName=[customer.first_name,customer.last_name].filter(Boolean).join(" ").trim();
+    const generatedAt=new Date().toISOString();
+    const snapshot={agreement:SALES_MANDATE_AGREEMENT_SNAPSHOT,property:{id:listing.id,reference:listing.listing_code,title:listing.title,address:listing.location,state:listing.state,city:listing.city,propertyType:listing.property_type,propertySubtype:listing.property_subtype,registeredTitleDocument:listing.registered_title_document??null},seller:{name:sellerName,email:customer.email,telephone:customer.phone_number_normalized??customer.phone_number??null}};
+    const snapshotHash=createHash("sha256").update(JSON.stringify(snapshot)).digest("hex");
+    let current=await this.repository.physicalMandate(customer.id,id);
+    let pdf:Uint8Array;
+    if(!current||current.snapshot_hash!==snapshotHash) {
+      pdf=await generateSalesMandatePdf({propertyReference:listing.listing_code,propertyTitle:listing.title,propertyAddress:[listing.location,listing.city,listing.state].filter(Boolean).join(", "),propertyType:listing.property_type,propertySubtype:listing.property_subtype,registeredTitleDocument:listing.registered_title_document??null,sellerName,sellerEmail:customer.email,sellerTelephone:customer.phone_number_normalized??customer.phone_number??null,generatedAt});
+      const asset:CleanupAsset={public_id:`beryl-v2/mandates/generated/${listing.id}/${randomUUID()}.pdf`,resource_type:"raw",delivery_type:"authenticated"};
+      await this.repository.journal(customer.id,asset);
+      const uploaded=await this.storage.upload({field:"mandate",mime:"application/pdf",bytes:Buffer.from(pdf)},asset);
+      try { await this.repository.createPhysicalMandate(customer.id,id,{agreementVersion:SALES_MANDATE_AGREEMENT_VERSION,agreementSnapshot:snapshot,snapshotHash,pdfPublicId:uploaded.public_id,pdfSizeBytes:uploaded.size_bytes,generatedAt}); }
+      catch(error){await this.cleanup(customer.id,[asset]);throw error;}
+      current=await this.repository.physicalMandate(customer.id,id);
+      if(!current) throw new AuthError(503,"MANDATE_UNAVAILABLE","The Sales Mandate could not be prepared.");
+    } else pdf=await this.storage.download(this.pdfAsset(current));
+    let emailSent=false;
+    if(sendEmail&&this.mandateEmail) {
+      try { await this.mandateEmail.send({recipient:customer.email,customerName:sellerName,propertyReference:listing.listing_code,listingId:listing.id,pdf});emailSent=true; }
+      catch { emailSent=false; }
+      await this.repository.recordMandateEmail(customer.id,current.id,emailSent);
+      current=await this.repository.physicalMandate(customer.id,id)??current;
+    }
+    return {...presentPhysicalMandate(current),email_attempted:sendEmail,email_sent:emailSent,registered_email:customer.email,property_reference:listing.listing_code};
+  }
+
+  async resendPhysicalMandate(customer:Customer,id:string) {
+    const current=await this.repository.physicalMandate(customer.id,id);
+    if(!current) throw new AuthError(409,"MANDATE_NOT_READY","Prepare the Sales Mandate first.");
+    if(current.last_email_attempt_at&&Date.now()-Date.parse(current.last_email_attempt_at)<60000) throw new AuthError(429,"MANDATE_EMAIL_RATE_LIMITED","Wait a minute before resending the Sales Mandate.");
+    if(!this.mandateEmail) throw new AuthError(503,"MANDATE_EMAIL_UNAVAILABLE","Email delivery is temporarily unavailable. Download the mandate instead.");
+    const listing=await this.own(customer.id,id),pdf=await this.storage.download(this.pdfAsset(current));
+    let sent=false;try{await this.mandateEmail.send({recipient:customer.email,customerName:[customer.first_name,customer.last_name].filter(Boolean).join(" "),propertyReference:listing.listing_code,listingId:id,pdf});sent=true;}finally{await this.repository.recordMandateEmail(customer.id,current.id,sent);}
+    return {sent:true,registered_email:customer.email};
+  }
+
+  async physicalMandatePdf(owner:string,id:string) {
+    const current=await this.repository.physicalMandate(owner,id);if(!current)throw notFound();
+    return {bytes:await this.storage.download(this.pdfAsset(current)),reference:(await this.own(owner,id)).listing_code};
+  }
+
+  async physicalMandateDocumentUploads(owner:string,id:string,files:UploadFile[]) {
+    const listing=await this.own(owner,id);if(!["UNLISTED","REJECTED"].includes(listing.listing_status))throw new AuthError(409,"LISTING_LOCKED","This property is not accepting a signed mandate.");
+    if(files.length<1||files.length>24)throw new AuthError(400,"INVALID_DOCUMENTS","Choose between 1 and 24 signed mandate files.");
+    const results=[];
+    for(let index=0;index<files.length;index+=1){const file=files[index]!;validateFile(file,true);const extension=file.mime==="application/pdf"?"pdf":file.mime==="image/png"?"png":"jpg";const asset:CleanupAsset={public_id:`beryl-v2/mandates/signed/${id}/${randomUUID()}.${extension}`,resource_type:"raw",delivery_type:"authenticated"};await this.repository.journal(owner,asset);const uploaded=await this.storage.upload(file,asset);results.push({upload_id:this.uploadHandle(owner,id,"signed-document",uploaded),mime_type:uploaded.mime_type,size_bytes:uploaded.size_bytes,sort_order:index});}
+    return results;
+  }
+
+  async submitPhysicalMandate(owner:string,id:string,input:unknown) {
+    const payload=physicalMandateSubmissionInput.parse(input);const current=await this.repository.physicalMandate(owner,id);
+    if(!current||current.id!==payload.version_id)throw new AuthError(409,"MANDATE_CHANGED","Download and sign the latest Sales Mandate.");
+    const documents=payload.documents.map((item,index)=>{const asset=this.resolveUpload(owner,id,"signed-document",item.upload_id);return{title:item.title,public_id:asset.public_id,mime_type:asset.mime_type,size_bytes:asset.size_bytes,sort_order:index};});
+    if(!await this.repository.validateMandateUploads(owner,id,documents))throw new AuthError(400,"INVALID_UPLOAD","A signed mandate upload was not found or does not belong to this property. Upload the document again.");
+    await this.repository.createMandateSubmission(owner,id,current.id,documents);
+    await this.repository.submit(owner,id);
+    return {listing:await this.own(owner,id),mandate:presentPhysicalMandate((await this.repository.physicalMandate(owner,id))!)};
   }
 }

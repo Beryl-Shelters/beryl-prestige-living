@@ -79,7 +79,8 @@ test("Edit routes pass the canonical internal listing ID and the editor fetches 
   const editor = read("app/(tabs)/list.tsx");
   assert.match(index, /draftId=\$\{item\.id\}/);
   assert.match(detail, /draftId=\$\{listing\.id\}/);
-  assert.match(editor, /useLocalSearchParams<\{ draftId\?: string \| string\[\] \}>/);
+  assert.match(editor, /useLocalSearchParams<\{ draftId\?: string \| string\[\]; step\?: string \| string\[\] \}>/);
+  assert.match(editor, /openMandateStep \? 2 : 1/);
   assert.match(editor, /loadEditableListing\(draftId, listingsApi\.get\)/);
 
   const requested: string[] = [];

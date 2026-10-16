@@ -58,7 +58,7 @@ export function validateMandateFile(file: UploadFile, signature: boolean) {
 export function readMandateUpload(request: Request, signature: boolean): Promise<{ data: unknown; files: UploadFile[] }> {
   return new Promise((resolve, reject) => {
     let parser: ReturnType<typeof Busboy>;
-    try { parser = Busboy({ headers: request.headers, limits: { files: signature ? 1 : 10, fields: signature ? 0 : 1, fieldSize: 32768, fileSize: signature ? SIGNATURE_BYTES : DOCUMENT_BYTES, parts: signature ? 2 : 12 } }); }
+    try { parser = Busboy({ headers: request.headers, limits: { files: signature ? 1 : 24, fields: signature ? 0 : 1, fieldSize: 32768, fileSize: signature ? SIGNATURE_BYTES : DOCUMENT_BYTES, parts: signature ? 2 : 26 } }); }
     catch { reject(invalid()); return; }
     let data: unknown; let failed = false; let total = 0; let fieldSeen = false;
     const files: UploadFile[] = [];

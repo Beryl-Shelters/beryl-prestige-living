@@ -14,6 +14,8 @@ export type PropertyDirectoryPage = {
 };
 export type PropertyDocument = {id:string;title:string;sortOrder:number;mimeType:string;sizeBytes:number;documentType?:string;description?:string};
 export type PropertyReview = {id:string;action:"APPROVED"|"REJECTED";reason:string|null;submissionRequestedAt:string|null;reviewedAt:string;reviewer:{id:string;name:string}};
+export type PhysicalMandateSubmission={id:string;mandateVersion:number;agreementVersion:string;submissionNumber:number;status:"UNDER_REVIEW"|"APPROVED"|"REJECTED";uploadedAt:string;reviewedAt:string|null;reviewerName:string|null;rejectionReason:string|null;documents:PropertyDocument[]};
+export type PhysicalMandate={id:string;version:number;agreementVersion:string;generatedAt:string;submissions:PhysicalMandateSubmission[]};
 export type PropertyDetail = {
   id:string;code:string;version:number;title:string;description:string;occupancyType:string;ownershipType:string;
   propertyType:string;propertySubtype:string;hasLien:boolean;bedrooms:number;bathrooms:number;toilets:number|null;
@@ -25,6 +27,7 @@ export type PropertyDetail = {
   images:{id:string;url:string;sortOrder:number;mimeType:string;sizeBytes:number}[];
   documents:PropertyDocument[];
   mandate:null|{id:string;type:"Exclusive";commissionPercent:5;signerName:string;mandateDate:string;signedAt:string;submittedAt:string|null;hasSignature:boolean;documents:PropertyDocument[]};
+  physicalMandate:PhysicalMandate|null;
   reviews:PropertyReview[];
 };
 
@@ -48,4 +51,11 @@ export function adminPropertyDocumentUrl(code:string,id:string,mandate=false){
 export function adminMandateSignatureUrl(code:string){
   const apiBase=(process.env.NEXT_PUBLIC_API_BASE_URL??"http://localhost:4000").replace(/\/$/,"");
   return `${apiBase}/api/v1/admin/properties/${encodeURIComponent(code)}/mandate/signature`;
+}
+export function adminSignedMandateDocumentUrl(code:string,id:string){
+  const apiBase=(process.env.NEXT_PUBLIC_API_BASE_URL??"http://localhost:4000").replace(/\/$/,"");
+  return `${apiBase}/api/v1/admin/properties/${encodeURIComponent(code)}/signed-mandates/documents/${encodeURIComponent(id)}`;
+}
+export async function reviewAdminMandate(code:string,submissionId:string,action:"APPROVE"|"REJECT",reason?:string){
+  const value=await adminApi<{property:PropertyDetail}>(`/properties/${encodeURIComponent(code)}/signed-mandates/review`,{method:"POST",body:JSON.stringify({submissionId,action,...(reason?{reason}:{})})});return value.property;
 }

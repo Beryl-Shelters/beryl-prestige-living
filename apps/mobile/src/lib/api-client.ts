@@ -27,6 +27,7 @@ export class MobileApiClient {
     if(!payload||typeof payload!=="object"||!("success" in payload)||payload.success!==true)throw new MobileApiError("server","Beryl Shelter returned an invalid response.",response.status,"INVALID_API_RESPONSE");
     return payload.data;
   }
+  async download(path:string):Promise<Uint8Array>{const headers:Record<string,string>={"X-Beryl-Client":"mobile"};const token=await this.store.get("account");if(token)headers.Authorization=`Bearer ${token}`;let response:Response;try{const transport=this.transport;response=await transport(`${apiBaseUrl}${path}`,{headers});}catch(error){throw transportFailure(error);}if(!response.ok){const payload=await response.json().catch(()=>null) as Envelope<never>|null;if(shouldClearAccountForResponse(response.status,true)){await this.store.remove("account");await unauthorizedHandler?.();}throw responseFailure(response.status,payload);}return new Uint8Array(await response.arrayBuffer());}
 }
 
 export const apiClient = new MobileApiClient();

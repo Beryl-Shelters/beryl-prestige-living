@@ -57,7 +57,11 @@ export type CustomerListing = {
   views?: number;
   time_on_market?: number | null;
   referral_url?: string;
+  mandate_workflow?:PhysicalMandate|null;
 };
+
+export type PhysicalMandateStatus="AWAITING_UPLOAD"|"UNDER_REVIEW"|"APPROVED"|"REJECTED";
+export type PhysicalMandate={version_id:string;version:number;agreement_version:string;generated_at:string;email_status:"NOT_SENT"|"SENT"|"FAILED";email_sent_at:string|null;status:PhysicalMandateStatus;rejection_reason:string|null;registered_email?:string;property_reference?:string;submissions:{id:string;submission_number:number;status:Exclude<PhysicalMandateStatus,"AWAITING_UPLOAD">;uploaded_at:string;reviewed_at:string|null;rejection_reason:string|null;documents:{id:string;title:string;mime_type:string;size_bytes:number;sort_order:number}[]}[]};
 
 export type ListingsCounts = {
   all: number;
@@ -280,6 +284,11 @@ export function createListingsApi(
         throw err;
       }
     },
+
+    async getPhysicalMandate(listingId:string):Promise<PhysicalMandate|null>{return getClient().request<PhysicalMandate|null>(`/api/v1/listings/${encodeURIComponent(listingId)}/physical-mandate`);},
+    async preparePhysicalMandate(listingId:string):Promise<PhysicalMandate>{return getClient().request<PhysicalMandate>(`/api/v1/listings/${encodeURIComponent(listingId)}/physical-mandate/prepare`,{method:"POST",body:{}});},
+    async resendPhysicalMandate(listingId:string):Promise<{sent:true;registered_email:string}>{return getClient().request(`/api/v1/listings/${encodeURIComponent(listingId)}/physical-mandate/resend`,{method:"POST",body:{}});},
+    async uploadPhysicalMandate(listingId:string,versionId:string,files:PickedFile[]):Promise<{listing:CustomerListing;mandate:PhysicalMandate}>{const form=new FormData();form.append("data",JSON.stringify(files.map(file=>file.name)));for(const file of files)await appendFile(form,"documents",file);const uploads=await getClient().request<{upload_id:string}[]>(`/api/v1/listings/${encodeURIComponent(listingId)}/physical-mandate/uploads`,{method:"POST",body:form});return getClient().request(`/api/v1/listings/${encodeURIComponent(listingId)}/physical-mandate/submit`,{method:"POST",body:{version_id:versionId,documents:uploads.map((upload,index)=>({upload_id:upload.upload_id,title:files[index]?.name??`Signed mandate page ${index+1}`}))}});},
 
     async uploadMandateDocuments(
       listingId: string,
