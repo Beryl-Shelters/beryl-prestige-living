@@ -19,12 +19,13 @@ import type { MediaAsset } from "../src/listings/model.js";
 
 const auth = authConfigSchema.parse({ webOrigin:"http://localhost:3000", apiOrigin:"http://localhost:4000", supabaseUrl:"https://example.supabase.co", anonKey:"anon", serviceKey:"service", encryptionKey:randomBytes(32).toString("base64"), cookieSecure:false, production:false, rateLimit:100 });
 const adminConfig = adminConfigSchema.parse({ appOrigin:"http://localhost:3001", resendApiKey:"test", inviteFrom:"Beryl <admin@example.test>", inviteSeconds:172800, production:false });
-const adminId="11111111-1111-4111-8111-111111111111", inactiveId="22222222-2222-4222-8222-222222222222", propertyId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const adminId="11111111-1111-4111-8111-111111111111", inactiveId="22222222-2222-4222-8222-222222222222", superAdminId="33333333-3333-4333-8333-333333333333", customerId="44444444-4444-4444-8444-444444444444", missingProfileId="55555555-5555-4555-8555-555555555555", propertyId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
 class Sessions implements AdminRepository {
   profiles=new Map<string,AdminProfile>([
     [adminId,{userId:adminId,fullName:"Review Admin",email:"admin@example.test",phone:"+2348011111111",department:"MANAGEMENT",role:"ADMIN",active:true}],
     [inactiveId,{userId:inactiveId,fullName:"Inactive Admin",email:"inactive@example.test",phone:"+2348022222222",department:"TECH",role:"ADMIN",active:false}],
+    [superAdminId,{userId:superAdminId,fullName:"Super Admin",email:"super@example.test",phone:"+2348033333333",department:"MANAGEMENT",role:"SUPER_ADMIN",active:true}],
   ]);
   sessions=new Map<string,StoredAdminSession>();
   profile(id:string){return Promise.resolve(this.profiles.get(id)??null);}
@@ -77,11 +78,13 @@ async function fixture(t:TestContext){
   return{properties,storage,request,login};
 }
 
-test("Admin property endpoints reject unauthenticated and inactive Admin access",async t=>{const f=await fixture(t);assert.equal((await f.request("/properties")).status,401);assert.equal((await f.login(inactiveId)).status,401);assert.equal(f.properties.queries.length,0);});
+test("Admin property endpoints reject unauthenticated, inactive, customer and missing-profile access",async t=>{const f=await fixture(t);assert.equal((await f.request("/properties")).status,401);for(const id of [inactiveId,customerId,missingProfileId])assert.equal((await f.login(id)).status,401);assert.equal(f.properties.queries.length,0);});
+test("active Admin and Super Admin can open property details",async t=>{for(const id of [adminId,superAdminId]){await t.test(id,async t=>{const f=await fixture(t);assert.equal((await f.login(id)).status,200);assert.equal((await f.request("/properties/RES-TEST01")).status,200);});}});
 test("directory validates server search, status, sort and pagination",async t=>{const f=await fixture(t);await f.login(adminId);assert.equal((await f.request("/properties?search=Ikeja&status=PENDING&sort=TITLE_DESC&page=2&pageSize=6")).status,200);assert.deepEqual(f.properties.queries[0],{search:"Ikeja",status:"PENDING",sort:"TITLE_DESC",page:2,pageSize:6});for(const path of ["/properties?status=APPROVED","/properties?sort=PRICE","/properties?page=0"])assert.equal((await f.request(path)).status,400);});
 test("approval and rejection derive reviewer identity from the Admin session",async t=>{const f=await fixture(t);await f.login(adminId);assert.equal((await f.request("/properties/RES-TEST01/approve",{version:2})).status,200);assert.equal((await f.request("/properties/RES-TEST01/reject",{version:2,reason:"Provide a clearer ownership document."})).status,200);assert.deepEqual(f.properties.reviews,[{code:"RES-TEST01",reviewer:adminId,action:"APPROVE",version:2},{code:"RES-TEST01",reviewer:adminId,action:"REJECT",version:2,reason:"Provide a clearer ownership document."}]);assert.equal((await f.request("/properties/RES-TEST01/reject",{version:2,reason:"   "})).status,400);});
 test("private documents require Admin auth and stream through private storage",async t=>{const f=await fixture(t),path="/properties/RES-TEST01/documents/cccccccc-cccc-4ccc-8ccc-cccccccccccc";assert.equal((await f.request(path)).status,401);await f.login(adminId);const response=await f.request(path);assert.equal(response.status,200);assert.equal(response.headers.get("content-type"),"application/pdf");assert.equal(f.storage.downloads,1);});
 test("signed mandate documents and review decisions require Admin auth",async t=>{const f=await fixture(t),documentId="cccccccc-cccc-4ccc-8ccc-cccccccccccc",submissionId="dddddddd-dddd-4ddd-8ddd-dddddddddddd",path=`/properties/RES-TEST01/signed-mandates/documents/${documentId}`;assert.equal((await f.request(path)).status,401);await f.login(adminId);assert.equal((await f.request(path)).status,200);assert.equal((await f.request("/properties/RES-TEST01/signed-mandates/review",{submissionId,action:"REJECT",reason:"Upload every signed page clearly."})).status,200);assert.deepEqual(f.properties.mandateReviews,[{code:"RES-TEST01",submissionId,reviewer:adminId,action:"REJECT",reason:"Upload every signed page clearly."}]);assert.equal((await f.request("/properties/RES-TEST01/signed-mandates/review",{submissionId,action:"REJECT",reason:"   "})).status,400);});
+test("unauthorized sessions cannot approve properties or review mandates",async t=>{const f=await fixture(t),submissionId="dddddddd-dddd-4ddd-8ddd-dddddddddddd";assert.equal((await f.request("/properties/RES-TEST01/approve",{version:2})).status,401);assert.equal((await f.request("/properties/RES-TEST01/signed-mandates/review",{submissionId,action:"APPROVE"})).status,401);assert.deepEqual(f.properties.reviews,[]);assert.deepEqual(f.properties.mandateReviews,[]);});
 
 test("moderation migration maps statuses, persists review history and controls visibility",async t=>{
   const db=new PGlite();t.after(()=>db.close());

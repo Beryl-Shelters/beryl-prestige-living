@@ -46,10 +46,16 @@ export class SupabaseAdminPropertiesRepository implements AdminPropertiesReposit
   }
   async detail(code: string) {
     const detail=await this.rpc<AdminPropertyDetail>("read_admin_property", { p_code: code });
-    const {data,error}=await this.db.from("listing_mandate_versions").select("id,version,agreement_version,generated_at,submissions:listing_mandate_submissions(id,submission_number,status,uploaded_at,reviewed_at,rejection_reason,reviewer:admin_profiles!listing_mandate_submissions_reviewed_by_fkey(full_name),documents:listing_mandate_submission_documents(id,title,sort_order,mime_type,size_bytes))").eq("listing_id",detail.id).order("version",{ascending:false});
+    const {data,error}=await this.db.from("listing_mandate_versions").select("id,version,agreement_version,generated_at,submissions:listing_mandate_submissions(id,submission_number,status,uploaded_at,reviewed_by,reviewed_at,rejection_reason,documents:listing_mandate_submission_documents(id,title,sort_order,mime_type,size_bytes))").eq("listing_id",detail.id).order("version",{ascending:false});
     propertyError(error);
     const versions=data??[],latest=versions[0];
-    detail.physicalMandate=latest?{id:latest.id,version:latest.version,agreementVersion:latest.agreement_version,generatedAt:latest.generated_at,submissions:versions.flatMap(version=>(version.submissions??[]).map((submission)=>({id:submission.id,mandateVersion:version.version,agreementVersion:version.agreement_version,submissionNumber:submission.submission_number,status:submission.status,uploadedAt:submission.uploaded_at,reviewedAt:submission.reviewed_at,reviewerName:submission.reviewer?.[0]?.full_name??null,rejectionReason:submission.rejection_reason,documents:(submission.documents??[]).map(document=>({id:document.id,title:document.title,sortOrder:document.sort_order,mimeType:document.mime_type,sizeBytes:document.size_bytes}))})))}:null;
+    const reviewerIds=[...new Set(versions.flatMap(version=>(version.submissions??[]).map(submission=>submission.reviewed_by).filter((value):value is string=>typeof value==="string")))];
+    const reviewerNames=new Map<string,string>();
+    await Promise.all(reviewerIds.map(async reviewerId=>{
+      const profile=await this.rpc<{fullName?:unknown}|null>("read_admin_profile",{p_user:reviewerId});
+      if(typeof profile?.fullName==="string")reviewerNames.set(reviewerId,profile.fullName);
+    }));
+    detail.physicalMandate=latest?{id:latest.id,version:latest.version,agreementVersion:latest.agreement_version,generatedAt:latest.generated_at,submissions:versions.flatMap(version=>(version.submissions??[]).map((submission)=>({id:submission.id,mandateVersion:version.version,agreementVersion:version.agreement_version,submissionNumber:submission.submission_number,status:submission.status,uploadedAt:submission.uploaded_at,reviewedAt:submission.reviewed_at,reviewerName:submission.reviewed_by?reviewerNames.get(submission.reviewed_by)??null:null,rejectionReason:submission.rejection_reason,documents:(submission.documents??[]).map(document=>({id:document.id,title:document.title,sortOrder:document.sort_order,mimeType:document.mime_type,sizeBytes:document.size_bytes}))})))}:null;
     return detail;
   }
   async review(code: string, reviewerId: string, action: "APPROVE" | "REJECT", version: number, reason?: string) {
