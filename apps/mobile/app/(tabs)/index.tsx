@@ -15,6 +15,8 @@ import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
 type SearchMode = "buy" | "sell" | "refer";
 const heroImage = require("../../../web/public/landing/landingpagehero_desktop.png");
+const WEBSITE_HERO_COPPER = "#A85D29";
+const WEBSITE_HERO_TEXT = "#4B3516";
 
 export default function HomeScreen() {
   const params = useLocalSearchParams<{ ref?: string }>();
@@ -338,19 +340,19 @@ function createStyles(colors: ColorTokens, isDark: boolean) {
     heroImage: { width: "100%", height: 190 },
     heroHeadline: {
       ...typography.heading,
-      color: isDark ? "#1F2937" : "#FFFFFF",
+      color: isDark ? colors.text : WEBSITE_HERO_TEXT,
       fontSize: 22,
       lineHeight: 28,
       fontWeight: "800",
       letterSpacing: -0.3,
     },
     heroEmphasis: {
-      color: colors.brand,
+      color: isDark ? colors.brand : WEBSITE_HERO_COPPER,
       fontStyle: "italic",
     },
     heroCopy: {
       ...typography.body,
-      color: isDark ? "#1F2937" : "#FFFFFF",
+      color: isDark ? colors.textMuted : WEBSITE_HERO_TEXT,
       fontSize: 14,
       lineHeight: 20,
     },

@@ -11,7 +11,7 @@
     "type-check": "tsc --noEmit",
     "lint": "eslint .",
     "test": "tsx --test tests/*.test.ts",
-    "test:ui": "node tests/shell-ui.checks.mjs",
+    "test:ui": "node tests/onboarding-ui.checks.mjs && node tests/shell-ui.checks.mjs",
     "test:release-ui": "node tests/release-shell-ui.checks.mjs",
     "validate:config": "expo config --type public",
     "validate:routes": "tsx --test tests/foundation.test.ts"
@@ -25,6 +25,7 @@
     "expo-image-picker": "~57.0.20",
     "expo-router": "~57.0.25",
     "expo-secure-store": "~57.0.4",
+    "expo-splash-screen": "~57.0.9",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",

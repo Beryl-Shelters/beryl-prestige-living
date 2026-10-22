@@ -7,15 +7,6 @@
     "scheme": "berylshelter",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#F7F5F2",
-      "dark": {
-        "image": "./assets/splash-icon.png",
-        "backgroundColor": "#0D1117"
-      }
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.berylshelter.mobile",
@@ -39,7 +30,20 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#242424",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#242424",
+            "image": "./assets/splash-icon.png"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
