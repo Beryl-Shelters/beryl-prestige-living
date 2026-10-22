@@ -10,7 +10,7 @@ export async function checkSellAssistance({ page, origin, calls, failures, scree
     assert(labelBox && buttonBox); const gap = buttonBox.x - (labelBox.x + labelBox.width);
     assert(gap >= 4 && gap <= 7, `${buttonName} gap was ${gap}px`);
   };
-  const navSell = () => page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell — Sell a Property" });
+  const navSell = () => page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell a Property", exact: true });
   const prompt = page.getByRole("dialog", { name: "Do you need assistance" });
   await page.goto(origin + "/buy"); await navSell().click(); await prompt.waitFor(); await screenshot("sell-decision-1440");
   const promptSize = await prompt.boundingBox(); assert(promptSize && promptSize.width <= 520 && promptSize.height < 260);

@@ -11,7 +11,7 @@ export async function checkBuyAssistance({ page, origin, calls, failures, screen
     assert(labelBox && buttonBox); const gap = buttonBox.x - (labelBox.x + labelBox.width);
     assert(gap >= 4 && gap <= 7, `${buttonName} gap was ${gap}px`);
   };
-  const navBuy = () => page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Buy", exact: true });
+  const navBuy = () => page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Buy a Property", exact: true });
   const prompt = page.getByRole("dialog", { name: "Do you need Assistance?" });
   await page.goto(origin + "/about"); await navBuy().click(); await prompt.waitFor();
   const size = await prompt.boundingBox(); assert(size && size.width <= 520 && size.height < 260); await screenshot("buy-decision-1440");

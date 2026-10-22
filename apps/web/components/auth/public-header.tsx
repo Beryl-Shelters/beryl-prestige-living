@@ -13,8 +13,8 @@ const navigation = [
   ["Home", "/"],
   ["About", "/about"],
   ["Referrals", "/referrals"],
-  ["Buy", "/buy"],
-  ["Sell", "/sell"],
+  ["Buy a Property", "/buy"],
+  ["Sell a Property", "/sell"],
   ["Careers", "/careers"],
   ["Support", "/support"],
 ] as const;
@@ -78,11 +78,11 @@ export function PublicHeader({ sessionAware = false, mobileMenu = false, onSessi
         <nav className="public-nav" aria-label="Public navigation">
           {navigation.map(([label, href]) => {
             const isSell = href === "/sell";
-            const isBuy = label === "Buy";
+            const isBuy = href === "/buy";
             return <Link ref={isSell ? sellTrigger : isBuy ? buyTrigger : undefined} className={pathname === href || isSell && pathname.startsWith("/sell") || isBuy && pathname.startsWith("/buy") ? "active" : undefined} href={href} key={label} onClick={event => {
               if (isSell || isBuy) { event.preventDefault(); setOpen(false); setAccountOpen(false); setAssistancePrompt(isSell ? "sell" : "buy"); return; }
               setOpen(false);
-            }} aria-label={isSell ? "Sell — Sell a Property" : undefined}>{isSell ? <span className="public-nav-sell"><span className="public-nav-sell-primary">Sell</span><span className="public-nav-sell-secondary">Sell a Property</span></span> : label}</Link>;
+            }}>{label}</Link>;
           })}
         </nav>
         <div className="header-actions">

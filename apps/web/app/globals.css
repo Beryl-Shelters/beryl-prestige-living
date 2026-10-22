@@ -129,9 +129,6 @@ button:disabled { cursor: wait; opacity: .65; }
 .brand-logo { display: block; height: auto; object-fit: contain; }
 .public-nav { align-items: center; display: flex; flex: 1; gap: clamp(16px, 1.8vw, 28px); justify-content: flex-end; min-width: 0; white-space: nowrap; }
 .public-nav a { color: var(--nav-link-color); font-size: 12px; font-weight: 600; text-decoration: none; transition: color .15s ease; }
-.public-nav-sell { align-items: center; display: inline-flex; flex-direction: column; justify-content: center; line-height: 1; text-align: center; }
-.public-nav-sell-primary { font-size: 13px; font-weight: 800; line-height: 1.05; }
-.public-nav-sell-secondary { font-size: 9px; font-weight: 600; line-height: 1.1; margin-top: 2px; }
 .public-nav a.active { color: var(--gold); }
 .public-site-menu { align-items: center; display: contents; }
 .public-menu-button { background: transparent; border: 0; display: none; margin-left: auto; padding: 8px; }
@@ -286,9 +283,6 @@ button:disabled { cursor: wait; opacity: .65; }
   .public-site-header .public-site-menu.open { display: flex; flex-direction: column; }
   .public-site-header .public-nav { align-items: stretch; display: flex; flex: none; flex-direction: column; gap: 0; order: initial; overflow: visible; padding: 0; }
   .public-site-header .public-nav a { border-bottom: 1px solid var(--line); font-size: 14px; padding: 11px 8px; }
-  .public-site-header .public-nav-sell { align-items: center; width: fit-content; }
-  .public-site-header .public-nav-sell-primary { font-size: 14px; }
-  .public-site-header .public-nav-sell-secondary { font-size: 10px; }
   .public-site-header .header-actions { justify-content: center; margin: 14px 0 0; }
   .public-site-header .public-account-menu { max-width: 100%; width: 100%; }
   .public-site-header .public-account-trigger { justify-content: center; width: 100%; }
