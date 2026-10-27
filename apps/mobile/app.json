@@ -35,12 +35,12 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#242424",
-          "image": "./assets/splash-icon.png",
+          "image": "../web/public/brand/beryl-shelter-logo.png",
           "imageWidth": 180,
           "resizeMode": "contain",
           "dark": {
             "backgroundColor": "#242424",
-            "image": "./assets/splash-icon.png"
+            "image": "../web/public/brand/beryl-shelter-logo.png"
           }
         }
       ]

@@ -10,7 +10,7 @@ import { useAuth } from "@/providers/auth-provider";
 type Phase = "brand" | "transition" | "onboarding" | "hidden";
 let launchExperienceHandled = false;
 
-export function LaunchExperience() {
+export function LaunchExperience({ onVisualReady }: { onVisualReady?: () => void }) {
   const pathname = usePathname();
   const { status } = useAuth();
   const startedAt = useRef<number | null>(null);
@@ -22,6 +22,12 @@ export function LaunchExperience() {
     latestPathname.current = pathname;
     latestStatus.current = status;
   }, [pathname, status]);
+
+  useEffect(() => {
+    if (phase === "brand" || phase === "transition") return;
+    const frame = requestAnimationFrame(() => onVisualReady?.());
+    return () => cancelAnimationFrame(frame);
+  }, [onVisualReady, phase]);
 
   const dismiss = useCallback(() => {
     launchExperienceHandled = true;
@@ -61,7 +67,7 @@ export function LaunchExperience() {
       {phase === "brand" || phase === "transition" ? (
         <>
           <StatusBar style="light" />
-          <BrandSplash exiting={phase === "transition"} />
+          <BrandSplash exiting={phase === "transition"} onReady={onVisualReady} />
         </>
       ) : null}
     </View>

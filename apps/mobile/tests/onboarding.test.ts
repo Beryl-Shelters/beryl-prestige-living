@@ -83,7 +83,7 @@ test("onboarding uses supplied assets, approved copy, paging and existing routes
   assert.match(carousel,/\"\/dashboard\/referrals\"/);
 });
 
-test("onboarding heroes remain contained and the brand has no circular plate",()=>{
+test("onboarding heroes remain contained and the enlarged brand stays readable throughout its entrance",()=>{
   const carousel=read("src/components/onboarding-carousel.tsx"),splash=read("src/components/brand-splash.tsx");
   assert.match(carousel,/height \* \(compact \? 0\.28 : 0\.33\)/);
   assert.match(carousel,/resizeMode="contain"/);
@@ -91,17 +91,26 @@ test("onboarding heroes remain contained and the brand has no circular plate",()
   assert.doesNotMatch(carousel,/maxWidth: 560/);
   assert.match(splash,/>BERYL<\/Text> Shelter/);
   assert.match(splash,/>NIGERIA LIMITED<\/Text>/);
+  assert.match(splash,/availableWidth \* 0\.56/);
+  assert.match(splash,/availableHeight \* 0\.29/);
+  assert.match(splash,/Math\.max\(32, Math\.min\(availableWidth \* 0\.095, 38\)\)/);
+  assert.match(splash,/onLayout=\{\(event\) =>/);
+  assert.match(splash,/outputRange: \[0\.94, 1\]/);
+  assert.doesNotMatch(splash,/opacity: reveal/);
+  assert.match(splash,/fontWeight: "800"/);
   assert.doesNotMatch(splash,/styles\.glow/);
   assert.doesNotMatch(splash,/borderRadius: 115/);
   assert.doesNotMatch(splash,/width: 230/);
 });
 
-test("native splash is held until layout and deep-link handling remains isolated",()=>{
+test("native splash waits for textured brand assets and deep-link handling remains isolated",()=>{
   const layout=read("app/_layout.tsx"),intent=read("app/+native-intent.tsx"),config=JSON.parse(read("app.json"));
   const brandSplash=read("src/components/brand-splash.tsx"),launchExperience=read("src/components/launch-experience.tsx");
   const splashPlugin=config.expo.plugins.find((plugin:unknown)=>Array.isArray(plugin)&&plugin[0]==="expo-splash-screen");
   assert.match(layout,/preventAutoHideAsync/);
-  assert.match(layout,/onLayout=\{hideNativeSplash\}/);
+  assert.match(layout,/onLayout=\{onRootLayout\}/);
+  assert.match(layout,/!rootLaidOut\.current \|\| !visualReady\.current/);
+  assert.match(layout,/onVisualReady=\{onVisualReady\}/);
   assert.match(layout,/hideAsync/);
   assert.match(layout,/LaunchExperience/);
   assert.match(layout,/backgroundColor: "#242424"/);
@@ -111,7 +120,24 @@ test("native splash is held until layout and deep-link handling remains isolated
   assert.ok(Array.isArray(splashPlugin));
   assert.equal(splashPlugin[1].backgroundColor,"#242424");
   assert.equal(splashPlugin[1].dark.backgroundColor,"#242424");
-  assert.equal(splashPlugin[1].image,"./assets/splash-icon.png");
+  assert.equal(splashPlugin[1].image,"../web/public/brand/beryl-shelter-logo.png");
+  assert.equal(splashPlugin[1].imageWidth,180);
+  assert.equal(existsSync(join(root,"../web/public/brand/beryl-shelter-logo.png")),true);
+  assert.match(brandSplash,/onLoadEnd=\{\(\) => markLoaded\("texture"\)\}/);
+  assert.match(brandSplash,/onLoadEnd=\{\(\) => markLoaded\("logo"\)\}/);
+  assert.match(launchExperience,/onReady=\{onVisualReady\}/);
   assert.match(brandSplash,/>BERYL<\/Text> Shelter/);
   assert.match(brandSplash,/>NIGERIA LIMITED<\/Text>/);
+});
+
+test("carousel keeps images mounted and never fades them during a page change",()=>{
+  const carousel=read("src/components/onboarding-carousel.tsx");
+  assert.match(carousel,/initialNumToRender=\{carouselSlides\.length\}/);
+  assert.match(carousel,/setMoving\(true\)/);
+  assert.match(carousel,/onMomentumScrollEnd=.*settleAt/);
+  assert.match(carousel,/setTimerEpoch\(\(value\) => value \+ 1\)/);
+  assert.match(carousel,/key: "refer-loop"/);
+  assert.match(carousel,/page === slides\.length/);
+  assert.match(carousel,/animated: false/);
+  assert.doesNotMatch(carousel,/contentAnimation|animateContent/);
 });

@@ -11,7 +11,7 @@ import { ThemeProvider, useTheme } from "@/providers/theme-provider";
 
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 
-function ThemedNavigationShell() {
+function ThemedNavigationShell({ onVisualReady }: { onVisualReady: () => void }) {
   const { colors, effectiveTheme } = useTheme();
 
   return (
@@ -37,26 +37,36 @@ function ThemedNavigationShell() {
         <Stack.Screen name="buy-assistance" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" options={{ title: "Not Found" }} />
       </Stack>
-      <LaunchExperience />
+      <LaunchExperience onVisualReady={onVisualReady} />
     </>
   );
 }
 
 export default function RootLayout() {
   const nativeSplashHidden = useRef(false);
+  const rootLaidOut = useRef(false);
+  const visualReady = useRef(false);
   const hideNativeSplash = useCallback(() => {
-    if (nativeSplashHidden.current) return;
+    if (nativeSplashHidden.current || !rootLaidOut.current || !visualReady.current) return;
     nativeSplashHidden.current = true;
     void SplashScreen.hideAsync().catch(() => {});
   }, []);
+  const onRootLayout = useCallback(() => {
+    rootLaidOut.current = true;
+    hideNativeSplash();
+  }, [hideNativeSplash]);
+  const onVisualReady = useCallback(() => {
+    visualReady.current = true;
+    hideNativeSplash();
+  }, [hideNativeSplash]);
 
   return (
     <SafeAreaProvider>
-      <View onLayout={hideNativeSplash} style={styles.root}>
+      <View onLayout={onRootLayout} style={styles.root}>
         <ThemeProvider>
           <AuthProvider>
             <PropertyStateProvider>
-              <ThemedNavigationShell />
+              <ThemedNavigationShell onVisualReady={onVisualReady} />
             </PropertyStateProvider>
           </AuthProvider>
         </ThemeProvider>

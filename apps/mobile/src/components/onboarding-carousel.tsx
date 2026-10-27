@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { router, useFocusEffect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
-  Animated,
   AppState,
   FlatList,
   Image,
@@ -21,7 +20,6 @@ import { BrandLogo } from "./brand-logo";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import {
   ONBOARDING_INTERVAL_MS,
-  nextOnboardingSlide,
   onboardingPage,
   shouldAutoAdvance,
 } from "@/lib/onboarding";
@@ -46,6 +44,8 @@ const slides = [
     imageLabel: "Property professional holding house keys",
   },
 ] as const;
+// The repeated first slide lets the last slide scroll forward before an invisible snap to page zero.
+const carouselSlides = [...slides, { ...slides[0], key: "refer-loop" }] as const;
 
 function Shortcut({ icon, label, onPress }: { icon: AppIconName; label: string; onPress: () => void }) {
   return (
@@ -62,35 +62,41 @@ export function OnboardingCarousel({ onNavigate }: { onNavigate: () => void }) {
   const heroHeight = Math.max(160, Math.min(compact ? 210 : 300, Math.round(height * (compact ? 0.28 : 0.33))));
   const heroWidth = Math.min(width - (compact ? 40 : 56), compact ? 270 : 340);
   const reducedMotion = useReducedMotion();
-  const listRef = useRef<FlatList<(typeof slides)[number]>>(null);
+  const listRef = useRef<FlatList<(typeof carouselSlides)[number]>>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const initialSlideReady = useRef(false);
-  const [contentAnimation] = useState(() => new Animated.Value(1));
+  const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const draggingRef = useRef(false);
+  const offsetRef = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [focused, setFocused] = useState(true);
   const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState);
-  const [dragging, setDragging] = useState(false);
+  const [moving, setMoving] = useState(false);
   const [timerEpoch, setTimerEpoch] = useState(0);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = null;
   }, []);
+  const clearSettleTimer = useCallback(() => {
+    if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+    settleTimerRef.current = null;
+  }, []);
 
-  const animateContent = useCallback(() => {
-    contentAnimation.stopAnimation();
-    contentAnimation.setValue(reducedMotion ? 1 : 0);
-    if (!reducedMotion) {
-      Animated.parallel([
-        Animated.timing(contentAnimation, { toValue: 1, duration: 360, useNativeDriver: true }),
-      ]).start();
+  const settleAt = useCallback((offset: number) => {
+    clearSettleTimer();
+    draggingRef.current = false;
+    const page = onboardingPage(offset, width, carouselSlides.length);
+    if (page === slides.length) {
+      listRef.current?.scrollToIndex({ index: 0, animated: false });
     }
-  }, [contentAnimation, reducedMotion]);
-
-  const showSlide = useCallback((index: number, animated: boolean) => {
-    setActiveIndex(index);
-    listRef.current?.scrollToIndex({ index, animated: animated && !reducedMotion });
-  }, [reducedMotion]);
+    setActiveIndex(page % slides.length);
+    setMoving(false);
+    setTimerEpoch((value) => value + 1);
+  }, [clearSettleTimer, width]);
+  const scheduleSettle = useCallback((offset: number, delay = 220) => {
+    clearSettleTimer();
+    settleTimerRef.current = setTimeout(() => settleAt(offset), delay);
+  }, [clearSettleTimer, settleAt]);
 
   useFocusEffect(useCallback(() => {
     setFocused(true);
@@ -103,41 +109,22 @@ export function OnboardingCarousel({ onNavigate }: { onNavigate: () => void }) {
   }, []);
 
   useEffect(() => {
-    if (!initialSlideReady.current) {
-      initialSlideReady.current = true;
-      contentAnimation.setValue(1);
-      return;
-    }
-    animateContent();
-  }, [activeIndex, animateContent, contentAnimation]);
-
-  useEffect(() => {
     clearTimer();
-    if (dragging || !shouldAutoAdvance(focused, appState, reducedMotion)) return;
+    if (moving || !shouldAutoAdvance(focused, appState, reducedMotion)) return;
     timerRef.current = setTimeout(() => {
-      showSlide(nextOnboardingSlide(activeIndex, slides.length), true);
+      const next = activeIndex + 1;
+      setMoving(true);
+      listRef.current?.scrollToIndex({ index: next, animated: true });
+      // Some platforms do not emit a momentum event for programmatic scrolling.
+      scheduleSettle(next * width, 900);
     }, ONBOARDING_INTERVAL_MS);
     return clearTimer;
-  }, [activeIndex, appState, clearTimer, dragging, focused, reducedMotion, showSlide, timerEpoch]);
+  }, [activeIndex, appState, clearTimer, focused, moving, reducedMotion, scheduleSettle, timerEpoch, width]);
 
   useEffect(() => () => {
     clearTimer();
-    contentAnimation.stopAnimation();
-  }, [clearTimer, contentAnimation]);
-
-  const animatedContentStyle = useMemo(() => ({
-    opacity: contentAnimation,
-    transform: [{ translateY: contentAnimation.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
-  }), [contentAnimation]);
-
-  function settled(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    const index = onboardingPage(event.nativeEvent.contentOffset.x, width, slides.length);
-    if (index !== activeIndex) {
-      setActiveIndex(index);
-    }
-    setDragging(false);
-    setTimerEpoch((value) => value + 1);
-  }
+    clearSettleTimer();
+  }, [clearSettleTimer, clearTimer]);
 
   function navigate(path: "/(auth)/login" | "/(auth)/register", next?: string) {
     onNavigate();
@@ -155,29 +142,59 @@ export function OnboardingCarousel({ onNavigate }: { onNavigate: () => void }) {
           <View onLayout={onLayout} style={[style, styles.carouselCell]}>{children}</View>
         )}
         contentContainerStyle={styles.carouselContent}
-        data={slides}
+        data={carouselSlides}
         decelerationRate="fast"
         getItemLayout={(_, index) => ({ index, length: width, offset: width * index })}
         horizontal
+        initialNumToRender={carouselSlides.length}
         keyExtractor={(item) => item.key}
-        onMomentumScrollEnd={settled}
+        onMomentumScrollBegin={() => {
+          if (draggingRef.current) clearSettleTimer();
+        }}
+        onMomentumScrollEnd={(event: NativeSyntheticEvent<NativeScrollEvent>) => settleAt(event.nativeEvent.contentOffset.x)}
+        onScroll={(event: NativeSyntheticEvent<NativeScrollEvent>) => {
+          const offset = event.nativeEvent.contentOffset.x;
+          if (Math.abs(offset - offsetRef.current) < 0.5) return;
+          offsetRef.current = offset;
+          clearTimer();
+          setMoving(true);
+          // Web touch scrolling can omit drag-end/momentum callbacks; idle position still settles the page.
+          scheduleSettle(offset, draggingRef.current ? 700 : 220);
+        }}
+        scrollEventThrottle={16}
         onScrollBeginDrag={() => {
           clearTimer();
-          setDragging(true);
+          clearSettleTimer();
+          draggingRef.current = true;
+          setMoving(true);
         }}
-        onScrollEndDrag={() => setDragging(false)}
+        onScrollEndDrag={(event: NativeSyntheticEvent<NativeScrollEvent>) => {
+          draggingRef.current = false;
+          // If a drag ends without momentum, settle after the native page snap.
+          scheduleSettle(event.nativeEvent.contentOffset.x, 400);
+        }}
+        onTouchStart={() => {
+          clearTimer();
+          clearSettleTimer();
+          draggingRef.current = true;
+          setMoving(true);
+        }}
+        onTouchEnd={() => {
+          draggingRef.current = false;
+          scheduleSettle(offsetRef.current, 400);
+        }}
         pagingEnabled
         removeClippedSubviews={false}
         renderItem={({ item, index }) => (
-          <View style={[styles.slide, { width, paddingHorizontal: compact ? 14 : 22 }]}>
-            <Animated.View style={[styles.slideContent, compact && styles.slideContentCompact, index === activeIndex ? animatedContentStyle : undefined]}>
+          <View accessibilityElementsHidden={index === slides.length} importantForAccessibility={index === slides.length ? "no-hide-descendants" : "auto"} style={[styles.slide, { width, paddingHorizontal: compact ? 14 : 22 }]}>
+            <View style={[styles.slideContent, compact && styles.slideContentCompact]}>
               <View style={[styles.heroFrame, { width: heroWidth, height: heroHeight }]}>
                 <Image accessibilityLabel={item.imageLabel} source={item.image} resizeMode="contain" style={styles.heroImage} />
               </View>
               <Text accessibilityRole="header" maxFontSizeMultiplier={1.3} style={[styles.headline, compact && styles.headlineCompact]}>
                 {item.headline}
               </Text>
-            </Animated.View>
+            </View>
           </View>
         )}
         showsHorizontalScrollIndicator={false}
