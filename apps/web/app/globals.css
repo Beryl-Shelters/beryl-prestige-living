@@ -129,6 +129,7 @@ button:disabled { cursor: wait; opacity: .65; }
 .brand-logo { display: block; height: auto; object-fit: contain; }
 .public-nav { align-items: center; display: flex; flex: 1; gap: clamp(16px, 1.8vw, 28px); justify-content: flex-end; min-width: 0; white-space: nowrap; }
 .public-nav a { color: var(--nav-link-color); font-size: 12px; font-weight: 600; text-decoration: none; transition: color .15s ease; }
+.public-nav a.featured { font-weight: 800; }
 .public-nav a.active { color: var(--gold); }
 .public-site-menu { align-items: center; display: contents; }
 .public-menu-button { background: transparent; border: 0; display: none; margin-left: auto; padding: 8px; }

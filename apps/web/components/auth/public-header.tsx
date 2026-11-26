@@ -12,9 +12,9 @@ import { ThemeToggle } from "../theme/theme-toggle";
 const navigation = [
   ["Home", "/"],
   ["About", "/about"],
-  ["Referrals", "/referrals"],
-  ["Buy a Property", "/buy"],
-  ["Sell a Property", "/sell"],
+  ["Buy", "/buy"],
+  ["Sell", "/sell"],
+  ["Refer", "/referrals"],
   ["Careers", "/careers"],
   ["Support", "/support"],
 ] as const;
@@ -79,7 +79,9 @@ export function PublicHeader({ sessionAware = false, mobileMenu = false, onSessi
           {navigation.map(([label, href]) => {
             const isSell = href === "/sell";
             const isBuy = href === "/buy";
-            return <Link ref={isSell ? sellTrigger : isBuy ? buyTrigger : undefined} className={pathname === href || isSell && pathname.startsWith("/sell") || isBuy && pathname.startsWith("/buy") ? "active" : undefined} href={href} key={label} onClick={event => {
+            const featured = isBuy || isSell || href === "/referrals";
+            const active = pathname === href || isSell && pathname.startsWith("/sell") || isBuy && pathname.startsWith("/buy");
+            return <Link ref={isSell ? sellTrigger : isBuy ? buyTrigger : undefined} className={[featured && "featured", active && "active"].filter(Boolean).join(" ")} href={href} key={label} onClick={event => {
               if (isSell || isBuy) { event.preventDefault(); setOpen(false); setAccountOpen(false); setAssistancePrompt(isSell ? "sell" : "buy"); return; }
               setOpen(false);
             }}>{label}</Link>;

@@ -23,7 +23,16 @@ try{
     },150,{timeout:4000});
     const brandMark=await splash.locator("img").last().locator("..").boundingBox();
     assert.ok(brandMark&&brandMark.width>=150,`Brand mark too small at ${profile.width}x${profile.height}`);
-    assert.equal(await splash.getByText("NIGERIA LIMITED").isVisible(),true);
+    const silverName=splash.locator('svg text[fill="url(#silver-name)"]');
+    const silverSuffix=splash.locator('svg text[fill="url(#silver-suffix)"]');
+    assert.equal(await silverName.count(),1,`Silver wordmark missing at ${profile.width}px`);
+    assert.equal(await silverSuffix.count(),1,`Silver company suffix missing at ${profile.width}px`);
+    assert.equal(await silverName.isVisible(),true);
+    assert.equal(await silverSuffix.isVisible(),true);
+    for(const label of [silverName,silverSuffix]){
+      const box=await label.boundingBox();assert.ok(box&&box.x>=0&&box.x+box.width<=profile.width,`Silver typography clipped at ${profile.width}px`);
+    }
+    if(profile.width===390&&process.env.BERYL_SPLASH_CAPTURE)await page.screenshot({path:process.env.BERYL_SPLASH_CAPTURE});
     await page.getByRole("heading",{name:"Refer a buyer to us and earn up to ₦2M"}).first().waitFor({timeout:8000});
     await splash.waitFor({state:"detached",timeout:1500});const elapsed=Date.now()-started;assert.ok(elapsed>=3000&&elapsed<=8500,`Splash elapsed ${elapsed}ms at ${profile.width}x${profile.height}`);
     const hero=page.getByLabel("Customer viewing a successful Beryl Shelter referral payment notification").first(),headline=page.getByRole("heading",{name:"Refer a buyer to us and earn up to ₦2M"}).first();

@@ -17,6 +17,7 @@ export function LaunchExperience({ onVisualReady }: { onVisualReady?: () => void
   const latestPathname = useRef(pathname);
   const latestStatus = useRef(status);
   const [phase, setPhase] = useState<Phase>(() => launchExperienceHandled || pathname !== "/" ? "hidden" : "brand");
+  const [brandReady, setBrandReady] = useState(false);
 
   useEffect(() => {
     latestPathname.current = pathname;
@@ -34,6 +35,11 @@ export function LaunchExperience({ onVisualReady }: { onVisualReady?: () => void
     setPhase("hidden");
   }, []);
 
+  const handleBrandReady = useCallback(() => {
+    onVisualReady?.();
+    setBrandReady(true);
+  }, [onVisualReady]);
+
   useEffect(() => {
     if (phase === "hidden" || pathname === "/") return;
     const timer = setTimeout(dismiss, 0);
@@ -41,7 +47,7 @@ export function LaunchExperience({ onVisualReady }: { onVisualReady?: () => void
   }, [dismiss, pathname, phase]);
 
   useEffect(() => {
-    if (phase !== "brand") return;
+    if (phase !== "brand" || !brandReady) return;
     if (startedAt.current === null) startedAt.current = Date.now();
     const remaining = launchDelay(status, Date.now() - startedAt.current);
     const timer = setTimeout(() => {
@@ -49,7 +55,7 @@ export function LaunchExperience({ onVisualReady }: { onVisualReady?: () => void
       setPhase("transition");
     }, remaining);
     return () => clearTimeout(timer);
-  }, [phase, status]);
+  }, [brandReady, phase, status]);
 
   useEffect(() => {
     if (phase !== "transition") return;
@@ -67,7 +73,7 @@ export function LaunchExperience({ onVisualReady }: { onVisualReady?: () => void
       {phase === "brand" || phase === "transition" ? (
         <>
           <StatusBar style="light" />
-          <BrandSplash exiting={phase === "transition"} onReady={onVisualReady} />
+          <BrandSplash exiting={phase === "transition"} onReady={handleBrandReady} />
         </>
       ) : null}
     </View>

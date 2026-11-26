@@ -13,9 +13,9 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
   assert.equal(await trigger.count(), 0);
   assert.equal(await page.getByRole("link", { name: "Register" }).count(), 1);
   assert.equal(await page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Analytics & Insights" }).count(), 0);
-  const signedOutSell = page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell a Property", exact: true });
+  const signedOutSell = page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell", exact: true });
   assert.equal(await signedOutSell.getAttribute("href"), "/sell");
-  assert.equal(await signedOutSell.innerText(), "Sell a Property");
+  assert.equal(await signedOutSell.innerText(), "Sell");
   await page.goto(origin + "/sell");
   await page.getByRole("heading", { name: "Sign in to sell a property" }).waitFor();
   assert.equal(await page.getByRole("link", { name: "Create free account" }).getAttribute("href"), "/register?next=%2Fdashboard%2Flistings%2Fnew");
@@ -31,8 +31,8 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
     assert.equal(await page.locator(".header-actions .public-account-menu").count(), 1, route);
     const nav = page.getByRole("navigation", { name: "Public navigation" });
     assert.equal(await nav.getByRole("link", { name: "Analytics & Insights" }).count(), 0, route);
-    assert.equal(await nav.getByRole("link", { name: "Sell a Property", exact: true }).getAttribute("href"), "/sell", route);
-    assert.equal(await nav.getByRole("link", { name: "Buy a Property", exact: true }).getAttribute("href"), "/buy", route);
+    assert.equal(await nav.getByRole("link", { name: "Sell", exact: true }).getAttribute("href"), "/sell", route);
+    assert.equal(await nav.getByRole("link", { name: "Buy", exact: true }).getAttribute("href"), "/buy", route);
   }
   await page.goto(origin + "/referrals"); await page.waitForURL("**/dashboard/referrals");
   await page.goto(origin + "/sell"); await page.waitForURL("**/dashboard/listings/new");
@@ -59,12 +59,15 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
     assert.deepEqual((await dropdown.locator(":scope > *").allTextContents()).map(value => value.trim()),
       ["My Dashboard", "Sell a Property", "Referrals", "Saved Property", "Compare Property", "Mortgage Calculator", "Log Out"]);
     const navigation = page.getByRole("navigation", { name: "Public navigation" });
-    const sellLink = navigation.getByRole("link", { name: "Sell a Property", exact: true });
-    const buyLink = navigation.getByRole("link", { name: "Buy a Property", exact: true });
+    const sellLink = navigation.getByRole("link", { name: "Sell", exact: true });
+    const buyLink = navigation.getByRole("link", { name: "Buy", exact: true });
     assert.equal(await sellLink.count(), 1, `one Sell link at ${width}`);
     assert.equal(await buyLink.count(), 1, `one Buy link at ${width}`);
-    assert.equal(await sellLink.innerText(), "Sell a Property", `single Sell label at ${width}`);
-    assert.equal(await buyLink.innerText(), "Buy a Property", `single Buy label at ${width}`);
+    assert.equal(await sellLink.innerText(), "Sell", `single Sell label at ${width}`);
+    assert.equal(await buyLink.innerText(), "Buy", `single Buy label at ${width}`);
+    assert.deepEqual(await navigation.locator("a").allTextContents(), ["Home", "About", "Buy", "Sell", "Refer", "Careers", "Support"]);
+    const weights = await navigation.locator("a").evaluateAll(elements => elements.map(element => Number(getComputedStyle(element).fontWeight)));
+    assert.deepEqual(weights, [600, 600, 800, 800, 800, 600, 600]);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `header overflow at ${width}`);
     if (width > 700) {
       assert.equal(await dropdown.evaluate(element => getComputedStyle(element).position), "absolute");
@@ -90,7 +93,7 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
   await dropdown.getByRole("link", { name: "My Dashboard" }).click();
   await page.waitForURL("**/dashboard");
   await page.goto(origin + "/buy"); await trigger.waitFor();
-  await page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell a Property", exact: true }).click();
+  await page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Sell", exact: true }).click();
   const sellPrompt=page.getByRole("dialog",{name:"Do you need assistance"});await sellPrompt.waitFor();await sellPrompt.getByRole("button",{name:"No",exact:true}).click();await page.waitForURL("**/dashboard/listings/new");
   for (const [label, path] of [["Sell a Property", "/dashboard/listings/new"], ["Referrals", "/dashboard/referrals"]]) {
     await page.goto(origin + "/buy"); await trigger.waitFor(); await trigger.click();
@@ -109,5 +112,5 @@ export async function checkPublicHeader({ page, origin, calls, failures, screens
   assert.equal(await page.getByText("Analytics & Insights", { exact: true }).count(), 0);
   passed.push("Shared authenticated public header uses session identity on five public routes; signed-in Referrals redirects to dashboard");
   passed.push("Public desktop/mobile navigation omits Analytics & Insights and retired /analytics returns 404");
-  passed.push("Signed-out controls, eight widths, exact single-line Buy a Property/Sell a Property labels, menu toggle/outside/Escape, valid routes and existing logout work");
+  passed.push("Signed-out controls, eight widths, emphasized Buy/Sell/Refer links, menu toggle/outside/Escape, valid routes and existing logout work");
 }

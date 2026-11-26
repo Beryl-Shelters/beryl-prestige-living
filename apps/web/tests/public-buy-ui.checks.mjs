@@ -55,11 +55,22 @@ export async function checkPublicBuy({ page, origin, calls, failures, screenshot
       await page.getByRole("button", { name: "Advanced Filters" }).click();
       const dialog = page.getByRole("dialog", { name: "Advanced Filters" }); await dialog.waitFor();
       assert.equal(await dialog.evaluate(element => element.getBoundingClientRect().right <= innerWidth + 1), true);
+      const specificTypes = await dialog.getByLabel("Specific Property Type").locator("option").evaluateAll(options => options.map(option => option.value));
+      assert.equal(specificTypes.length, 24);
+      for (const subtype of ["Flat", "Duplex", "Land", "Office Space", "Warehouse"]) assert(specificTypes.includes(subtype));
       if (width === 390) await screenshot("public-buy-filters-390");
       await dialog.getByRole("button", { name: "Close Advanced Filters" }).click();
     }
     if (width === 1440 || width === 390) { await page.evaluate(() => scrollTo(0, 0)); await screenshot(`public-buy-${width}`); }
   }
+  buyState.items.push({ ...baseProperty, code: "RES-LAND1", title: "Lagos Land", propertySubtype: "Land", bedrooms: 0, bathrooms: 0 });
+  await page.goto(origin + "/buy?propertySubtype=Land");
+  await page.getByText("1 Property found for sale").waitFor();
+  assert.equal(new URL(properties().at(-1).url).searchParams.get("propertySubtype"), "Land");
+  assert.equal(await page.getByText("Lagos Land").count(), 1);
+  buyState.items.pop();
+  await page.goto(origin + "/buy");
+  await page.getByText("2 Properties found for sale").waitFor();
   assert.equal(events().length, 0, "Initial/direct Buy loads must not record searches");
   assert.equal(await page.getByText("₦85,000,000").count(), 1);
   assert.equal(await page.getByText("Photo unavailable").count(), 1);

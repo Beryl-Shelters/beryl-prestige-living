@@ -47,6 +47,17 @@ test("launch completion is bounded independently of the decorative animation",()
   assert.doesNotMatch(brand,/onExited/);
 });
 
+test("Android releases the native splash without the default fade once the custom brand is ready",()=>{
+  const layout=read("app/_layout.tsx"),launch=read("src/components/launch-experience.tsx");
+  assert.match(layout,/Platform\.OS === "android"/);
+  assert.match(layout,/SplashScreen\.setOptions\(\{ duration: 0, fade: false \}\)/);
+  assert.match(layout,/!rootLaidOut\.current \|\| !visualReady\.current/);
+  assert.match(launch,/if \(phase !== "brand" \|\| !brandReady\) return/);
+  assert.match(launch,/onVisualReady\?\.\(\);\s*setBrandReady\(true\)/);
+  assert.match(launch,/BrandSplash exiting=\{phase === "transition"\} onReady=\{handleBrandReady\}/);
+  assert.doesNotMatch(launch,/setTimeout\(.*hideAsync/);
+});
+
 test("carousel advances every 3.5 seconds and loops deterministically",()=>{
   assert.equal(ONBOARDING_INTERVAL_MS,3500);
   assert.equal(nextOnboardingSlide(0,3),1);
@@ -89,15 +100,18 @@ test("onboarding heroes remain contained and the enlarged brand stays readable t
   assert.match(carousel,/resizeMode="contain"/);
   assert.match(carousel,/flexShrink: 1/);
   assert.doesNotMatch(carousel,/maxWidth: 560/);
-  assert.match(splash,/>BERYL<\/Text> Shelter/);
-  assert.match(splash,/>NIGERIA LIMITED<\/Text>/);
+  assert.match(splash,/<TSpan fontWeight="900">BERYL<\/TSpan><TSpan> Shelter<\/TSpan>/);
+  assert.match(splash,/>NIGERIA LIMITED<\/SvgText>/);
+  assert.match(splash,/LinearGradient id="silver-name"/);
+  assert.match(splash,/LinearGradient id="silver-suffix"/);
+  assert.doesNotMatch(splash,/#E5A45A|#E8C18E/);
   assert.match(splash,/availableWidth \* 0\.56/);
   assert.match(splash,/availableHeight \* 0\.29/);
   assert.match(splash,/Math\.max\(32, Math\.min\(availableWidth \* 0\.095, 38\)\)/);
   assert.match(splash,/onLayout=\{\(event\) =>/);
   assert.match(splash,/outputRange: \[0\.94, 1\]/);
   assert.doesNotMatch(splash,/opacity: reveal/);
-  assert.match(splash,/fontWeight: "800"/);
+  assert.match(splash,/fontWeight="800"/);
   assert.doesNotMatch(splash,/styles\.glow/);
   assert.doesNotMatch(splash,/borderRadius: 115/);
   assert.doesNotMatch(splash,/width: 230/);
@@ -125,9 +139,9 @@ test("native splash waits for textured brand assets and deep-link handling remai
   assert.equal(existsSync(join(root,"../web/public/brand/beryl-shelter-logo.png")),true);
   assert.match(brandSplash,/onLoadEnd=\{\(\) => markLoaded\("texture"\)\}/);
   assert.match(brandSplash,/onLoadEnd=\{\(\) => markLoaded\("logo"\)\}/);
-  assert.match(launchExperience,/onReady=\{onVisualReady\}/);
-  assert.match(brandSplash,/>BERYL<\/Text> Shelter/);
-  assert.match(brandSplash,/>NIGERIA LIMITED<\/Text>/);
+  assert.match(launchExperience,/onReady=\{handleBrandReady\}/);
+  assert.match(brandSplash,/<TSpan fontWeight="900">BERYL<\/TSpan><TSpan> Shelter<\/TSpan>/);
+  assert.match(brandSplash,/>NIGERIA LIMITED<\/SvgText>/);
 });
 
 test("carousel keeps images mounted and never fades them during a page change",()=>{

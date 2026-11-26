@@ -3,7 +3,7 @@ import { AuthError } from "../auth/errors.js";
 
 export const listingOptions = {
   occupancy_type: ["Residential", "Commercial"], ownership_type: ["Personal", "Family"],
-  property_type: ["Residential", "Commercial"], property_subtype: ["Bungalow", "Semi-Detached House", "Block of flats", "Terraced Duplexes", "Terraced Bungalows", "Semi-Detached Bungalows", "Detached Bungalows", "Detached Duplexes"],
+  property_type: ["Residential", "Commercial"], property_subtype: ["Bungalow", "Semi-Detached House", "Block of flats", "Terraced Duplexes", "Terraced Bungalows", "Semi-Detached Bungalows", "Detached Bungalows", "Detached Duplexes", "Flat", "Duplex", "Land", "Detached House", "Terraced House", "Townhouse", "Studio Apartment", "Penthouse", "Maisonette", "Mansion", "Office Space", "Shop", "Warehouse", "Commercial Building", "Mixed-Use Property"],
   facilities: ["Swimming Pool", "Balcony/Terrace", "Children Play Area", "Tennis Court", "Basketball Court", "Gym/Fitness Center", "CCTV", "Air Conditioning", "Laundry", "Garden", "Wi-Fi", "Housekeeping Services", "Car Park", "24Hrs Security"],
   document_type: ["Ownership", "Survey", "Other"],
   state: ["Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara", "Federal Capital Territory (FCT)"],

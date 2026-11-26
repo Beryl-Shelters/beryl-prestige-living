@@ -2,7 +2,7 @@ import { useCallback, useRef } from "react";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { LaunchExperience } from "@/components/launch-experience";
 import { AuthProvider } from "@/providers/auth-provider";
@@ -10,6 +10,10 @@ import { PropertyStateProvider } from "@/providers/property-state-provider";
 import { ThemeProvider, useTheme } from "@/providers/theme-provider";
 
 void SplashScreen.preventAutoHideAsync().catch(() => {});
+if (Platform.OS === "android") {
+  // The textured React Native splash is ready before hide; avoid Expo's extra 400 ms native fade.
+  SplashScreen.setOptions({ duration: 0, fade: false });
+}
 
 function ThemedNavigationShell({ onVisualReady }: { onVisualReady: () => void }) {
   const { colors, effectiveTheme } = useTheme();

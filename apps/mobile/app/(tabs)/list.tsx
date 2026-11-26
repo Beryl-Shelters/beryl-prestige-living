@@ -11,7 +11,7 @@ import {
   type CustomerListing,
   type ListingOptions,
 } from "@/lib/listings-api";
-import { nigerianStates } from "@/lib/property-taxonomy";
+import { nigerianStates, propertySubtypes } from "@/lib/property-taxonomy";
 import { friendlyError } from "@/lib/api-error";
 import { loadEditableListing } from "@/lib/listing-edit";
 import { useAuth } from "@/providers/auth-provider";
@@ -22,16 +22,7 @@ const defaultOptions: ListingOptions = {
   occupancy_type: ["Residential", "Commercial"],
   ownership_type: ["Personal", "Family"],
   property_type: ["Residential", "Commercial"],
-  property_subtype: [
-    "Bungalow",
-    "Semi-Detached House",
-    "Block of flats",
-    "Terraced Duplexes",
-    "Terraced Bungalows",
-    "Semi-Detached Bungalows",
-    "Detached Bungalows",
-    "Detached Duplexes",
-  ],
+  property_subtype: propertySubtypes,
   facilities: [
     "Swimming Pool",
     "Balcony/Terrace",

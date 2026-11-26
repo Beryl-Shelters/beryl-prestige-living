@@ -78,8 +78,11 @@ test("image/document MIME magic, file-size and executable restrictions",()=>{val
 test("expanded listing taxonomy accepts all states, subtypes and conveniences while rejecting unsupported values",async t=>{
   assert.equal(listingOptions.state.length,37);
   assert.equal(new Set(listingOptions.state).size,37);
+  assert.equal(listingOptions.property_subtype.length,23);
+  for(const subtype of ["Flat","Duplex","Land","Studio Apartment","Office Space","Warehouse"])assert(listingOptions.property_subtype.includes(subtype as typeof listingOptions.property_subtype[number]));
   for(const state of listingOptions.state) assert.equal(parseContent({...validContent,state}).state,state);
   for(const subtype of listingOptions.property_subtype) assert.equal(parseContent({...validContent,property_subtype:subtype}).property_subtype,subtype);
+  assert.equal(parseContent({...validContent,property_subtype:"Land",bedrooms:0,bathrooms:0}).property_subtype,"Land");
   for(const facility of listingOptions.facilities) assert.deepEqual(parseContent({...validContent,facilities:[facility]}).facilities,[facility]);
   for(const invalid of [{state:"Atlantis"},{property_subtype:"Villa"},{facilities:["Pool"]},{bedrooms:101},{bathrooms:101},{bedrooms:-1},{bathrooms:1.5}])assert.throws(()=>parseContent({...validContent,...invalid}));
   const f=await listingFixture(t);
