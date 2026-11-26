@@ -230,13 +230,20 @@ try {
           white: getComputedStyle(header).backgroundColor, background: getComputedStyle(document.body).backgroundColor,
           font: getComputedStyle(document.body).fontFamily, belowHeader: card.top >= header.getBoundingClientRect().bottom,
           right: picture.left >= card.right, stacked: picture.top >= card.bottom, footer: !!document.querySelector("footer"),
-          logo: document.querySelector(".brand img")?.getAttribute("alt") };
+          logo: document.querySelector(".brand img")?.getAttribute("alt"),
+          plain: document.querySelector(".auth-card-plain") ? {
+            background: getComputedStyle(document.querySelector(".auth-card-plain")).backgroundColor,
+            border: getComputedStyle(document.querySelector(".auth-card-plain")).borderTopWidth,
+            padding: getComputedStyle(document.querySelector(".auth-card-plain")).paddingTop,
+          } : null };
       });
       assert.equal(layout.overflow, false, `${path} overflows at ${width}`);
       assert.equal(layout.fixed, "fixed");
       assert.equal(layout.white, "rgb(255, 255, 255)");
       assert.equal(layout.background, "rgb(242, 242, 255)");
       assert.match(layout.font, /jakarta/i);
+      if (path === "/login" || path === "/register") assert.deepEqual(layout.plain, { background: "rgba(0, 0, 0, 0)", border: "0px", padding: "0px" }, `${path} has no card at ${width}`);
+      if (path === "/login" || path === "/register") assert.equal(await page.locator(".auth-card input[placeholder]").count(), 0, `${path} has no input placeholders at ${width}`);
       assert(layout.belowHeader && !layout.footer && layout.logo === "Beryl Shelter");
       assert.equal(await page.locator(".brand .brand-name").innerText(), "Beryl Shelter");
       const brand = await page.locator(".brand-lockup").boundingBox();

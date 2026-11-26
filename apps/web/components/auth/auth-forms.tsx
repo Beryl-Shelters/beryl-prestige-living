@@ -28,6 +28,10 @@ function Divider({ children }: { children: ReactNode }) {
   return <div className="auth-divider"><span>{children}</span></div>;
 }
 
+function LegalNotice({ action }: { action: "Signing in" | "Creating an account" }) {
+  return <p className="auth-legal-notice">{action} means you agree to our <Link href="/terms-of-service">Terms of Service</Link> and acknowledge our <Link href="/privacy-policy">Privacy Policy</Link>.</p>;
+}
+
 const subscribeToHydration = () => () => {};
 const hydratedSnapshot = () => true;
 const serverSnapshot = () => false;
@@ -70,13 +74,13 @@ export function LoginForm() {
     });
   }
   return (
-    <AuthForm className="auth-card" pending={pending} onSubmit={submit}>
+    <AuthForm className="auth-card auth-card-plain" pending={pending} onSubmit={submit}>
       <AuthHeading title="Welcome Back">Ready to continue your journey in real estate? Sign in now to connect with top agents, agencies, and developers who can help you achieve your property goals.</AuthHeading>
       <div className="field-group">
         <label htmlFor="login-identity">Email Address / Phone Number <span aria-hidden="true">*</span></label>
-        <input autoComplete="username" id="login-identity" name="identity" placeholder="e.g. ada@example.com or 08012345678" required type="text" />
+        <input autoComplete="username" id="login-identity" name="identity" required type="text" />
       </div>
-      <PasswordInput autoComplete="current-password" id="login-password" label="Password *" />
+      <PasswordInput autoComplete="current-password" id="login-password" label="Password *" showPlaceholder={false} />
       <div className="auth-links split-links">
         <Link href="/verify-email" onClick={(event) => {
           event.preventDefault();
@@ -93,6 +97,7 @@ export function LoginForm() {
       <button className="button button-primary submit-button" type="submit" disabled={pending}>Submit</button>
       <Divider>or sign in with</Divider>
       <GoogleAuthButton action="sign in" />
+      <LegalNotice action="Signing in" />
     </AuthForm>
   );
 }
@@ -118,26 +123,27 @@ export function RegisterForm() {
     });
   }
   return (
-    <AuthForm className="auth-card register-card" pending={pending} onSubmit={submit}>
+    <AuthForm className="auth-card auth-card-plain register-card" pending={pending} onSubmit={submit}>
       <AuthHeading title="Create your account">Join Beryl Shelter and begin your property journey.</AuthHeading>
       <div className="two-column-fields">
-        <div className="field-group"><label htmlFor="first-name">First Name <span aria-hidden="true">*</span></label><input autoComplete="given-name" id="first-name" name="firstName" placeholder="e.g. Ada" required /></div>
-        <div className="field-group"><label htmlFor="last-name">Last Name <span aria-hidden="true">*</span></label><input autoComplete="family-name" id="last-name" name="lastName" placeholder="e.g. Okafor" required /></div>
+        <div className="field-group"><label htmlFor="first-name">First Name <span aria-hidden="true">*</span></label><input autoComplete="given-name" id="first-name" name="firstName" required /></div>
+        <div className="field-group"><label htmlFor="last-name">Last Name <span aria-hidden="true">*</span></label><input autoComplete="family-name" id="last-name" name="lastName" required /></div>
       </div>
-      <div className="field-group"><label htmlFor="register-email">Email Address <span aria-hidden="true">*</span></label><input autoComplete="email" id="register-email" name="email" placeholder="e.g. ada@example.com" required type="email" /></div>
+      <div className="field-group"><label htmlFor="register-email">Email Address <span aria-hidden="true">*</span></label><input autoComplete="email" id="register-email" name="email" required type="email" /></div>
       <div className="phone-fields">
         <div className="field-group"><label htmlFor="country-code">Country Code</label><select defaultValue="+234" id="country-code" name="countryCode"><option value="+234">Nigeria (+234)</option><option value="+1">+1</option><option value="+44">+44</option></select></div>
-        <div className="field-group phone-number"><label htmlFor="phone-number">Phone Number <span aria-hidden="true">*</span></label><input autoComplete="tel" id="phone-number" inputMode="numeric" name="phone" placeholder="e.g. 8012345678" onInput={(event) => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, ""); }} pattern="[0-9]*" required type="tel" /></div>
+        <div className="field-group phone-number"><label htmlFor="phone-number">Phone Number <span aria-hidden="true">*</span></label><input autoComplete="tel" id="phone-number" inputMode="numeric" name="phone" onInput={(event) => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, ""); }} pattern="[0-9]*" required type="tel" /></div>
       </div>
       <fieldset className="radio-fieldset"><legend>Account Type</legend><div className="radio-options account-options">{accountTypes.map((accountType) => <label className="radio-option" key={accountType}><input defaultChecked={accountType === "Investor"} name="accountType" type="radio" value={accountType} /><span>{accountType}</span></label>)}</div></fieldset>
       <fieldset className="radio-fieldset"><legend>Profile Type</legend><div className="radio-options"><label className="radio-option"><input defaultChecked name="profileType" type="radio" value="Personal" /><span>Personal</span></label><label className="radio-option"><input name="profileType" type="radio" value="Business" /><span>Business</span></label></div></fieldset>
       <div className="two-column-fields">
-        <PasswordInput autoComplete="new-password" id="register-password" label="Create Password *" />
-        <PasswordInput autoComplete="new-password" id="register-confirm-password" label="Confirm Password *" />
+        <PasswordInput autoComplete="new-password" id="register-password" label="Create Password *" showPlaceholder={false} />
+        <PasswordInput autoComplete="new-password" id="register-confirm-password" label="Confirm Password *" showPlaceholder={false} />
       </div>
       <button className="button button-primary submit-button" type="submit" disabled={pending}>Create Account</button>
       <Divider>or sign up with</Divider>
       <GoogleAuthButton action="sign up" />
+      <LegalNotice action="Creating an account" />
       <p className="auth-footer">Already have an account? <Link href="/login">Login</Link></p>
     </AuthForm>
   );

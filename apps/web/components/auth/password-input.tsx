@@ -6,9 +6,10 @@ type PasswordInputProps = {
   id: string;
   label: string;
   autoComplete: string;
+  showPlaceholder?: boolean;
 };
 
-export function PasswordInput({ id, label, autoComplete }: PasswordInputProps) {
+export function PasswordInput({ id, label, autoComplete, showPlaceholder = true }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
 
   return (
@@ -16,7 +17,7 @@ export function PasswordInput({ id, label, autoComplete }: PasswordInputProps) {
       <label htmlFor={id}>{label.replace(/\s*\*$/, "")} <span aria-hidden="true">*</span></label>
       <div className="password-control">
         {/* Form submission validates new passwords together, using the existing error/toast UI. */}
-        <input id={id} name={id} type={visible ? "text" : "password"} autoComplete={autoComplete} placeholder="Enter your password" required maxLength={128} />
+        <input id={id} name={id} type={visible ? "text" : "password"} autoComplete={autoComplete} placeholder={showPlaceholder ? "Enter your password" : undefined} required maxLength={128} />
         <button
           aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
           className="password-toggle"

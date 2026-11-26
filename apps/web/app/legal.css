@@ -1,0 +1,12 @@
+.legal-main { min-height: 65vh; padding: calc(var(--header-height) + 42px) clamp(20px, 5vw, 70px) 84px; }
+.legal-content { color: var(--ink); font-size: 14px; line-height: 1.75; margin: 0 auto; max-width: 1120px; }
+.legal-content h1 { font-size: clamp(28px, 3vw, 38px); line-height: 1.2; margin: 0 0 12px; }
+.legal-dates { font-size: 13px; margin-bottom: 12px; }
+.legal-content section { border-top: 1px solid var(--line); margin-top: 26px; padding-top: 24px; }
+.legal-content h2 { font-size: 17px; line-height: 1.4; margin: 0 0 10px; }
+.legal-content p { margin: 0 0 12px; }
+.legal-content ul { margin: 0 0 12px; padding-left: 25px; }
+.legal-content li { padding-left: 2px; margin-bottom: 5px; }
+.legal-content a { color: var(--gold); text-decoration: underline; text-underline-offset: 2px; }
+.legal-content address { font-style: normal; }
+@media (max-width: 600px) { .legal-main { padding-bottom: 56px; } .legal-content { font-size: 13px; } }
