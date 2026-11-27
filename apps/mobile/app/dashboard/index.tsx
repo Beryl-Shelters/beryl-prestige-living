@@ -20,13 +20,6 @@ import { useAuth } from "@/providers/auth-provider";
 import { useTheme } from "@/providers/theme-provider";
 import { radius, spacing, typography, type ColorTokens } from "@/theme/tokens";
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
 export default function DashboardOverviewScreen() {
   const { customer } = useAuth();
   const { colors } = useTheme();
@@ -108,7 +101,6 @@ export default function DashboardOverviewScreen() {
     [customer?.first_name, customer?.last_name].filter(Boolean).join(" ") ||
     "Customer";
 
-  const greeting = getGreeting();
   const summary = overview?.summary;
 
   const kpis: {
@@ -161,7 +153,7 @@ export default function DashboardOverviewScreen() {
         {/* Salutation Greeting */}
         <View style={styles.greetingBox}>
           <Text accessibilityRole="header" style={styles.greetingText}>
-            {greeting}, {name}!
+            Good Day, {name}!
           </Text>
           <Text style={styles.greetingSubtext}>
             Here is a summary of your Beryl Shelter activity and portfolio.

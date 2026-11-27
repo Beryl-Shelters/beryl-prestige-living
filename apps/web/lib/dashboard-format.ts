@@ -7,10 +7,6 @@ export function customerInitials(customer: { first_name: string | null; last_nam
 export function accountTypeLabel(value: string | null) {
   return (value ?? "").toLowerCase().split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
 }
-export function greeting(date = new Date()) {
-  const hour = date.getHours();
-  return hour < 12 ? "Good Morning" : hour < 18 ? "Good Afternoon" : "Good Evening";
-}
 export function naira(value: number, fractionDigits = 2) {
   return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: fractionDigits, maximumFractionDigits: fractionDigits }).format(value);
 }

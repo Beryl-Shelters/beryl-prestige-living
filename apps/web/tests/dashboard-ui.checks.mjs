@@ -21,8 +21,7 @@ export async function checkDashboard({ page, origin, calls, failures, screenshot
     assert.equal(await page.locator(".dashboard-kpi").count(), 4);
     assert.deepEqual(await page.locator(".dashboard-kpi h2").allTextContents(), ["Total Investments", "Properties Owned", "Referral Earnings", "New Messages"]);
     assert.deepEqual(await page.locator(".dashboard-kpi p").allTextContents(), ["₦0.00", "0 Units", "₦0.00", "0 messages"]);
-    const expected = await page.evaluate(() => { const hour = new Date().getHours(); return hour < 12 ? "Good Morning" : hour < 18 ? "Good Afternoon" : "Good Evening"; });
-    assert.equal(await page.locator(".dashboard-greeting").innerText(), `${expected}, Ada Okafor!`);
+    assert.equal(await page.locator(".dashboard-greeting").innerText(), "Good Day, Ada Okafor!");
     assert.equal(await page.locator(".public-site-header, .public-site-footer").count(), 0);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Overflow at ${width}`);
     await page.getByText("No messages yet", { exact: true }).waitFor();

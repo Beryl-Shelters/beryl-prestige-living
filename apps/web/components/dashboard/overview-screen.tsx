@@ -2,8 +2,7 @@
 /* Customer listing images are existing validated media URLs and are not optimized here. */
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { customerName, greeting, messageCount, naira, units } from "../../lib/dashboard-format";
+import { customerName, messageCount, naira, units } from "../../lib/dashboard-format";
 import type { DashboardOverview } from "../../lib/dashboard-api";
 import { DashboardIcon } from "./dashboard-icon";
 import { useDashboard } from "./dashboard-provider";
@@ -24,8 +23,6 @@ function RecentListings({ listings }: { listings: DashboardOverview["recent_prop
 function DashboardEmptyIcon({kind}:{kind:"messages"|"listings"}){return <svg className="dashboard-empty-icon" viewBox="0 0 80 70" aria-hidden="true"><path d="M15 51 42 34l23 9-28 18Z" fill="#e5e9ef"/><rect x="27" y="20" width="35" height="27" rx="3" fill="#f4f6f9" stroke="#cbd2dc"/><circle cx="44" cy="30" r="5" fill="#b8c2cf"/><path d="M34 42c2-6 6-9 11-9s9 3 11 9" fill="#cbd2dc"/>{kind==="messages"&&<><path d="M12 31h17M16 24h14M55 14h13" stroke="#cbd2dc" strokeWidth="3" strokeLinecap="round"/><circle cx="67" cy="23" r="4" fill="#d5dbe3"/></>}</svg>}
 export function OverviewScreen() {
   const { overview } = useDashboard();
-  const [salutation, setSalutation] = useState(() => greeting());
-  useEffect(() => { const timer = setInterval(() => setSalutation(greeting()), 60000); return () => clearInterval(timer); }, []);
   const name = customerName(overview.customer);
   const cards = [
     { label: "Total Investments", value: naira(overview.summary.total_investments), icon: "investments" },
@@ -34,7 +31,7 @@ export function OverviewScreen() {
     { label: "New Messages", value: messageCount(overview.summary.new_messages), icon: "messages" },
   ];
   return <>
-    <h1 className="dashboard-greeting">{salutation}{name ? `, ${name}` : ""}!</h1>
+    <h1 className="dashboard-greeting">Good Day{name ? `, ${name}` : ""}!</h1>
     <div className="dashboard-kpis" aria-label="Overview summary">{cards.map((card) => <section className="dashboard-card dashboard-kpi" key={card.label} aria-label={card.label}>
       <span className="dashboard-icon-box" aria-hidden="true"><DashboardIcon name={card.icon} /></span><div><h2>{card.label}</h2><p>{card.value}</p></div>
     </section>)}</div>
